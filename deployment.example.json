@@ -1,0 +1,12 @@
+{
+    "AdminCap": {
+        "id": "0x7592556d6120051bbaabe7e4aeae662fdb265c2b",
+        "owner": "Owned",
+        "dataType": "AdminCap"
+    },
+    "package": {
+        "id": "0xf8a7ce243ac70503368227293b863f0c1fd603e6",
+        "owner": "Immutable",
+        "dataType": "package"
+    }
+}

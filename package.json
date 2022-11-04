@@ -1,0 +1,36 @@
+{
+  "name": "firefly-exchange-contracts-v2",
+  "description": "Repository containing firefly core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.",
+  "version": "1.0.0",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "@mysten/sui.js": "^0.0.0-experimental-20221030022636",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.3",
+    "@types/expect": "^24.3.0",
+    "@types/mocha": "^10.0.0",
+    "chai": "^4.3.6",
+    "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.8.4"
+  },
+  "scripts": {
+    "deploy": "ts-node ./scripts/deploy.ts",
+    "debug": "ts-node ./scripts/debug.ts",
+    "test": "ts-mocha --no-timeout tests/*.test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fireflyprotocol/firefly-exchange-contracts-v2.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fireflyprotocol/firefly-exchange-contracts-v2/issues"
+  },
+  "homepage": "https://github.com/fireflyprotocol/firefly-exchange-contracts-v2#readme"
+}
