@@ -24,5 +24,4 @@ Repository containing firefly core exchange contracts that allow users to do on-
     ```
 
 **Running Tests:**
-- Deploy contracts using `yarn deploy`
-- Run tests using `yarn test`
+- Provide `RPC_URL` and `SEED` in `.env` file and run: `yarn test`

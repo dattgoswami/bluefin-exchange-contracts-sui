@@ -1,5 +1,4 @@
 import { OBJECT_OWNERSHIP_STATUS } from "./enums"
-import { ObjectType } from "@mysten/sui.js";
 
 export interface Object {
     id: string,
@@ -9,4 +8,9 @@ export interface Object {
 
 export interface ObjectMap {
     [dataType: string]: Object
+}
+
+export interface wallet{
+    address:string,
+    phrase: string
 }

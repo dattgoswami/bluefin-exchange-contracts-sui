@@ -4,37 +4,46 @@ import nacl from 'tweetnacl';
 
 import { SuiObject, Base64DataBuffer } from "@mysten/sui.js";
 import { DeploymentConfig } from "../src/DeploymentConfig";
-import { readFile, getProvider, getSignerFromKeyPair, getKeyPairFromSeed, getSignerSUIAddress, getSignerFromSeed} from "../src/utils";
+import { readFile, getProvider, getSignerSUIAddress, getSignerFromSeed, publishPackage} from "../src/utils";
 import { OnChainCalls } from "../src/OnChainCalls";
-import { getCreatedObjects } from "../src/objects";
+import { getCreatedObjects } from "../src/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { toBigNumber } from "../src/library";
+import { test_deploy_package, test_deploy_market } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
+const provider = getProvider(DeploymentConfig.rpcURL, DeploymentConfig.faucetURL);
+const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
+
 
 describe("Sanity Tests", async() => {
-    const ownerKeyPair = getKeyPairFromSeed(DeploymentConfig.deployer);
-    const provider = getProvider(DeploymentConfig.rpcURL, DeploymentConfig.faucetURL);
-    const ownerSigner = getSignerFromKeyPair(ownerKeyPair, provider);
-    // TODO create a type for deployment
-    const deployment = readFile(DeploymentConfig.filePath);
+    
     const ownerAddress = await getSignerSUIAddress(ownerSigner);
-    const onChain = new OnChainCalls(ownerSigner, deployment);
+    let deployment:any;
+    let onChain:OnChainCalls;
 
+    // deploy package once
     before(async () => {
+        // TODO implement a method for requesting sui
         // await provider.requestSuiFromFaucet(ownerAddress);
+        deployment = await test_deploy_package(ownerAddress, ownerSigner, provider);
+
+    });
+
+    // deploy the market again before each test
+    beforeEach(async ()=>{
+        deployment['markets'].push(await test_deploy_market(deployment, ownerSigner, provider));
+        onChain = new OnChainCalls(ownerSigner, deployment);
     });
 
     it("deployer should have non zero balance", async ()=>{
-
         const coins = await provider.getCoinBalancesOwnedByAddress(
             ownerAddress
         );
         expect(coins.length).to.be.greaterThan(0);
-
     });
 
     it("The deployer account must be the owner of AdminCap", async()=> {

@@ -8,5 +8,7 @@ export const OWNERSHIP_ERROR = (objId:string, ownerId:string, signerId:string) =
 
 export const ERROR_CODES = {
     '1': "Minimum order price must be > 0",
-    '2': "Minimum trade price must be < maximum trade price"
+    '2': "Minimum trade price must be < maximum trade price",
+    '3': "Trade price is < min allowed price",
+    '4': "Trade price is > max allowed price"
 }

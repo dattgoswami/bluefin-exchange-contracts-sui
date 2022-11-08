@@ -27,6 +27,11 @@ module firefly_exchange::foundation {
         takerFee: u64,
     }
 
+    struct MinOrderPriceUpdateEvent has copy, drop {
+        id: ID,
+        price: u64
+    }
+
     struct AdminCap has key {
         id: UID,
     }
@@ -108,6 +113,12 @@ module firefly_exchange::foundation {
         ctx: &mut TxContext
         ){
         
+
+        // TODO perform assertions on remaining variables
+        assert!(minPrice > 0, 1);
+        assert!(minPrice < maxPrice, 2);        
+
+
         let id = object::new(ctx);
         let perpID = object::uid_to_inner(&id);
 
@@ -151,12 +162,27 @@ module firefly_exchange::foundation {
 
     }
 
+    /**
+     * Updates minimum price of the perpetual 
+     * Only Admin can update price
+     */
     public entry fun setMinPrice( _: &AdminCap, perpetual: &mut Perpetual, minPrice: u64){
         assert!(minPrice > 0, 1);
         assert!(minPrice < perpetual.maxPrice, 2);        
         perpetual.minPrice = minPrice;
-        // todo emit event
+
+        event::emit(MinOrderPriceUpdateEvent{
+            id: object::uid_to_inner(&perpetual.id),
+            price: minPrice
+        })
+    }   
+
+    // todo finish this
+    fun verifyMinMaxPriceChecks(price: u64, minPrice: u64, maxPrice: u64, _maker:address){
+        assert!(price >= minPrice, 3);
+        assert!(price <= maxPrice, 4);
     }
+
 
 
 

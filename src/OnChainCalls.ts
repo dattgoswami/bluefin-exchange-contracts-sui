@@ -31,7 +31,7 @@ export class OnChainCalls{
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.deployment["objects"]['AdminCap'].id);
+        callArgs.push(args.adminID ? args.adminID : this._getAdminCap());
         callArgs.push(args.name ? args.name : "ETH-PERP");
 
         callArgs.push(args.minPrice ? args.minPrice : toBigNumberStr(0.1));
