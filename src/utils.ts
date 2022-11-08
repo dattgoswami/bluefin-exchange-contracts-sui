@@ -1,7 +1,11 @@
-import { JsonRpcProvider, RawSigner, Ed25519Keypair, LocalTxnDataSerializer} from "@mysten/sui.js";
-
+import { JsonRpcProvider, RawSigner, Ed25519Keypair, LocalTxnDataSerializer, Keypair} from "@mysten/sui.js";
+import { config } from "dotenv";
 const { execSync } = require('child_process');
 const fs = require("fs");
+config({ path: ".env" });
+
+const FAUCET_URL = process.env.FAUCET_URL;
+
 
 export interface wallet{
     address:string,
@@ -27,8 +31,8 @@ export function readFile(filePath: string): any {
     return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath)) : {};
 }
 
-export function getProvider(rpcURL: string): JsonRpcProvider {
-    return new JsonRpcProvider(rpcURL);
+export function getProvider(rpcURL: string, faucetURL:string): JsonRpcProvider {
+    return new JsonRpcProvider(rpcURL, {faucetURL: faucetURL} );
 }
 
 export async function getSignerSUIAddress(signer:RawSigner): Promise<string> {
@@ -37,11 +41,25 @@ export async function getSignerSUIAddress(signer:RawSigner): Promise<string> {
 
 }
 
-export function getSigner(deployerSeed: string, provider: JsonRpcProvider): RawSigner {
 
+export function getKeyPairFromSeed(seed:string):Keypair {
+    return Ed25519Keypair.deriveKeypair(seed);
+}
+
+export function getSignerFromKeyPair(keypair: Keypair, provider: JsonRpcProvider): RawSigner {
     return new RawSigner(
-        Ed25519Keypair.deriveKeypair(deployerSeed), 
+        keypair, 
         provider, 
         new LocalTxnDataSerializer(provider)
     );
 }
+
+export function getSignerFromSeed(seed:string, provider: JsonRpcProvider): RawSigner {
+    return getSignerFromKeyPair(getKeyPairFromSeed(seed), provider);
+}
+
+
+export function mintSUI(amount:number, address:string) {
+
+}
+

@@ -21,7 +21,7 @@ export async function getCreatedObjects(provider: JsonRpcProvider, txResponse:Su
         // get object owner
         const owner = objDetails.owner == OBJECT_OWNERSHIP_STATUS.IMMUTABLE
          ? OBJECT_OWNERSHIP_STATUS.IMMUTABLE
-            : objDetails.owner == OBJECT_OWNERSHIP_STATUS.SHARED
+            : objDetails.owner == OBJECT_OWNERSHIP_STATUS.SHARED || (objDetails.owner as any)["Shared"] != undefined
                 ? OBJECT_OWNERSHIP_STATUS.SHARED
                 : OBJECT_OWNERSHIP_STATUS.OWNED 
 
