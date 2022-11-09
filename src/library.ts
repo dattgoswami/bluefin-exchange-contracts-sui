@@ -9,17 +9,24 @@ export const ADDRESSES = {
     ZERO: "0x0000000000000000000000000000000000000000"
 };
 
-
-const toBnBase = (base:number) => { return new BigNumber(1).shiftedBy(base);}; 
+const toBnBase = (base: number) => {
+    return new BigNumber(1).shiftedBy(base);
+};
 
 export function bigNumber(val: BigNumberable): BigNumber {
     return new BigNumber(val);
 }
 
-export function toBigNumber(val: BigNumberable, base:number = BASE_DECIMALS): BigNumber {
+export function toBigNumber(
+    val: BigNumberable,
+    base: number = BASE_DECIMALS
+): BigNumber {
     return new BigNumber(val).multipliedBy(toBnBase(base));
 }
 
-export function toBigNumberStr(val: BigNumberable, base:number = BASE_DECIMALS): string {
+export function toBigNumberStr(
+    val: BigNumberable,
+    base: number = BASE_DECIMALS
+): string {
     return toBigNumber(val, base).toFixed(0);
 }

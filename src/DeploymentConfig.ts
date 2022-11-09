@@ -3,46 +3,45 @@ import { toBigNumberStr } from "./library";
 config({ path: ".env" });
 
 interface DeploymentConfig {
-    rpcURL:string;
-    faucetURL:string;
-    deployer:string;
-    filePath:string;
+    rpcURL: string;
+    faucetURL: string;
+    deployer: string;
+    filePath: string;
     markets: Perpetual[];
 }
 
 interface Perpetual {
-    name:string,
+    name: string;
     // min price at which asset can be traded
-    minPrice: string,
+    minPrice: string;
     // max price at which asset can be traded
-    maxPrice: string,
+    maxPrice: string;
     // the smallest decimal unit supported by asset for price
-    tickSize: string,
+    tickSize: string;
     // minimum quantity of asset that can be traded
-    minQty: string,
+    minQty: string;
     // maximum quantity of asset that can be traded for limit order
-    maxQtyLimit: string,
+    maxQtyLimit: string;
     // maximum quantity of asset that can be traded for market order
-    maxQtyMarket: string,
+    maxQtyMarket: string;
     // the smallest decimal unit supported by asset for quantity
-    stepSize: string,
+    stepSize: string;
     //  market take bound for long side ( 10% == 100000000000000000)
-    mtbLong: string,
+    mtbLong: string;
     //  market take bound for short side ( 10% == 100000000000000000)
-    mtbShort: string,
+    mtbShort: string;
     // imr: the initial margin collateralization percentage
-    initialMarginRequired: string
+    initialMarginRequired: string;
     // mmr: the minimum collateralization percentage
-    maintenanceMarginRequired: string
+    maintenanceMarginRequired: string;
     // default maker order fee for this Perpetual
-    makerFee: string
+    makerFee: string;
     // default taker order fee for this Perpetual
-    takerFee: string
-
+    takerFee: string;
 }
 
-export const DeploymentConfig:DeploymentConfig  = {
-    filePath: "./deployment.json",  // Todo will create separate files for separate networks
+export const DeploymentConfig: DeploymentConfig = {
+    filePath: "./deployment.json", // Todo will create separate files for separate networks
     rpcURL: process.env.RPC_URL || "",
     faucetURL: process.env.FAUCET_URL || "",
     deployer: process.env.DEPLOYER_SEED || "",
@@ -62,7 +61,6 @@ export const DeploymentConfig:DeploymentConfig  = {
             maintenanceMarginRequired: toBigNumberStr(0.3),
             makerFee: toBigNumberStr(0.001),
             takerFee: toBigNumberStr(0.0045)
-    }],
-}
-
-
+        }
+    ]
+};
