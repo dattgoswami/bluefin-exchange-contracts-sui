@@ -74,6 +74,27 @@ export function getSignerFromSeed(
     return getSignerFromKeyPair(getKeyPairFromSeed(seed), provider);
 }
 
+export async function requestGas(address: string) {
+    const url = process.env.FAUCET_URL + "/gas";
+    try {
+        const data = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                FixedAmountRequest: {
+                    recipient: address
+                }
+            })
+        });
+        return data;
+    } catch (e: any) {
+        console.log("Error while requesting gas", e.message);
+    }
+    return false;
+}
+
 export function mintSUI(amount: number, address: string) {}
 
 export async function getCreatedObjects(
@@ -94,6 +115,8 @@ export async function getCreatedObjects(
         const txn = await provider.getObject(obj.reference.objectId);
         const objDetails = txn.details as SuiObject;
 
+        // get object type
+        const objectType = objDetails.data.dataType;
         // get object owner
         const owner =
             objDetails.owner == OBJECT_OWNERSHIP_STATUS.IMMUTABLE
@@ -102,9 +125,6 @@ export async function getCreatedObjects(
                   (objDetails.owner as any)["Shared"] != undefined
                 ? OBJECT_OWNERSHIP_STATUS.SHARED
                 : OBJECT_OWNERSHIP_STATUS.OWNED;
-
-        // get object type
-        const objectType = objDetails.data.dataType;
 
         // get data type
         let dataType = "package";

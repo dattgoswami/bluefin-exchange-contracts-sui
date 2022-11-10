@@ -9,7 +9,9 @@ import {
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed,
-    publishPackage
+    publishPackage,
+    requestGas,
+    getKeyPairFromSeed
 } from "../src/utils";
 import { OnChainCalls } from "../src/OnChainCalls";
 import { getCreatedObjects } from "../src/utils";
@@ -26,6 +28,7 @@ const provider = getProvider(
     DeploymentConfig.faucetURL
 );
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
+const ownerKeyPair = getKeyPairFromSeed(DeploymentConfig.deployer);
 
 describe("Sanity Tests", async () => {
     const ownerAddress = await getSignerSUIAddress(ownerSigner);
@@ -35,7 +38,8 @@ describe("Sanity Tests", async () => {
     // deploy package once
     before(async () => {
         // TODO implement a method for requesting sui
-        // await provider.requestSuiFromFaucet(ownerAddress);
+        await requestGas(ownerAddress);
+        await requestGas(TEST_WALLETS[0].address);
         deployment = await test_deploy_package(
             ownerAddress,
             ownerSigner,
