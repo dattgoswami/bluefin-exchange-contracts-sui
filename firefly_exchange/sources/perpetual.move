@@ -1,12 +1,12 @@
 
-
-module firefly_exchange::foundation {
+module firefly_exchange::perpetual {
 
     use sui::object::{Self, ID, UID};
     use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
     use sui::transfer;
     use sui::event;
+    // use firefly_exchange::evaluator::{Self};
 
     
     struct PerpetualCreationEvent has copy, drop {
@@ -167,6 +167,10 @@ module firefly_exchange::foundation {
      * Only Admin can update price
      */
     public entry fun setMinPrice( _: &AdminCap, perpetual: &mut Perpetual, minPrice: u64){
+        // TODO find a way to move setMinPrice and other setter methods to evaluator module
+        // getting error that perpetual.fieldName can only be acccessed with in the module 
+        // that created the perpetual object
+        
         assert!(minPrice > 0, 1);
         assert!(minPrice < perpetual.maxPrice, 2);        
         perpetual.minPrice = minPrice;
@@ -176,15 +180,6 @@ module firefly_exchange::foundation {
             price: minPrice
         })
     }   
-
-    // todo finish this
-    fun verifyMinMaxPriceChecks(price: u64, minPrice: u64, maxPrice: u64, _maker:address){
-        assert!(price >= minPrice, 3);
-        assert!(price <= maxPrice, 4);
-    }
-
-
-
 
     //===========================================================//
     //                      HELPER METHODS

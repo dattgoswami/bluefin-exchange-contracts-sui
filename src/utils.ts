@@ -75,7 +75,7 @@ export function getSignerFromSeed(
 }
 
 export async function requestGas(address: string) {
-    const url = process.env.FAUCET_URL + "/gas";
+    const url = FAUCET_URL + "/gas";
     try {
         const data = await fetch(url, {
             method: "POST",
@@ -109,6 +109,7 @@ export async function getCreatedObjects(
     // iterate over each object
     for (const itr in createdObjects) {
         const obj = createdObjects[itr];
+
         // get object id
         const id = obj.reference.objectId;
 

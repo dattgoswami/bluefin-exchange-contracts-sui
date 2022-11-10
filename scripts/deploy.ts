@@ -28,14 +28,14 @@ async function main() {
     console.log("Package published");
 
     // fetch created objects
-    const objects = await getCreatedObjects(provider, publishTxn);
-
+    const objects = await getCreatedObjects(provider, publishTxn); 
+    
     const dataToWrite = {
-        deployer: deployerAddress,
-        moduleName: "foundation", //TODO extract from deployed module
-        objects: objects,
-        markets: []
-    };
+        'deployer': deployerAddress,
+        'moduleName': 'perpetual', //TODO extract from deployed module
+        'objects': objects,
+        'markets': []
+    }
 
     const onChain = new OnChainCalls(signer, dataToWrite);
 

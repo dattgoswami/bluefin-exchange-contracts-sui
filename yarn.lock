@@ -93,7 +93,7 @@
   resolved "https://registry.npmjs.org/@mysten/sui.js/-/sui.js-0.0.0-experimental-20221030022636.tgz"
   integrity sha512-ImyNYzZspBjdCVkadPWsRAjQMfDWN7q+niyiGQqRzHXU4+LfLtVJ/n4SgOnwXwIE0HT3al9RKkDvhPaJchcRAw==
   dependencies:
-    "@mysten/bcs" "0.3.0"
+    "@mysten/bcs" "0.4.0"
     "@noble/hashes" "^1.1.2"
     "@noble/secp256k1" "^1.6.3"
     "@scure/bip32" "^1.1.0"
@@ -967,7 +967,7 @@ jest-message-util@^29.2.1:
   integrity sha512-Dx5nEjw9V8C1/Yj10S/8ivA8F439VS8vTq1L7hEgwHFn9ovSKNpYW/kwNh7UglaEgXO42XxzKJB+2x0nSglFVw==
   dependencies:
     "@babel/code-frame" "^7.12.13"
-    "@jest/types" "^29.2.1"
+    "@jest/types" "^29.3.1"
     "@types/stack-utils" "^2.0.0"
     chalk "^4.0.0"
     graceful-fs "^4.2.9"

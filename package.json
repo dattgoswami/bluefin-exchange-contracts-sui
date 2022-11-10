@@ -6,7 +6,7 @@
     "test": "tests"
   },
   "dependencies": {
-    "@mysten/sui.js": "^0.0.0-experimental-20221030022636",
+    "@mysten/sui.js": "^0.15.0",
     "add": "^2.0.6",
     "avsc": "^5.7.6",
     "bignumber.js": "^9.1.0",
