@@ -18,20 +18,20 @@ const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
 
 describe("Sanity Tests", async() => {
-    
+
     const ownerAddress = await getSignerSUIAddress(ownerSigner);
     let deployment = readFile(DeploymentConfig.filePath);
     let onChain:OnChainCalls;
 
     // deploy package once
-before(async () => {
+    before(async () => {
         // await requestGas(ownerAddress);        
         // await requestGas(TEST_WALLETS[0].address);
     });
 
     // deploy the market again before each test
     beforeEach(async ()=>{
-        deployment['markets'].push(await test_deploy_market(deployment, ownerSigner, provider));
+        deployment['markets'] = [ await test_deploy_market(deployment, ownerSigner, provider) ] ;
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
 
@@ -43,22 +43,22 @@ before(async () => {
     });
 
     it("The deployer account must be the owner of AdminCap", async () => {
-        const details = (await provider.getObject(onChain._getAdminCap()))
-            .details as SuiObject;
+        const details = await onChain.getOnChainObject(onChain.getAdminCap());
         expect((details.owner as any).AddressOwner).to.be.equal(ownerAddress);
     });
 
     it("should allow admin to create ETH perpetual", async () => {
         const moveCallTxn = await onChain.createPerpetual({});
         const objects = await getCreatedObjects(provider, moveCallTxn);
-        const details = (await provider.getObject(objects["Perpetual"].id))
-            .details as SuiObject;
+
+        const details = await onChain.getOnChainObject(onChain.getPerpetualID());
+
         expect((details.data as any)["fields"]["name"]).to.be.equal("ETH-PERP");
     });
 
     it("should revert when non-admin account tries to create a perpetual", async () => {
         const alice = getSignerFromSeed(TEST_WALLETS[0].phrase, provider);
-        const expectedError = OWNERSHIP_ERROR(onChain._getAdminCap(), ownerAddress, TEST_WALLETS[0].address);           
+        const expectedError = OWNERSHIP_ERROR(onChain.getAdminCap(), ownerAddress, TEST_WALLETS[0].address);           
         await expect(onChain.createPerpetual({}, alice)).to.eventually.be.rejectedWith(expectedError);
     });
 

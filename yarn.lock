@@ -63,6 +63,18 @@
     "@types/yargs" "^17.0.8"
     chalk "^4.0.0"
 
+"@jest/types@^29.3.1":
+  version "29.3.1"
+  resolved "https://registry.yarnpkg.com/@jest/types/-/types-29.3.1.tgz#7c5a80777cb13e703aeec6788d044150341147e3"
+  integrity sha512-d0S0jmmTpjnhCmNpApgX3jrUZgZ22ivKJRvL2lli5hpCRoNnp1f85r2/wpKfXuYu8E7Jjh1hGfhPyup1NM5AmA==
+  dependencies:
+    "@jest/schemas" "^29.0.0"
+    "@types/istanbul-lib-coverage" "^2.0.0"
+    "@types/istanbul-reports" "^3.0.0"
+    "@types/node" "*"
+    "@types/yargs" "^17.0.8"
+    chalk "^4.0.0"
+
 "@jridgewell/resolve-uri@^3.0.3":
   version "3.1.0"
   resolved "https://registry.npmjs.org/@jridgewell/resolve-uri/-/resolve-uri-3.1.0.tgz"
@@ -81,17 +93,17 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@mysten/bcs@0.3.0":
-  version "0.3.0"
-  resolved "https://registry.npmjs.org/@mysten/bcs/-/bcs-0.3.0.tgz"
-  integrity sha512-Me6OkrS+idPq+ZUM1MEcKP9YOTacZKLwo0gf8rfeImQ+G25tqPRhjpccZGOUJGOKh+gojH2vjkWi2TYJv9kNCg==
+"@mysten/bcs@0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@mysten/bcs/-/bcs-0.4.0.tgz#d0c9deb91918fcd37a2f1eb30621ac5a58ef6381"
+  integrity sha512-9qtPtFgUu7k2DnS1PyfT5lRngzgzUPx5x6BobcxOZgl+nxoa+WZNvJBWU6VoI2RJi2uxg72MswCEtgFsYaoIfQ==
   dependencies:
     bn.js "^5.2.1"
 
-"@mysten/sui.js@^0.0.0-experimental-20221030022636":
-  version "0.0.0-experimental-20221030022636"
-  resolved "https://registry.npmjs.org/@mysten/sui.js/-/sui.js-0.0.0-experimental-20221030022636.tgz"
-  integrity sha512-ImyNYzZspBjdCVkadPWsRAjQMfDWN7q+niyiGQqRzHXU4+LfLtVJ/n4SgOnwXwIE0HT3al9RKkDvhPaJchcRAw==
+"@mysten/sui.js@^0.15.0":
+  version "0.15.0"
+  resolved "https://registry.yarnpkg.com/@mysten/sui.js/-/sui.js-0.15.0.tgz#72fe242e8890c813a9cf9e53073fc45b53e8886b"
+  integrity sha512-9JgrWVDDuxAI+ymhdnUvxcQ99ar0dbeBKk2zyjYjvuIvI7934fqcwDPuEl6QOuJjkVG+OTyhCae1gDi0LIq4og==
   dependencies:
     "@mysten/bcs" "0.4.0"
     "@noble/hashes" "^1.1.2"
@@ -967,7 +979,7 @@ jest-message-util@^29.2.1:
   integrity sha512-Dx5nEjw9V8C1/Yj10S/8ivA8F439VS8vTq1L7hEgwHFn9ovSKNpYW/kwNh7UglaEgXO42XxzKJB+2x0nSglFVw==
   dependencies:
     "@babel/code-frame" "^7.12.13"
-    "@jest/types" "^29.3.1"
+    "@jest/types" "^29.2.1"
     "@types/stack-utils" "^2.0.0"
     chalk "^4.0.0"
     graceful-fs "^4.2.9"

@@ -6,9 +6,12 @@ module firefly_exchange::perpetual {
     use std::string::{Self, String};
     use sui::transfer;
     use sui::event;
+    use sui::table::{Self, Table, add, contains, borrow_mut};
+
+    // custom modules
+    use firefly_exchange::position::{Self, UserPosition};
     // use firefly_exchange::evaluator::{Self};
 
-    
     struct PerpetualCreationEvent has copy, drop {
         id: ID,
         name: String,
@@ -66,6 +69,8 @@ module firefly_exchange::perpetual {
         makerFee: u64,
         /// Default taker order fee for this Perpetual
         takerFee: u64,
+        /// table containing user positions for this market/perpetual
+        positions: Table<address,UserPosition>,
     }
 
 
@@ -73,7 +78,7 @@ module firefly_exchange::perpetual {
     //                      INITIALIZATION
     //===========================================================//
 
-    fun init(ctx: &mut TxContext) {        
+    fun init(ctx: &mut TxContext) {
         // giving deployer the admin cap
         let admin = AdminCap {
             id: object::new(ctx),
@@ -82,8 +87,6 @@ module firefly_exchange::perpetual {
     }
 
     
-
-
     //===========================================================//
     //                      ENTRY METHODS
     //===========================================================//
@@ -122,6 +125,8 @@ module firefly_exchange::perpetual {
         let id = object::new(ctx);
         let perpID = object::uid_to_inner(&id);
 
+        let positions = table::new<address, UserPosition>(ctx);
+
         let perpetual = Perpetual {
             id: id,
             name: string::utf8(name),
@@ -138,6 +143,7 @@ module firefly_exchange::perpetual {
             maintenanceMarginRequired,
             makerFee,
             takerFee,
+            positions,
         };
 
         event::emit(PerpetualCreationEvent {
@@ -157,7 +163,7 @@ module firefly_exchange::perpetual {
             makerFee,
             takerFee    
         });
-
+        
         transfer::share_object(perpetual);
 
     }
@@ -181,8 +187,39 @@ module firefly_exchange::perpetual {
         })
     }   
 
+    /**
+     * Creates a new position and adds to perpetual
+     *
+     */
+    public entry fun createPosition(perp: &mut Perpetual,  ctx: &mut TxContext){
+            let account = tx_context::sender(ctx);
+            let perpID = object::uid_to_inner(&perp.id);
+
+            // position for the account should not exist in table
+            assert!(contains(&mut perp.positions, account) == false, 6);
+
+
+            let userPosition = position::initPosition(perpID, account);            
+            add(&mut perp.positions, account, userPosition);
+    }   
+
+    // for testing purpose only, will be removed
+    public entry fun mutatePosition(perp: &mut Perpetual, user:address, isPosPositive: bool, qPos: u128, margin: u128, oiOpen: u128, mro: u128){       
+
+        assert!(contains(&mut perp.positions, user) == true, 6);
+
+        let perpID = object::uid_to_inner(&perp.id);
+
+        let position = borrow_mut(&mut perp.positions, user);
+        position::updatePosition(perpID, position, user, isPosPositive, qPos, margin, oiOpen, mro);
+        
+    }
+
+
     //===========================================================//
     //                      HELPER METHODS
     //===========================================================//
 
 }
+
+

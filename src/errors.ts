@@ -14,4 +14,5 @@ export const ERROR_CODES = {
     '3': "Trade price is < min allowed price (Maker At Fault)",
     '4': "Trade price is > max allowed price (Maker At Fault)",
     '5': "Trade price does not conforms to allowed tick size (Maker At Fault)",
+    '6': "User already has a position object",
 }

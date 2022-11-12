@@ -13,7 +13,7 @@ import {
     Base64DataBuffer
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
-import { ObjectMap, wallet } from "../src/interfaces";
+import { DeploymentObjectMap, wallet } from "../src/interfaces";
 import { config } from "dotenv";
 
 const { execSync } = require("child_process");
@@ -97,11 +97,15 @@ export async function requestGas(address: string) {
 
 export function mintSUI(amount: number, address: string) {}
 
+export function getStatus(txResponse: SuiExecuteTransactionResponse) {
+    return (txResponse as any)["EffectsCert"]["effects"]["effects"]["status"];
+}
+
 export async function getCreatedObjects(
     provider: JsonRpcProvider,
     txResponse: SuiExecuteTransactionResponse
-): Promise<ObjectMap> {
-    const map: ObjectMap = {};
+): Promise<DeploymentObjectMap> {
+    const map: DeploymentObjectMap = {};
 
     const createdObjects = (txResponse as any).EffectsCert.effects.effects
         .created as OwnedObjectRef[];
