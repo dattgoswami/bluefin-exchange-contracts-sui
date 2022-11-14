@@ -4,9 +4,8 @@ import {
     SuiExecuteTransactionResponse,
     SuiObject
 } from "@mysten/sui.js";
-import { UserDetails } from "./interfaces";
-import { toBigNumberStr } from "./library";
-
+import { UserDetails } from "../interfaces";
+import { toBigNumberStr } from "../library";
 export class OnChainCalls {
     signer: SignerWithProvider;
     deployment: any;

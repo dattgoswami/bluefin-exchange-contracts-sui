@@ -2,7 +2,6 @@ import path from "path";
 
 import {
     RawSigner,
-    Ed25519Keypair,
     LocalTxnDataSerializer,
     Keypair,
     JsonRpcProvider,
@@ -10,7 +9,10 @@ import {
     SuiMoveObject,
     SuiExecuteTransactionResponse,
     OwnedObjectRef,
-    Base64DataBuffer
+    Base64DataBuffer,
+    Secp256k1Keypair,
+    SignatureScheme,
+    Ed25519Keypair
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
 import { DeploymentObjectMap, wallet } from "../src/interfaces";
@@ -52,8 +54,18 @@ export async function getSignerSUIAddress(signer: RawSigner): Promise<string> {
     return `0x${address}`;
 }
 
-export function getKeyPairFromSeed(seed: string): Keypair {
-    return Ed25519Keypair.deriveKeypair(seed);
+export function getKeyPairFromSeed(
+    seed: string,
+    scheme: SignatureScheme = "Secp256k1"
+): Keypair {
+    switch (scheme) {
+        case "ED25519":
+            return Ed25519Keypair.deriveKeypair(seed);
+        case "Secp256k1":
+            return Secp256k1Keypair.deriveKeypair("m/54'/784'/0'/0/0", seed);
+        default:
+            throw new Error("Provided scheme is invalid");
+    }
 }
 
 export function getSignerFromKeyPair(
@@ -167,4 +179,8 @@ export async function publishPackage(
         compiledModules: modulesInBytes,
         gasBudget: 10000
     });
+}
+
+export function getPrivateKey(keypair: Keypair) {
+    return (keypair as any).keypair.secretKey;
 }

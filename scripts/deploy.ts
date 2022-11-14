@@ -7,7 +7,7 @@ import {
     getProvider,
     getStatus,
 } from "../src/utils";
-import { OnChainCalls } from "../src/OnChainCalls";
+import { OnChainCalls } from "../src/classes";
 import { DeploymentConfig } from "../src/DeploymentConfig";
 
 const provider = getProvider(

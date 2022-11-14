@@ -1,5 +1,5 @@
 import { JsonRpcProvider, RawSigner } from "@mysten/sui.js";
-import { OnChainCalls } from "../../src/OnChainCalls";
+import { OnChainCalls } from "../../src/classes/OnChainCalls";
 import { getCreatedObjects, publishPackage } from "../../src/utils";
 
 export async function test_deploy_package(ownerAddress:string, ownerSigner:RawSigner, provider:JsonRpcProvider):Promise<any>{

@@ -7,7 +7,7 @@ import {
     getSignerSUIAddress,
     getSignerFromSeed
 } from "../src/utils";
-import { OnChainCalls } from "../src/OnChainCalls";
+import { OnChainCalls } from "../src/classes";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { test_deploy_market } from "./helpers/utils";
 import { expectTxToSucceed, expectTxToFail } from "./helpers/expect";

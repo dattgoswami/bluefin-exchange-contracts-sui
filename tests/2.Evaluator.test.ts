@@ -1,15 +1,13 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-
-import { SuiObject } from "@mysten/sui.js";
 import { DeploymentConfig } from "../src/DeploymentConfig";
+import { OnChainCalls } from "../src/classes";
 import {
     readFile,
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed
 } from "../src/utils";
-import { OnChainCalls } from "../src/OnChainCalls";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { toBigNumber } from "../src/library";

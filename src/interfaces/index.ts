@@ -1,4 +1,6 @@
-import { OBJECT_OWNERSHIP_STATUS } from "./enums";
+export * from "./order";
+
+import { OBJECT_OWNERSHIP_STATUS } from "../enums";
 
 export interface Object {
     id: string;

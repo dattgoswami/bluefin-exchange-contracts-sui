@@ -1,6 +1,7 @@
 import {
     SuiExecuteTransactionResponse,
-    getExecutionStatusError
+    getExecutionStatusError,
+    SuiCertifiedTransactionEffects
 } from "@mysten/sui.js";
 import { Object } from "./interfaces";
 import { ERROR_CODES } from "./errors";
@@ -16,6 +17,17 @@ export class Transaction {
     static getError(tx: SuiExecuteTransactionResponse): string {
         const code = Transaction.getErrorCode(tx);
         return (ERROR_CODES as any)[code];
+    }
+
+    static getEvents(tx: SuiExecuteTransactionResponse | any) {
+        if (tx?.EffectsCert) {
+            const transactionEffects: SuiCertifiedTransactionEffects =
+                tx?.EffectsCert?.effects;
+            const events = transactionEffects?.effects?.events;
+            return events;
+        }
+
+        return [];
     }
 
     static getCreatedObjects(
