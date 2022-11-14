@@ -30,6 +30,12 @@ module firefly_exchange::perpetual {
         takerFee: u64,
     }
 
+    struct OperatorUpdateEvent has copy, drop {
+        account:address,
+        status: bool
+    }
+
+
     struct MinOrderPriceUpdateEvent has copy, drop {
         id: ID,
         price: u64
@@ -84,6 +90,11 @@ module firefly_exchange::perpetual {
             id: object::new(ctx),
         };
         transfer::transfer(admin, tx_context::sender(ctx));
+
+        // create settlement operators table
+        let settlementOperators = table::new<address, bool>(ctx);
+        transfer::share_object(settlementOperators);   
+
     }
 
     
@@ -91,6 +102,19 @@ module firefly_exchange::perpetual {
     //                      ENTRY METHODS
     //===========================================================//
 
+
+    /**
+     * Updates status(active/inactiver) of settlement operator
+     * Only Admin can invoke this method
+     */
+    public entry fun updateOperator(_:&AdminCap, operatorTable: &mut Table<address, bool>, operator:address, status:bool){
+        add(operatorTable, operator, status);
+
+        event::emit(OperatorUpdateEvent {
+            account: operator,
+            status: status
+        });
+    }
 
     /**
      * Creates a perpetual
@@ -203,7 +227,7 @@ module firefly_exchange::perpetual {
             add(&mut perp.positions, account, userPosition);
     }   
 
-    // for testing purpose only, will be removed
+    // TODO for testing purpose only, will be removed
     public entry fun mutatePosition(perp: &mut Perpetual, user:address, isPosPositive: bool, qPos: u128, margin: u128, oiOpen: u128, mro: u128){       
 
         assert!(contains(&mut perp.positions, user) == true, 6);
@@ -211,9 +235,9 @@ module firefly_exchange::perpetual {
         let perpID = object::uid_to_inner(&perp.id);
 
         let position = borrow_mut(&mut perp.positions, user);
-        position::updatePosition(perpID, position, user, isPosPositive, qPos, margin, oiOpen, mro);
-        
+        position::updatePosition(perpID, position, user, isPosPositive, qPos, margin, oiOpen, mro); 
     }
+
 
 
     //===========================================================//

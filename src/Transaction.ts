@@ -40,10 +40,9 @@ export class Transaction {
         for (const ev of events) {
             const obj = ev["newObject"];
             if (obj !== undefined) {
-                const objType = obj["objectType"].slice(
-                    obj["objectType"].lastIndexOf("::") + 2,
-                    obj["objectType"].length - 1
-                );
+                const objType = obj["objectType"]
+                    .slice(obj["objectType"].lastIndexOf("::") + 2)
+                    .replace(/[^a-zA-Z ]/g, "");
                 if (objectType == "" || objType == objectType) {
                     objects.push({
                         id: obj["objectId"],

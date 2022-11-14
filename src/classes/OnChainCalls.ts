@@ -121,6 +121,33 @@ export class OnChainCalls {
         });
     }
 
+    public async updateOperator(
+        args: {
+            adminID?: string;
+            operator: string;
+            status: boolean;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer ? signer : this.signer;
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(this.getSettlementOperatorTable());
+
+        callArgs.push(args.operator);
+        callArgs.push(args.status);
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "updateOperator",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
     public async updatePosition(
         args: {
             perpID?: string;
@@ -181,6 +208,10 @@ export class OnChainCalls {
     async getUserDetails(id: string): Promise<UserDetails> {
         const details = await this.getOnChainObject(id);
         return (details.data as any).fields.value.fields;
+    }
+
+    getSettlementOperatorTable(): string {
+        return this.deployment["objects"]["Table<address, bool>"].id as string;
     }
 
     getModuleName(): string {
