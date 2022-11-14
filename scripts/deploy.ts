@@ -5,7 +5,7 @@ import {
     getCreatedObjects,
     getSignerFromSeed,
     getProvider,
-    getStatus,
+    getStatus
 } from "../src/utils";
 import { OnChainCalls } from "../src/classes";
 import { DeploymentConfig } from "../src/DeploymentConfig";
@@ -31,16 +31,16 @@ async function main() {
     const status = getStatus(publishTxn);
     console.log("Status:", status);
 
-    if (status['status'] == 'success'){
+    if (status["status"] == "success") {
         // fetch created objects
-        const objects = await getCreatedObjects(provider, publishTxn); 
-        
+        const objects = await getCreatedObjects(provider, publishTxn);
+
         const dataToWrite = {
-            'deployer': deployerAddress,
-            'moduleName': 'perpetual', //TODO extract from deployed module
-            'objects': objects,
-            'markets': []
-        }
+            deployer: deployerAddress,
+            moduleName: "perpetual", //TODO extract from deployed module
+            objects: objects,
+            markets: []
+        };
 
         const onChain = new OnChainCalls(signer, dataToWrite);
 
@@ -57,7 +57,9 @@ async function main() {
         }
 
         await writeFile(DeploymentConfig.filePath, dataToWrite);
-        console.log(`Object details written to file: ${DeploymentConfig.filePath}`);
+        console.log(
+            `Object details written to file: ${DeploymentConfig.filePath}`
+        );
     }
 }
 

@@ -25,7 +25,6 @@ const ownerKeyPair = getKeyPairFromSeed(DeploymentConfig.deployer);
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
 describe("Order Signer", () => {
-    
     let deployment = readFile(DeploymentConfig.filePath);
     const order: Order = {
         expiration: toBigNumber(1668356404505),

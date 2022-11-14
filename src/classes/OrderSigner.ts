@@ -19,8 +19,7 @@ export class OrderSigner {
                     new Base64DataBuffer(
                         Buffer.from(
                             this.keypair instanceof Secp256k1Keypair
-                                ? 
-                                this.getSerializedOrder(order)
+                                ? this.getSerializedOrder(order)
                                 : this.getOrderHash(order)
                         )
                     )

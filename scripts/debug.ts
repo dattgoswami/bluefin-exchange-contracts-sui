@@ -1,12 +1,25 @@
-import { SerializeField, DataType, BinarySerializer } from 'ts-binary-serializer';
-import { bcs } from '@mysten/sui.js'
+import {
+    SerializeField,
+    DataType,
+    BinarySerializer
+} from "ts-binary-serializer";
+import { bcs } from "@mysten/sui.js";
 import { DeploymentConfig } from "../src/DeploymentConfig";
-import { readFile, getProvider, getSignerSUIAddress, getSignerFromSeed, getStatus} from "../src/utils";
+import {
+    readFile,
+    getProvider,
+    getSignerSUIAddress,
+    getSignerFromSeed,
+    getStatus
+} from "../src/utils";
 import { OnChainCalls } from "../src/OnChainCalls";
 
 let deployment = readFile(DeploymentConfig.filePath);
 
-const provider = getProvider(DeploymentConfig.rpcURL, DeploymentConfig.faucetURL);
+const provider = getProvider(
+    DeploymentConfig.rpcURL,
+    DeploymentConfig.faucetURL
+);
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
 const onChain = new OnChainCalls(ownerSigner, deployment);
@@ -25,16 +38,17 @@ const onChain = new OnChainCalls(ownerSigner, deployment);
 
 // const avro = require('avsc');
 
-
 async function main() {
     // const txResponse = await onChain.createPerpetual({});
     // console.log(JSON.stringify(txResponse));
 
-    const obj = await onChain.getOnChainObject("0x5aabb522d56cb5c47d66c2a7405740dd305ec9f8");
+    const obj = await onChain.getOnChainObject(
+        "0x5aabb522d56cb5c47d66c2a7405740dd305ec9f8"
+    );
     console.log(JSON.stringify(obj));
-    
+
     //  bcs.STRING;
-     
+
     // const type = avro.Type.forValue({
     //     utf8_str: "Hello, world!",
     //   });
@@ -53,13 +67,9 @@ async function main() {
     // let a2 = BinarySerializer.Deserialize(binaryData,A);
     // console.log(a2);
 
-
     // const error = `MoveAbort(ModuleId { address: 16d640b50b10fa7d592122381e70703af41becea, name: Identifier("foundation") }, 1)`
 
     // console.log();
-
-
-
 }
 
 main();
