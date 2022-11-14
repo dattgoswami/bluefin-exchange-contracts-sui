@@ -21,12 +21,17 @@ const provider = getProvider(
     DeploymentConfig.rpcURL,
     DeploymentConfig.faucetURL
 );
+
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
-describe("Evaluator", async () => {
-    const ownerAddress = await getSignerSUIAddress(ownerSigner);
+describe("Evaluator", () => {
     let deployment = readFile(DeploymentConfig.filePath);
     let onChain: OnChainCalls;
+    let ownerAddress: string;
+
+    before(async () => {
+        ownerAddress = await getSignerSUIAddress(ownerSigner);
+    });
 
     // deploy the market again before each test
     beforeEach(async () => {

@@ -7,6 +7,8 @@ import {
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed,
+    getKeyPairFromSeed,
+    requestGas
 } from "../src/utils";
 import { OnChainCalls, OrderSigner } from "../src/classes";
 import { getCreatedObjects } from "../src/utils";
@@ -23,23 +25,16 @@ const provider = getProvider(
 );
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
-describe("Sanity Tests", async () => {
-    const ownerAddress = await getSignerSUIAddress(ownerSigner);
+describe("Sanity Tests", () => {
     let deployment = readFile(DeploymentConfig.filePath);
     let onChain: OnChainCalls;
+    let ownerAddress: string;
 
     // deploy package once
     before(async () => {
+        ownerAddress = await getSignerSUIAddress(ownerSigner);
         // await requestGas(ownerAddress);
         // await requestGas(TEST_WALLETS[0].address);
-    });
-
-    // deploy the market again before each test
-    beforeEach(async () => {
-        deployment["markets"] = [
-            await test_deploy_market(deployment, ownerSigner, provider)
-        ];
-        onChain = new OnChainCalls(ownerSigner, deployment);
     });
 
     it("deployer should have non zero balance", async () => {
@@ -76,5 +71,4 @@ describe("Sanity Tests", async () => {
             onChain.createPerpetual({}, alice)
         ).to.eventually.be.rejectedWith(expectedError);
     });
-
 });

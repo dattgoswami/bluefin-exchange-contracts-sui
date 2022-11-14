@@ -23,11 +23,16 @@ const provider = getProvider(
 );
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
-describe("Positions", async () => {
-    const ownerAddress = await getSignerSUIAddress(ownerSigner);
+describe("Positions", () => {
     let deployment = readFile(DeploymentConfig.filePath);
     let onChain: OnChainCalls;
+    let ownerAddress: string;
 
+    before(async () => {
+        ownerAddress = await getSignerSUIAddress(ownerSigner);
+    });
+
+    // deploy the market again before each test
     beforeEach(async () => {
         deployment["markets"] = [
             await test_deploy_market(deployment, ownerSigner, provider)
