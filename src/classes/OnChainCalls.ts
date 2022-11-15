@@ -210,6 +210,11 @@ export class OnChainCalls {
         return (details.data as any).fields.value.fields;
     }
 
+    async getPerpDetails(id: string): Promise<any> {
+        const details = await this.getOnChainObject(id);
+        return (details.data as any).fields;
+    }
+
     getSettlementOperatorTable(): string {
         return this.deployment["objects"]["Table<address, bool>"].id as string;
     }

@@ -10,11 +10,10 @@ import {
     getKeyPairFromSeed,
     requestGas
 } from "../src/utils";
-import { OnChainCalls, OrderSigner } from "../src/classes";
+import { OnChainCalls } from "../src/classes";
 import { getCreatedObjects } from "../src/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { OWNERSHIP_ERROR } from "../src/errors";
-import { test_deploy_market } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -33,6 +32,8 @@ describe("Sanity Tests", () => {
     // deploy package once
     before(async () => {
         ownerAddress = await getSignerSUIAddress(ownerSigner);
+        onChain = new OnChainCalls(ownerSigner, deployment);
+
         // await requestGas(ownerAddress);
         // await requestGas(TEST_WALLETS[0].address);
     });

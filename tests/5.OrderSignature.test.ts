@@ -1,10 +1,8 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { OrderSigner } from "../src/classes";
+import { OrderSigner, Transaction } from "../src/classes";
 import { DeploymentConfig } from "../src/DeploymentConfig";
 import { Order } from "../src/interfaces";
-import { toBigNumber } from "../src/library";
-import { Transaction } from "../src/Transaction";
 import {
     getKeyPairFromSeed,
     getProvider,
@@ -12,6 +10,7 @@ import {
     readFile
 } from "../src/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
+import { defaultOrder } from "../src/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -26,20 +25,10 @@ const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
 describe("Order Signer", () => {
     let deployment = readFile(DeploymentConfig.filePath);
-    const order: Order = {
-        expiration: toBigNumber(1668356404505),
-        isBuy: false,
-        leverage: toBigNumber(1),
-        maker: ownerKeyPair.getPublicKey().toSuiAddress(),
-        price: toBigNumber(1),
-        quantity: toBigNumber(1),
-        reduceOnly: true,
-        salt: toBigNumber(1),
-        triggerPrice: toBigNumber(1)
-    };
+    const order: Order = defaultOrder;
+    const orderSigner = new OrderSigner(ownerKeyPair);
 
     it("should verify hash to given address with secp256k1", async () => {
-        const orderSigner = new OrderSigner(ownerKeyPair);
         const hash = orderSigner.getOrderHash(order);
         const signature = await orderSigner.signOrder(order);
         const packageId = deployment.objects.package.id;
@@ -98,7 +87,7 @@ describe("Order Signer", () => {
             .false;
     });
 
-    it("should verify hash to given address with ed25519", async () => {
+    xit("should verify hash to given address with ed25519", async () => {
         const ownerKeyPair = getKeyPairFromSeed(
             DeploymentConfig.deployer,
             "ED25519"

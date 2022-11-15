@@ -5,25 +5,17 @@ module firefly_exchange::perpetual {
     use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
     use sui::transfer;
-    use sui::event;
-    use sui::table::{Self, Table, add, contains, borrow_mut};
+    use sui::event::{emit};
+    use sui::table::{Self, Table, add, contains, remove, borrow_mut};
 
     // custom modules
     use firefly_exchange::position::{Self, UserPosition};
-    // use firefly_exchange::evaluator::{Self};
+    use firefly_exchange::evaluator::{Self, TradeChecks};
 
     struct PerpetualCreationEvent has copy, drop {
         id: ID,
         name: String,
-        minPrice: u64,
-        maxPrice: u64,
-        tickSize: u64,
-        minQty: u64,
-        maxQtyLimit: u64,
-        maxQtyMarket: u64,
-        stepSize: u64,
-        mtbLong: u64,
-        mtbShort: u64,
+        checks:TradeChecks,
         initialMarginRequired: u64,
         maintenanceMarginRequired: u64,
         makerFee: u64,
@@ -35,12 +27,6 @@ module firefly_exchange::perpetual {
         status: bool
     }
 
-
-    struct MinOrderPriceUpdateEvent has copy, drop {
-        id: ID,
-        price: u64
-    }
-
     struct AdminCap has key {
         id: UID,
     }
@@ -49,24 +35,8 @@ module firefly_exchange::perpetual {
         id: UID,
         /// name of perpetual
         name: String,
-        /// min price at which asset can be traded
-        minPrice: u64,
-        /// max price at which asset can be traded
-        maxPrice: u64,
-        /// the smallest decimal unit supported by asset for price
-        tickSize: u64,
-        /// minimum quantity of asset that can be traded
-        minQty: u64,
-        /// maximum quantity of asset that can be traded for limit order
-        maxQtyLimit: u64,
-        /// maximum quantity of asset that can be traded for market order
-        maxQtyMarket: u64,
-        /// the smallest decimal unit supported by asset for quantity
-        stepSize: u64,
-        ///  market take bound for long side ( 10% == 100000000000000000)
-        mtbLong: u64,
-        ///  market take bound for short side ( 10% == 100000000000000000)
-        mtbShort: u64,
+        /// Trade Checks
+        checks: TradeChecks,
         /// imr: the initial margin collateralization percentage
         initialMarginRequired: u64,
         /// mmr: the minimum collateralization percentage
@@ -104,13 +74,19 @@ module firefly_exchange::perpetual {
 
 
     /**
-     * Updates status(active/inactiver) of settlement operator
+     * Updates status(active/inactive) of settlement operator
      * Only Admin can invoke this method
      */
     public entry fun updateOperator(_:&AdminCap, operatorTable: &mut Table<address, bool>, operator:address, status:bool){
-        add(operatorTable, operator, status);
+        if(contains(operatorTable, operator)){
+            assert!(status == false, 7);
+            remove(operatorTable, operator); 
+        } else {
+            assert!(status == true, 8);
+            add(operatorTable, operator, true);
+        };
 
-        event::emit(OperatorUpdateEvent {
+        emit(OperatorUpdateEvent {
             account: operator,
             status: status
         });
@@ -141,19 +117,12 @@ module firefly_exchange::perpetual {
         ){
         
 
-        // TODO perform assertions on remaining variables
-        assert!(minPrice > 0, 1);
-        assert!(minPrice < maxPrice, 2);        
-
-
         let id = object::new(ctx);
         let perpID = object::uid_to_inner(&id);
 
         let positions = table::new<address, UserPosition>(ctx);
 
-        let perpetual = Perpetual {
-            id: id,
-            name: string::utf8(name),
+        let checks = evaluator::initTradeChecks(
             minPrice,
             maxPrice,
             tickSize,
@@ -162,7 +131,13 @@ module firefly_exchange::perpetual {
             maxQtyMarket,
             stepSize,
             mtbLong,
-            mtbShort,
+            mtbShort
+            );
+
+        let perpetual = Perpetual {
+            id: id,
+            name: string::utf8(name),
+            checks,
             initialMarginRequired,
             maintenanceMarginRequired,
             makerFee,
@@ -170,18 +145,10 @@ module firefly_exchange::perpetual {
             positions,
         };
 
-        event::emit(PerpetualCreationEvent {
+        emit(PerpetualCreationEvent {
             id: perpID,
             name: perpetual.name,
-            minPrice,
-            maxPrice,
-            tickSize,
-            minQty,
-            maxQtyLimit,
-            maxQtyMarket,
-            stepSize,
-            mtbLong,
-            mtbShort,
+            checks,
             initialMarginRequired,
             maintenanceMarginRequired,
             makerFee,
@@ -197,18 +164,7 @@ module firefly_exchange::perpetual {
      * Only Admin can update price
      */
     public entry fun setMinPrice( _: &AdminCap, perpetual: &mut Perpetual, minPrice: u64){
-        // TODO find a way to move setMinPrice and other setter methods to evaluator module
-        // getting error that perpetual.fieldName can only be acccessed with in the module 
-        // that created the perpetual object
-        
-        assert!(minPrice > 0, 1);
-        assert!(minPrice < perpetual.maxPrice, 2);        
-        perpetual.minPrice = minPrice;
-
-        event::emit(MinOrderPriceUpdateEvent{
-            id: object::uid_to_inner(&perpetual.id),
-            price: minPrice
-        })
+        evaluator::setMinPrice(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, minPrice);
     }   
 
     /**
@@ -245,5 +201,4 @@ module firefly_exchange::perpetual {
     //===========================================================//
 
 }
-
 

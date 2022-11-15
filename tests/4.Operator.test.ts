@@ -5,14 +5,13 @@ import {
     readFile,
     getProvider,
     getSignerSUIAddress,
-    getSignerFromSeed
+    getSignerFromSeed,
+    publishPackage,
+    getCreatedObjects
 } from "../src/utils";
-import { OnChainCalls } from "../src/OnChainCalls";
-import { TEST_WALLETS } from "./helpers/accounts";
-import { test_deploy_market } from "./helpers/utils";
-import { expectTxToSucceed, expectTxToFail } from "./helpers/expect";
-import { Transaction } from "../src/Transaction";
-import { toBigNumberStr } from "../src/library";
+import { OnChainCalls, Transaction } from "../src/classes";
+import { expectTxToSucceed } from "./helpers/expect";
+import { ERROR_CODES } from "../src/errors";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -23,23 +22,67 @@ const provider = getProvider(
 );
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
-describe("Operators", async () => {
-    const ownerAddress = await getSignerSUIAddress(ownerSigner);
-    let deployment = readFile(DeploymentConfig.filePath);
+describe("Operators", () => {
     let onChain: OnChainCalls;
+    let ownerAddress: string;
+
+    before(async () => {
+        ownerAddress = await getSignerSUIAddress(ownerSigner);
+    });
 
     beforeEach(async () => {
-        deployment["markets"] = [
-            await test_deploy_market(deployment, ownerSigner, provider)
-        ];
+        const publishTxn = await publishPackage(ownerSigner);
+        const objects = await getCreatedObjects(provider, publishTxn);
+        const deployment = {
+            deployer: ownerAddress,
+            moduleName: "perpetual",
+            objects: objects,
+            markets: []
+        };
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
 
-    it.only("should set owner as settlement operator", async () => {
+    it("should set owner as settlement operator", async () => {
         const txResponse = await onChain.updateOperator({
             operator: ownerAddress,
             status: true
         });
         expectTxToSucceed(txResponse);
+    });
+
+    it("should remove settlement operator", async () => {
+        const txResponse = await onChain.updateOperator({
+            operator: ownerAddress,
+            status: true
+        });
+        expectTxToSucceed(txResponse);
+
+        const tx = await onChain.updateOperator({
+            operator: ownerAddress,
+            status: false
+        });
+        expectTxToSucceed(tx);
+    });
+
+    it("should revert when trying to add an already existing operator", async () => {
+        const txResponse = await onChain.updateOperator({
+            operator: ownerAddress,
+            status: true
+        });
+        expectTxToSucceed(txResponse);
+
+        const tx = await onChain.updateOperator({
+            operator: ownerAddress,
+            status: true
+        });
+        expect(Transaction.getError(tx), ERROR_CODES[7]);
+    });
+
+    it("should revert when trying to remove a non-existing operator", async () => {
+        const tx = await onChain.updateOperator({
+            operator: ownerAddress,
+            status: false
+        });
+        expect(Transaction.getError(tx), ERROR_CODES[8]);
     });
 });

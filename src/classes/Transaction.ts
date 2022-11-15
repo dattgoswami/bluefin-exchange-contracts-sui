@@ -3,8 +3,8 @@ import {
     getExecutionStatusError,
     SuiCertifiedTransactionEffects
 } from "@mysten/sui.js";
-import { Object } from "./interfaces";
-import { ERROR_CODES } from "./errors";
+import { Object } from "../interfaces";
+import { ERROR_CODES } from "../errors";
 
 export class Transaction {
     static getErrorCode(tx: SuiExecuteTransactionResponse): number {

@@ -1,18 +1,17 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfig } from "../src/DeploymentConfig";
-import { OnChainCalls } from "../src/classes";
+import { OnChainCalls, Transaction } from "../src/classes";
 import {
     readFile,
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed
 } from "../src/utils";
-import { TEST_WALLETS } from "./helpers/accounts";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { toBigNumber } from "../src/library";
+import { TEST_WALLETS } from "./helpers/accounts";
 import { test_deploy_market } from "./helpers/utils";
-import { Transaction } from "../src/Transaction";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -44,10 +43,10 @@ describe("Evaluator", () => {
     describe("Price", async () => {
         it("should set min price to 0.2", async () => {
             await onChain.setMinPrice({ minPrice: 0.02 });
-            const details = await onChain.getOnChainObject(
+            const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            expect((details.data as any)["fields"]["minPrice"]).to.be.equal(
+            expect((details.checks as any)["fields"]["minPrice"]).to.be.equal(
                 toBigNumber(0.02).toNumber()
             );
         });

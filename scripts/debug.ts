@@ -10,9 +10,11 @@ import {
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed,
-    getStatus
+    getStatus,
+    requestGas
 } from "../src/utils";
-import { OnChainCalls } from "../src/OnChainCalls";
+import { OnChainCalls } from "../src/classes/OnChainCalls";
+import { TEST_WALLETS } from "../tests/helpers/accounts";
 
 let deployment = readFile(DeploymentConfig.filePath);
 
@@ -42,10 +44,15 @@ async function main() {
     // const txResponse = await onChain.createPerpetual({});
     // console.log(JSON.stringify(txResponse));
 
-    const obj = await onChain.getOnChainObject(
-        "0x5aabb522d56cb5c47d66c2a7405740dd305ec9f8"
-    );
-    console.log(JSON.stringify(obj));
+    // const obj = await onChain.getOnChainObject(
+    //     "0x5aabb522d56cb5c47d66c2a7405740dd305ec9f8"
+    // );
+    // console.log(JSON.stringify(obj));
+
+    // const signer = getSignerFromSeed(TEST_WALLETS[0].phrase, provider);
+    // console.log(await signer.getAddress());
+
+    console.log(await requestGas("0x897a20a734140093525dde025153ed00d6d43609"));
 
     //  bcs.STRING;
 

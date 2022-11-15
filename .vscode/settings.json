@@ -1,13 +1,14 @@
 {
-    "cSpell.words": [
-        "bignumber",
-        "bytecode",
-        "collateralization",
-        "keypair",
-        "mysten",
-        "nacl",
-        "PERP",
-        "Stdlib",
-        "tweetnacl"
-    ]
+  "cSpell.words": [
+    "bignumber",
+    "bytecode",
+    "collateralization",
+    "keypair",
+    "mysten",
+    "nacl",
+    "PERP",
+    "Secp",
+    "Stdlib",
+    "tweetnacl"
+  ]
 }

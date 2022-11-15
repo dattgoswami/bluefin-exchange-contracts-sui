@@ -16,6 +16,8 @@ import {
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
 import { DeploymentObjectMap, wallet } from "../src/interfaces";
+import { toBigNumber, bigNumber, ADDRESSES } from "./library";
+import { Order } from "../src/interfaces";
 import { config } from "dotenv";
 
 const { execSync } = require("child_process");
@@ -183,4 +185,48 @@ export async function publishPackage(
 
 export function getPrivateKey(keypair: Keypair) {
     return (keypair as any).keypair.secretKey;
+}
+
+export const defaultOrder: Order = {
+    price: toBigNumber(1),
+    quantity: toBigNumber(1),
+    leverage: toBigNumber(1),
+    isBuy: true,
+    reduceOnly: false,
+    triggerPrice: toBigNumber(0),
+    maker: ADDRESSES.ZERO,
+    expiration: bigNumber(3655643731),
+    salt: bigNumber(425)
+};
+
+export function createOrder(params: {
+    triggerPrice?: number;
+    isBuy?: boolean;
+    price?: number;
+    quantity?: number;
+    leverage?: number;
+    reduceOnly?: boolean;
+    makerAddress?: string;
+    expiration?: number;
+    salt?: number;
+}): Order {
+    return {
+        triggerPrice: params.triggerPrice
+            ? toBigNumber(params.triggerPrice)
+            : bigNumber(0),
+        price: params.price ? toBigNumber(params.price) : defaultOrder.price,
+        isBuy: params.isBuy == true,
+        reduceOnly: params.reduceOnly == true,
+        quantity: params.quantity
+            ? toBigNumber(params.quantity)
+            : defaultOrder.quantity,
+        leverage: params.leverage
+            ? toBigNumber(params.leverage)
+            : defaultOrder.leverage,
+        expiration: params.expiration
+            ? bigNumber(params.expiration)
+            : defaultOrder.expiration,
+        salt: params.salt ? bigNumber(params.salt) : bigNumber(Date.now()),
+        maker: params.makerAddress ? params.makerAddress : defaultOrder.maker
+    } as Order;
 }
