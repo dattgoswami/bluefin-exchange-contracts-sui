@@ -2,15 +2,14 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfig } from "../src/DeploymentConfig";
 import {
-    readFile,
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed,
     publishPackage,
     getCreatedObjects
 } from "../src/utils";
+import { expectTxToSucceed, expectTxToFail } from "./helpers/expect";
 import { OnChainCalls, Transaction } from "../src/classes";
-import { expectTxToSucceed } from "./helpers/expect";
 import { ERROR_CODES } from "../src/errors";
 
 chai.use(chaiAsPromised);

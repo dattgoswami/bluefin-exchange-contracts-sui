@@ -1,0 +1,12 @@
+[
+    {
+        "packageObjectId": "",
+        "module": "perpetual",
+        "events": [
+            "PerpetualCreationEvent",
+            "OperatorUpdateEvent",
+            "MinOrderPriceUpdateEvent",
+            "AccountPositionUpdateEvent",
+        ]
+    }
+]

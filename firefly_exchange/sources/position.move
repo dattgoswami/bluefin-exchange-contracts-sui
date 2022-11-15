@@ -33,7 +33,6 @@ module firefly_exchange::position {
         });
 
         return position
-
     }
 
     public fun updatePosition(perpetual:ID, position: &mut UserPosition, user:address, isPosPositive: bool, qPos: u128, margin: u128, oiOpen: u128, mro: u128){

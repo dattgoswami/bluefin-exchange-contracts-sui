@@ -12,6 +12,10 @@ module firefly_exchange::perpetual {
     use firefly_exchange::position::{Self, UserPosition};
     use firefly_exchange::evaluator::{Self, TradeChecks};
 
+
+    //===========================================================//
+    //                           EVENTS                          //
+    //===========================================================//
     struct PerpetualCreationEvent has copy, drop {
         id: ID,
         name: String,
@@ -169,7 +173,6 @@ module firefly_exchange::perpetual {
 
     /**
      * Creates a new position and adds to perpetual
-     *
      */
     public entry fun createPosition(perp: &mut Perpetual,  ctx: &mut TxContext){
             let account = tx_context::sender(ctx);
@@ -177,7 +180,6 @@ module firefly_exchange::perpetual {
 
             // position for the account should not exist in table
             assert!(contains(&mut perp.positions, account) == false, 6);
-
 
             let userPosition = position::initPosition(perpID, account);            
             add(&mut perp.positions, account, userPosition);
@@ -199,6 +201,5 @@ module firefly_exchange::perpetual {
     //===========================================================//
     //                      HELPER METHODS
     //===========================================================//
-
 }
 
