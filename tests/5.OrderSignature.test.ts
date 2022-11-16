@@ -87,6 +87,70 @@ describe("Order Signer", () => {
             .false;
     });
 
+    it("should verify hash (off-chain) to given address secp256k1 by verifyUsingHash method", async () => {
+        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
+        const orderSigner = new OrderSigner(alice);
+
+        const hash = orderSigner.getOrderHash(order);
+        const signature = await orderSigner.signOrder(order);
+
+        expect(
+            orderSigner.verifyUsingHash(
+                signature,
+                hash,
+                alice.getPublicKey().toSuiAddress()
+            )
+        ).to.be.true;
+    });
+
+    it("should not verify hash (off-chain) to given address secp256k1 by verifyUsingHash method", async () => {
+        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
+        const orderSigner = new OrderSigner(alice);
+
+        const hash = orderSigner.getOrderHash(order);
+        const signature = await orderSigner.signOrder(order);
+
+        expect(
+            orderSigner.verifyUsingHash(
+                signature,
+                hash,
+                ownerKeyPair.getPublicKey().toSuiAddress()
+            )
+        ).to.be.false;
+    });
+
+    it("should verify hash (off-chain) to given address secp256k1 by verifyUsingOrder method", async () => {
+        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
+        const orderSigner = new OrderSigner(alice);
+
+        const hash = orderSigner.getOrderHash(order);
+        const signature = await orderSigner.signOrder(order);
+
+        expect(
+            orderSigner.verifyUsingOrder(
+                signature,
+                order,
+                alice.getPublicKey().toSuiAddress()
+            )
+        ).to.be.true;
+    });
+
+    it("should not verify hash (off-chain) to given address secp256k1 by verifyUsingOrder method", async () => {
+        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
+        const orderSigner = new OrderSigner(alice);
+
+        const hash = orderSigner.getOrderHash(order);
+        const signature = await orderSigner.signOrder(order);
+
+        expect(
+            orderSigner.verifyUsingOrder(
+                signature,
+                order,
+                ownerKeyPair.getPublicKey().toSuiAddress()
+            )
+        ).to.be.false;
+    });
+
     xit("should verify hash to given address with ed25519", async () => {
         const ownerKeyPair = getKeyPairFromSeed(
             DeploymentConfig.deployer,
