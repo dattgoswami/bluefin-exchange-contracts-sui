@@ -43,3 +43,10 @@ export function hexToBuffer(hex: string) {
 
     return Buffer.from(hex, "hex");
 }
+
+export function base64ToBuffer(data: string) {
+    return Buffer.from(data, "base64");
+}
+export function base64ToHex(data: string) {
+    return Buffer.from(data, "base64").toString("hex");
+}

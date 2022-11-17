@@ -11,7 +11,7 @@ import {
 } from "../src/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { defaultOrder } from "../src/utils";
-import { hexToBuffer } from "../src/library";
+import { base64ToBuffer, base64ToHex, hexToBuffer } from "../src/library";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -245,13 +245,44 @@ describe("Order Signer", () => {
         expect(hashGeneratedEvent).to.not.be.undefined;
         expect(orderSerializedEvent).to.not.be.undefined;
 
-        const onChainHash =
-            "0x" +
-            Buffer.from(
-                hashGeneratedEvent?.moveEvent?.fields?.hash ?? "",
-                "base64"
-            ).toString("hex");
+        const onChainHash = Buffer.from(
+            hashGeneratedEvent?.moveEvent?.fields?.hash ?? "",
+            "base64"
+        ).toString("hex");
 
         expect(hash).to.be.equal(onChainHash);
+    });
+
+    it("should generate off-chain public address exactly equal to on-chain public address", async () => {
+        const packageId = deployment.objects.package.id;
+
+        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+            packageObjectId: packageId,
+            module: "test",
+            function: "getPublicAddress",
+            typeArguments: [],
+            arguments: [
+                Array.from(
+                    base64ToBuffer(ownerKeyPair.getPublicKey().toBase64())
+                )
+            ],
+            gasBudget: 1000
+        });
+
+        const addressGeneratedEvent = Transaction.getEvents(receipt)?.filter(
+            (x) =>
+                x["moveEvent"]?.type?.indexOf("PublicAddressGeneratedEvent") >=
+                0
+        )[0];
+
+        expect(addressGeneratedEvent).to.not.be.undefined;
+
+        const onChainAddress = base64ToHex(
+            addressGeneratedEvent?.moveEvent?.fields?.address ?? ""
+        );
+
+        expect(onChainAddress).to.be.equal(
+            ownerKeyPair.getPublicKey().toSuiAddress()
+        );
     });
 });

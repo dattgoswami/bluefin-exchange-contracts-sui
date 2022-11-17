@@ -21,18 +21,15 @@ export class OrderSigner {
     }
 
     async signOrder(order: Order): Promise<string> {
-        return (
-            "0x" +
-            Buffer.from(
-                this.keypair
-                    .signData(
-                        new Base64DataBuffer(
-                            hexToBuffer(this.getSerializedOrder(order))
-                        )
+        return Buffer.from(
+            this.keypair
+                .signData(
+                    new Base64DataBuffer(
+                        hexToBuffer(this.getSerializedOrder(order))
                     )
-                    .getData()
-            ).toString("hex")
-        );
+                )
+                .getData()
+        ).toString("hex");
     }
 
     public getSerializedOrder(order: Order): string {
@@ -68,13 +65,13 @@ export class OrderSigner {
         buffer.set([reduceOnly ? 1 : 0], 116);
         buffer.set([isBuy ? 1 : 0], 117);
 
-        return "0x" + buffer.toString("hex");
+        return buffer.toString("hex");
     }
 
     public getOrderHash(order: Order): string {
         const serializedOrder = this.getSerializedOrder(order);
         const hash = sha256(hexToBuffer(serializedOrder));
-        return "0x" + Buffer.from(hash).toString("hex");
+        return Buffer.from(hash).toString("hex");
     }
 
     public verifyUsingHash(

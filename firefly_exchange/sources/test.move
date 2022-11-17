@@ -20,6 +20,10 @@ module firefly_exchange::test {
         serialized_order: vector<u8>,
     }
 
+    struct PublicAddressGeneratedEvent has copy, drop {
+        address: vector<u8>,
+    }
+
     // public native fun ed25519_verify(signature: &vector<u8>, public_key: &vector<u8>, msg: &vector<u8>): bool;
 
     public entry fun verifySignature(signature: vector<u8>, public_key: vector<u8>, hashed_msg: vector<u8>) {
@@ -107,5 +111,22 @@ module firefly_exchange::test {
 
         event::emit(OrderSerializedEvent {serialized_order:serialized_order});
         event::emit(HashGeneratedEvent {hash:hash::sha2_256(serialized_order)});
+    }
+
+    public entry fun getPublicAddress(public_key: vector<u8>){
+        let buff = vector::empty<u8>();
+
+        vector::append(&mut buff, vector[1]); // signature scheme for secp256k1
+        vector::append(&mut buff, public_key);
+
+        let address_ex = hash::sha3_256(buff);
+        let address = vector::empty<u8>();
+        let i = 0;
+        while (i < 20) {
+            let byte = vector::borrow(&address_ex, i);
+            vector::push_back(&mut address, *byte);
+            i = i + 1;
+        };
+        event::emit(PublicAddressGeneratedEvent {address:address});
     }
 }
