@@ -30,3 +30,16 @@ export function toBigNumberStr(
 ): string {
     return toBigNumber(val, base).toFixed(0);
 }
+
+export function bnToHex(bn: BigNumber) {
+    // u128 on chain = 16 bytes = 32 hex characters (2 char / byte)
+    return bn.toString(16).padStart(32, "0");
+}
+
+export function hexToBuffer(hex: string) {
+    if (hex?.toLowerCase().indexOf("x") !== -1) {
+        hex = hex.substring(2);
+    }
+
+    return Buffer.from(hex, "hex");
+}

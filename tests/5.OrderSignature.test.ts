@@ -11,6 +11,7 @@ import {
 } from "../src/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { defaultOrder } from "../src/utils";
+import { hexToBuffer } from "../src/library";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -40,9 +41,9 @@ describe("Order Signer", () => {
             function: "verifySignature",
             typeArguments: [],
             arguments: [
-                Array.from(Buffer.from(signature, "hex")),
+                Array.from(hexToBuffer(signature)),
                 Array.from(pubkey.toBuffer()),
-                Array.from(Buffer.from(hash, "hex"))
+                Array.from(hexToBuffer(hash))
             ],
             gasBudget: 1000
         });
@@ -71,9 +72,9 @@ describe("Order Signer", () => {
             function: "verifySignature",
             typeArguments: [],
             arguments: [
-                Array.from(Buffer.from(signature, "hex")),
+                Array.from(hexToBuffer(signature)),
                 Array.from(pubkey.toBuffer()),
-                Array.from(Buffer.from(hash, "hex"))
+                Array.from(hexToBuffer(hash))
             ],
             gasBudget: 1000
         });
@@ -168,17 +169,12 @@ describe("Order Signer", () => {
             function: "verifySignature",
             typeArguments: [],
             arguments: [
-                Array.from(Buffer.from(signature, "hex")),
+                Array.from(hexToBuffer(signature)),
                 Array.from(pubkey.toBuffer()),
-                Array.from(Buffer.from(hash, "hex"))
+                Array.from(hexToBuffer(hash))
             ],
             gasBudget: 1000
         });
-
-        // console.log(Array.from(Buffer.from(hash, "hex")));
-        // console.log(Array.from(Buffer.from(signature, "hex")));
-
-        // console.log(JSON.stringify(receipt,undefined,' '));
 
         const signatureVerifiedEvent = Transaction.getEvents(receipt)?.filter(
             (x) => x["moveEvent"]?.type?.indexOf("SignatureVerifiedEvent")
@@ -208,9 +204,9 @@ describe("Order Signer", () => {
             function: "verifySignature",
             typeArguments: [],
             arguments: [
-                Array.from(Buffer.from(signature, "hex")),
+                Array.from(hexToBuffer(signature)),
                 Array.from(pubkey.toBuffer()),
-                Array.from(Buffer.from(hash, "hex"))
+                Array.from(hexToBuffer(hash))
             ],
             gasBudget: 1000
         });
@@ -222,5 +218,40 @@ describe("Order Signer", () => {
         expect(signatureVerifiedEvent).to.not.be.undefined;
         expect(signatureVerifiedEvent?.moveEvent?.fields?.is_verified).to.be
             .false;
+    });
+
+    it("should generate off-chain hash exactly equal to on-chain hash", async () => {
+        const orderSigner = new OrderSigner(ownerKeyPair);
+        const hash = orderSigner.getOrderHash(order);
+
+        const packageId = deployment.objects.package.id;
+
+        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+            packageObjectId: packageId,
+            module: "test",
+            function: "hash",
+            typeArguments: [],
+            arguments: [],
+            gasBudget: 1000
+        });
+
+        const hashGeneratedEvent = Transaction.getEvents(receipt)?.filter(
+            (x) => x["moveEvent"]?.type?.indexOf("HashGeneratedEvent") >= 0
+        )[0];
+        const orderSerializedEvent = Transaction.getEvents(receipt)?.filter(
+            (x) => x["moveEvent"]?.type?.indexOf("OrderSerializedEvent") >= 0
+        )[0];
+
+        expect(hashGeneratedEvent).to.not.be.undefined;
+        expect(orderSerializedEvent).to.not.be.undefined;
+
+        const onChainHash =
+            "0x" +
+            Buffer.from(
+                hashGeneratedEvent?.moveEvent?.fields?.hash ?? "",
+                "base64"
+            ).toString("hex");
+
+        expect(hash).to.be.equal(onChainHash);
     });
 });

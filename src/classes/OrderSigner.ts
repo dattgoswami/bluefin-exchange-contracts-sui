@@ -7,6 +7,7 @@ import {
 import { Order, SignedOrder } from "../interfaces/order";
 import { sha256 } from "@noble/hashes/sha256";
 import { recoverPublicKey } from "@noble/secp256k1";
+import { bnToHex, hexToBuffer } from "../library";
 
 export class OrderSigner {
     constructor(private keypair: Keypair) {}
@@ -20,51 +21,60 @@ export class OrderSigner {
     }
 
     async signOrder(order: Order): Promise<string> {
-        return Buffer.from(
-            this.keypair
-                .signData(
-                    new Base64DataBuffer(
-                        Buffer.from(
-                            this.keypair instanceof Secp256k1Keypair
-                                ? this.getSerializedOrder(order)
-                                : this.getOrderHash(order)
+        return (
+            "0x" +
+            Buffer.from(
+                this.keypair
+                    .signData(
+                        new Base64DataBuffer(
+                            hexToBuffer(this.getSerializedOrder(order))
                         )
                     )
-                )
-                .getData()
-        ).toString("hex");
+                    .getData()
+            ).toString("hex")
+        );
     }
 
-    private getSerializedOrder(order: Order): string {
-        const {
-            expiration,
-            isBuy,
-            leverage,
-            maker,
-            price,
-            quantity,
-            reduceOnly,
-            salt,
-            triggerPrice
-        } = order;
+    public getSerializedOrder(order: Order): string {
+        const buffer = Buffer.alloc(118);
 
-        return JSON.stringify({
-            maker,
+        const {
             price,
             quantity,
-            isBuy,
             leverage,
+            expiration,
             salt,
             triggerPrice,
+            maker,
             reduceOnly,
-            expiration
-        });
+            isBuy
+        } = order;
+
+        const priceB = hexToBuffer(bnToHex(price));
+        const quantityB = hexToBuffer(bnToHex(quantity));
+        const leverageB = hexToBuffer(bnToHex(leverage));
+        const expirationB = hexToBuffer(bnToHex(expiration));
+        const saltB = hexToBuffer(bnToHex(salt));
+        const triggerPriceB = hexToBuffer(bnToHex(triggerPrice));
+        const makerB = hexToBuffer(maker.substring(2, 42)); // 20 bytes address 40 hex chars
+
+        buffer.set(priceB, 0);
+        buffer.set(quantityB, 16);
+        buffer.set(leverageB, 32);
+        buffer.set(expirationB, 48);
+        buffer.set(saltB, 64);
+        buffer.set(triggerPriceB, 80);
+        buffer.set(makerB, 96);
+        buffer.set([reduceOnly ? 1 : 0], 116);
+        buffer.set([isBuy ? 1 : 0], 117);
+
+        return "0x" + buffer.toString("hex");
     }
 
     public getOrderHash(order: Order): string {
         const serializedOrder = this.getSerializedOrder(order);
-        const hash = sha256(serializedOrder);
-        return Buffer.from(hash).toString("hex");
+        const hash = sha256(hexToBuffer(serializedOrder));
+        return "0x" + Buffer.from(hash).toString("hex");
     }
 
     public verifyUsingHash(
@@ -72,11 +82,11 @@ export class OrderSigner {
         orderHash: string,
         address: string
     ) {
-        const signatureWithR = Buffer.from(signature, "hex");
+        const signatureWithR = hexToBuffer(signature);
         if (signatureWithR.length == 65) {
             const sig = signatureWithR.subarray(0, 64);
             const rByte = signatureWithR[64];
-            const hash = Buffer.from(orderHash, "hex");
+            const hash = hexToBuffer(orderHash);
 
             const publicKey = recoverPublicKey(hash, sig, rByte, true);
 
