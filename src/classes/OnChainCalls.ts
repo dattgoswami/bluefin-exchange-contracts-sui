@@ -99,6 +99,214 @@ export class OnChainCalls {
         });
     }
 
+    public async setMaxPrice(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            maxPrice: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.maxPrice));
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setMaxPrice",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
+    public async setStepSize(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            stepSize: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.stepSize));
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setStepSize",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
+    public async setTickSize(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            tickSize: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.tickSize));
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setTickSize",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
+    public async setMtbLong(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            mtbLong: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.mtbLong));
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setMtbLong",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
+    public async setMtbShort(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            mtbShort: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.mtbShort));
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setMtbShort",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
+    public async setMaxQtyLimit(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            maxQtyLimit: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.maxQtyLimit));
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setMaxQtyLimit",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
+    public async setMaxQtyMarket(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            maxQtyMarket: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.maxQtyMarket));
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setMaxQtyMarket",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
+    public async setMinQty(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            minQty: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.minQty));
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setMinQty",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
+
     public async createPosition(
         args: {
             perpID?: string;

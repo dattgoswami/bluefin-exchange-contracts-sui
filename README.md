@@ -29,3 +29,4 @@ Repository containing firefly core exchange contracts that allow users to do on-
 - Provide `RPC_URL` and `SEED` in `.env` file
 - Deploy the package using `yarn deploy`, Every time any change is made to package, it will need to be re-deployed before running tests
 - Run tests using `yarn test`
+  > Note : Make sure to fund wallet with sui tokens when deployments is done locally

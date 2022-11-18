@@ -16,5 +16,15 @@ export const ERROR_CODES = {
     "5": "Trade price does not conforms to allowed tick size (Maker At Fault)",
     "6": "User already has a position object",
     "7": "Operator already whitelisted as settlement operator",
-    "8": "Operator does not exist"
+    "8": "Operator does not exist",
+    "9": "Maximum trade price must be > min trade price",
+    "10": "Step Size must be > 0",
+    "11": "Tick Size Must be > 0",
+    "12": "Market Take Bound for long trades must be > 0",
+    "13": "Market Take Bound for short trades must be > 0",
+    "14": "Market Take Bound for short trades must be < 100%",
+    "15": "Maximum Limit Trade quantity must be > minimum trade quantity",
+    "16": "Maximum Market Trade quantity must be > minimum trade quantity",
+    "17": "Minimum trade quantity must be < max trade quantity",
+    "18": "Minimum trade quantity must be > 0"
 };

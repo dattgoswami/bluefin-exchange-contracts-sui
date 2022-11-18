@@ -172,6 +172,74 @@ module firefly_exchange::perpetual {
     }   
 
     /**
+     * Updates maximum price of the perpetual 
+     * Only Admin can update price
+     */
+    public entry fun setMaxPrice( _: &AdminCap, perpetual: &mut Perpetual, maxPrice: u64){
+        evaluator::setMaxPrice(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxPrice);
+    }   
+
+    /**
+     * Updates step size of the perpetual 
+     * Only Admin can update size
+     */
+    public entry fun setStepSize( _: &AdminCap, perpetual: &mut Perpetual, stepSize: u64){
+        evaluator::setStepSize(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, stepSize);
+    }   
+
+    /**
+     * Updates tick size of the perpetual 
+     * Only Admin can update size
+     */
+    public entry fun setTickSize( _: &AdminCap, perpetual: &mut Perpetual, tickSize: u64){
+        evaluator::setTickSize(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, tickSize);
+    }   
+
+    /**
+     * Updates market take bound (long) of the perpetual 
+     * Only Admin can update MTB long
+     */
+    public entry fun setMtbLong( _: &AdminCap, perpetual: &mut Perpetual, mtbLong: u64){
+        evaluator::setMtbLong(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbLong);
+    }  
+
+    /**
+     * Updates market take bound (short) of the perpetual 
+     * Only Admin can update MTB short
+     */
+    public entry fun setMtbShort( _: &AdminCap, perpetual: &mut Perpetual, mtbShort: u64){
+        evaluator::setMtbShort(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbShort);
+    }   
+
+    /**
+     * Updates maximum quantity for limit orders of the perpetual 
+     * Only Admin can update max qty
+     */
+    public entry fun setMaxQtyLimit( _: &AdminCap, perpetual: &mut Perpetual, quantity: u64){
+        evaluator::setMaxQtyLimit(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    }   
+
+    /**
+     * Updates maximum quantity for market orders of the perpetual 
+     * Only Admin can update max qty
+     */
+    public entry fun setMaxQtyMarket( _: &AdminCap, perpetual: &mut Perpetual, quantity: u64){
+        evaluator::setMaxQtyMarket(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    }  
+
+    /**
+     * Updates minimum quantity of the perpetual 
+     * Only Admin can update max qty
+     */
+    public entry fun setMinQty( _: &AdminCap, perpetual: &mut Perpetual, quantity: u64){
+        evaluator::setMinQty(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    }   
+
+
+
+
+
+    /**
      * Creates a new position and adds to perpetual
      */
     public entry fun createPosition(perp: &mut Perpetual,  ctx: &mut TxContext){
