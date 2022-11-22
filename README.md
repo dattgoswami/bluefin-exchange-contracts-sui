@@ -35,11 +35,12 @@ Repository containing firefly core exchange contracts that allow users to do on-
 
 Local SUI network is hosted on cloud to cater fast pace development.
 
-URL: http://44.209.107.20:9000
+URL: https://sui-dev.firefly.exchange
 
 **Local Faucet:**
 - Use following cmd to fund your account. Make sure to replace receipt address with your own account address
-- curl http://44.209.107.20/gas -H 'Content-Type: application/json' -d '{"FixedAmountRequest":{ "recipient":"9b69d756ed5c1909a99289fae52527b7642969a1"}}'
+- curl https://sui-dev.firefly.exchange/gas -H 'Content-Type: application/json' -d '{"FixedAmountRequest":{ "recipient":"9b69d756ed5c1909a99289fae52527b7642969a1"}}'
+  
   > Note : Make sure to fund wallet with sui tokens when deployments is done locally
 
 **Prefunded Addresses & Pvt. Keys:**
