@@ -30,6 +30,8 @@ interface Perpetual {
     mtbLong: string;
     //  market take bound for short side ( 10% == 100000000000000000)
     mtbShort: string;
+    // array of maxAllowed values for leverage (0 index will contain dummy value, later indexes will represent leverage)
+    maxAllowedOIOpen: string[];
     // imr: the initial margin collateralization percentage
     initialMarginRequired: string;
     // mmr: the minimum collateralization percentage
@@ -57,6 +59,13 @@ export const DeploymentConfig: DeploymentConfig = {
             stepSize: toBigNumberStr(0.01),
             mtbLong: toBigNumberStr(0.2),
             mtbShort: toBigNumberStr(0.2),
+            maxAllowedOIOpen: [
+                toBigNumberStr(100000),
+                toBigNumberStr(100000),
+                toBigNumberStr(200000),
+                toBigNumberStr(200000),
+                toBigNumberStr(500000)
+            ],
             initialMarginRequired: toBigNumberStr(0.475),
             maintenanceMarginRequired: toBigNumberStr(0.3),
             makerFee: toBigNumberStr(0.001),

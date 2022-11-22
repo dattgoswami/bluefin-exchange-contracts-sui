@@ -20,10 +20,10 @@ module firefly_exchange::perpetual {
         id: ID,
         name: String,
         checks:TradeChecks,
-        initialMarginRequired: u64,
-        maintenanceMarginRequired: u64,
-        makerFee: u64,
-        takerFee: u64,
+        initialMarginRequired: u128,
+        maintenanceMarginRequired: u128,
+        makerFee: u128,
+        takerFee: u128,
     }
 
     struct OperatorUpdateEvent has copy, drop {
@@ -42,13 +42,13 @@ module firefly_exchange::perpetual {
         /// Trade Checks
         checks: TradeChecks,
         /// imr: the initial margin collateralization percentage
-        initialMarginRequired: u64,
+        initialMarginRequired: u128,
         /// mmr: the minimum collateralization percentage
-        maintenanceMarginRequired: u64,
+        maintenanceMarginRequired: u128,
         /// Default maker order fee for this Perpetual
-        makerFee: u64,
+        makerFee: u128,
         /// Default taker order fee for this Perpetual
-        takerFee: u64,
+        takerFee: u128,
         /// table containing user positions for this market/perpetual
         positions: Table<address,UserPosition>,
     }
@@ -104,19 +104,20 @@ module firefly_exchange::perpetual {
     public entry fun createPerpetual(
         _: &AdminCap, 
         name: vector<u8>, 
-        minPrice: u64,
-        maxPrice: u64,
-        tickSize: u64,
-        minQty: u64,
-        maxQtyLimit: u64,
-        maxQtyMarket: u64,
-        stepSize: u64,
-        mtbLong: u64,
-        mtbShort: u64,
-        initialMarginRequired: u64,
-        maintenanceMarginRequired: u64,
-        makerFee: u64,
-        takerFee: u64,
+        minPrice: u128,
+        maxPrice: u128,
+        tickSize: u128,
+        minQty: u128,
+        maxQtyLimit: u128,
+        maxQtyMarket: u128,
+        stepSize: u128,
+        mtbLong: u128,
+        mtbShort: u128,
+        maxAllowedOIOpen: vector<u128>,
+        initialMarginRequired: u128,
+        maintenanceMarginRequired: u128,
+        makerFee: u128,
+        takerFee: u128,
         ctx: &mut TxContext
         ){
         
@@ -135,7 +136,8 @@ module firefly_exchange::perpetual {
             maxQtyMarket,
             stepSize,
             mtbLong,
-            mtbShort
+            mtbShort,
+            maxAllowedOIOpen
             );
 
         let perpetual = Perpetual {
@@ -167,7 +169,7 @@ module firefly_exchange::perpetual {
      * Updates minimum price of the perpetual 
      * Only Admin can update price
      */
-    public entry fun setMinPrice( _: &AdminCap, perpetual: &mut Perpetual, minPrice: u64){
+    public entry fun setMinPrice( _: &AdminCap, perpetual: &mut Perpetual, minPrice: u128){
         evaluator::setMinPrice(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, minPrice);
     }   
 
@@ -175,7 +177,7 @@ module firefly_exchange::perpetual {
      * Updates maximum price of the perpetual 
      * Only Admin can update price
      */
-    public entry fun setMaxPrice( _: &AdminCap, perpetual: &mut Perpetual, maxPrice: u64){
+    public entry fun setMaxPrice( _: &AdminCap, perpetual: &mut Perpetual, maxPrice: u128){
         evaluator::setMaxPrice(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxPrice);
     }   
 
@@ -183,7 +185,7 @@ module firefly_exchange::perpetual {
      * Updates step size of the perpetual 
      * Only Admin can update size
      */
-    public entry fun setStepSize( _: &AdminCap, perpetual: &mut Perpetual, stepSize: u64){
+    public entry fun setStepSize( _: &AdminCap, perpetual: &mut Perpetual, stepSize: u128){
         evaluator::setStepSize(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, stepSize);
     }   
 
@@ -191,7 +193,7 @@ module firefly_exchange::perpetual {
      * Updates tick size of the perpetual 
      * Only Admin can update size
      */
-    public entry fun setTickSize( _: &AdminCap, perpetual: &mut Perpetual, tickSize: u64){
+    public entry fun setTickSize( _: &AdminCap, perpetual: &mut Perpetual, tickSize: u128){
         evaluator::setTickSize(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, tickSize);
     }   
 
@@ -199,7 +201,7 @@ module firefly_exchange::perpetual {
      * Updates market take bound (long) of the perpetual 
      * Only Admin can update MTB long
      */
-    public entry fun setMtbLong( _: &AdminCap, perpetual: &mut Perpetual, mtbLong: u64){
+    public entry fun setMtbLong( _: &AdminCap, perpetual: &mut Perpetual, mtbLong: u128){
         evaluator::setMtbLong(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbLong);
     }  
 
@@ -207,7 +209,7 @@ module firefly_exchange::perpetual {
      * Updates market take bound (short) of the perpetual 
      * Only Admin can update MTB short
      */
-    public entry fun setMtbShort( _: &AdminCap, perpetual: &mut Perpetual, mtbShort: u64){
+    public entry fun setMtbShort( _: &AdminCap, perpetual: &mut Perpetual, mtbShort: u128){
         evaluator::setMtbShort(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbShort);
     }   
 
@@ -215,7 +217,7 @@ module firefly_exchange::perpetual {
      * Updates maximum quantity for limit orders of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun setMaxQtyLimit( _: &AdminCap, perpetual: &mut Perpetual, quantity: u64){
+    public entry fun setMaxQtyLimit( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
         evaluator::setMaxQtyLimit(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
     }   
 
@@ -223,7 +225,7 @@ module firefly_exchange::perpetual {
      * Updates maximum quantity for market orders of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun setMaxQtyMarket( _: &AdminCap, perpetual: &mut Perpetual, quantity: u64){
+    public entry fun setMaxQtyMarket( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
         evaluator::setMaxQtyMarket(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
     }  
 
@@ -231,10 +233,17 @@ module firefly_exchange::perpetual {
      * Updates minimum quantity of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun setMinQty( _: &AdminCap, perpetual: &mut Perpetual, quantity: u64){
+    public entry fun setMinQty( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
         evaluator::setMinQty(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
     }   
 
+    /**
+     * updates max allowed oi open for selected mro
+     * Only Admin can update max allowed OI open
+     */
+    public entry fun setMaxOIOpen( _: &AdminCap, perpetual: &mut Perpetual, maxLimit: vector<u128>){
+        evaluator::setMaxOIOpen(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxLimit);
+    }
 
 
 

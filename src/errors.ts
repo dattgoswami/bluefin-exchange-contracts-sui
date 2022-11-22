@@ -26,5 +26,12 @@ export const ERROR_CODES = {
     "15": "Maximum Limit Trade quantity must be > minimum trade quantity",
     "16": "Maximum Market Trade quantity must be > minimum trade quantity",
     "17": "Minimum trade quantity must be < max trade quantity",
-    "18": "Minimum trade quantity must be > 0"
+    "18": "Minimum trade quantity must be > 0",
+    "19": "Trade quantity is < min tradeable quantity",
+    "20": "Trade quantity is > max allowed limit quantity",
+    "21": "Trade quantity is > max allowed market quantity",
+    "22": "Trade quantity does not conforms to allowed step size",
+    "23": "Trade price is > Market Take Bound for long side",
+    "24": "Trade price is < Market Take Bound for short side",
+    "25": "OI open for selected leverage > max allowed oi open"
 };

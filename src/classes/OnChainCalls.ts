@@ -28,6 +28,7 @@ export class OnChainCalls {
             stepSize?: string;
             mtbLong?: string;
             mtbShort?: string;
+            maxAllowedOIOpen?: string[];
             imr?: string;
             mmr?: string;
             makerFee?: string;
@@ -54,7 +55,17 @@ export class OnChainCalls {
         callArgs.push(args.stepSize ? args.stepSize : toBigNumberStr(0.1));
         callArgs.push(args.mtbLong ? args.mtbLong : toBigNumberStr(0.2));
         callArgs.push(args.mtbShort ? args.mtbShort : toBigNumberStr(0.2));
-
+        callArgs.push(
+            args.maxAllowedOIOpen
+                ? args.maxAllowedOIOpen
+                : [
+                      toBigNumberStr(100000),
+                      toBigNumberStr(100000),
+                      toBigNumberStr(200000),
+                      toBigNumberStr(200000),
+                      toBigNumberStr(500000)
+                  ]
+        );
         callArgs.push(args.imr ? args.imr : toBigNumberStr(0.1));
         callArgs.push(args.mmr ? args.mmr : toBigNumberStr(0.05));
 
@@ -307,6 +318,31 @@ export class OnChainCalls {
         });
     }
 
+    public async setMaxAllowedOIOpen(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            maxLimit: string[];
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.maxLimit);
+
+        return caller.executeMoveCallWithRequestType({
+            packageObjectId: this.getPackageID(),
+            module: this.getModuleName(),
+            function: "setMaxOIOpen",
+            typeArguments: [],
+            arguments: callArgs,
+            gasBudget: 10000
+        });
+    }
     public async createPosition(
         args: {
             perpID?: string;

@@ -7,6 +7,7 @@ module firefly_exchange::test {
     use std::hash;
     use sui::bcs;
     use sui::object;
+    use firefly_exchange::evaluator::{initTradeChecks,verify_qty_checks,verify_price_checks,verify_market_take_bound_checks,verify_oi_open_for_account};
 
     struct SignatureVerifiedEvent has copy, drop {
         is_verified: bool,
@@ -129,4 +130,47 @@ module firefly_exchange::test {
         };
         event::emit(PublicAddressGeneratedEvent {address:address});
     }
+
+    public entry fun testTradeVerificationFunctions(
+        minPrice: u128,
+        maxPrice: u128,
+        tickSize: u128,
+        minQty: u128,
+        maxQtyLimit: u128,
+        maxQtyMarket: u128,
+        stepSize: u128,
+        mtbLong: u128,
+        mtbShort: u128,
+        maxOILimit: vector<u128>,
+        tradeQty: u128,
+        tradePrice: u128,
+        oraclePrice: u128,
+        isBuy: bool,
+        mro: u128,
+        oiOpen: u128
+        ) {
+            
+            let maxAllowedOIOpen : vector<u128> = vector::empty();
+            // Push dummy value at index 0 because leverage starts at 1
+            vector::push_back(&mut maxAllowedOIOpen, 0);
+            vector::append(&mut maxAllowedOIOpen, maxOILimit);
+        
+            let checks = initTradeChecks(
+                minPrice,
+                maxPrice,
+                tickSize,
+                minQty,
+                maxQtyLimit,
+                maxQtyMarket,
+                stepSize,
+                mtbLong,
+                mtbShort,
+                maxAllowedOIOpen
+            );
+
+            verify_qty_checks(checks,tradeQty);
+            verify_price_checks(checks, tradePrice);
+            verify_market_take_bound_checks(checks,tradePrice,oraclePrice,isBuy);
+            verify_oi_open_for_account(checks, mro, oiOpen);
+        }
 }
