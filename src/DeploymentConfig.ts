@@ -1,10 +1,12 @@
 import { config } from "dotenv";
 import { toBigNumberStr } from "./library";
+import * as Networks from "../networks.json";
+import { Network } from "./interfaces";
+
 config({ path: ".env" });
 
 interface DeploymentConfig {
-    rpcURL: string;
-    faucetURL: string;
+    network: Network;
     deployer: string;
     filePath: string;
     markets: Perpetual[];
@@ -42,10 +44,14 @@ interface Perpetual {
     takerFee: string;
 }
 
+export const network = {
+    ...(Networks as any)[process.env.DEPLOY_ON as any],
+    name: process.env.DEPLOY_ON
+} as Network;
+
 export const DeploymentConfig: DeploymentConfig = {
     filePath: "./deployment.json", // Todo will create separate files for separate networks
-    rpcURL: process.env.RPC_URL || "",
-    faucetURL: process.env.FAUCET_URL || "",
+    network: network,
     deployer: process.env.DEPLOYER_SEED || "",
     markets: [
         {

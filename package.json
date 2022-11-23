@@ -35,8 +35,10 @@
   "scripts": {
     "build": "sui move build --path firefly_exchange",
     "deploy": "ts-node ./scripts/deploy.ts",
+    "publish:package": "ts-node ./scripts/publish.ts",
     "debug": "ts-node ./scripts/debug.ts",
     "test": "ts-mocha --no-timeout tests/*.test.ts",
+    "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
     "prepare": "husky install"
   },
   "repository": {

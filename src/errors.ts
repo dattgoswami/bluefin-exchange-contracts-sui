@@ -3,7 +3,13 @@ export const OWNERSHIP_ERROR = (
     ownerId: string,
     signerId: string
 ) => {
+    //     return `Error executing transaction with request type: Error: RPC Error: Failed to process transaction on a quorum of validators to form a transaction certificate. Locked objects: {}. Validator errors: [
+    //     "Error checking transaction input objects: [IncorrectSigner { error: \\"Object ${objId} is owned by account address ${ownerId}, but signer address is ${signerId}\\" }]",
+    // ]}`;
+
     return `Error executing transaction with request type: Error: RPC Error: Failed to process transaction on a quorum of validators to form a transaction certificate. Locked objects: {}. Validator errors: [
+    "Error checking transaction input objects: [IncorrectSigner { error: \\"Object ${objId} is owned by account address ${ownerId}, but signer address is ${signerId}\\" }]",
+    "Error checking transaction input objects: [IncorrectSigner { error: \\"Object ${objId} is owned by account address ${ownerId}, but signer address is ${signerId}\\" }]",
     "Error checking transaction input objects: [IncorrectSigner { error: \\"Object ${objId} is owned by account address ${ownerId}, but signer address is ${signerId}\\" }]",
 ]}`;
 };
@@ -11,9 +17,9 @@ export const OWNERSHIP_ERROR = (
 export const ERROR_CODES = {
     "1": "Minimum order price must be > 0",
     "2": "Minimum trade price must be < maximum trade price",
-    "3": "Trade price is < min allowed price (Maker At Fault)",
-    "4": "Trade price is > max allowed price (Maker At Fault)",
-    "5": "Trade price does not conforms to allowed tick size (Maker At Fault)",
+    "3": "Maker: Trade price is < min allowed price",
+    "4": "Maker: Trade price is > max allowed price",
+    "5": "Maker: Trade price does not conforms to allowed tick size",
     "6": "User already has a position object",
     "7": "Operator already whitelisted as settlement operator",
     "8": "Operator does not exist",
@@ -33,5 +39,27 @@ export const ERROR_CODES = {
     "22": "Trade quantity does not conforms to allowed step size",
     "23": "Trade price is > Market Take Bound for long side",
     "24": "Trade price is < Market Take Bound for short side",
-    "25": "OI open for selected leverage > max allowed oi open"
+    "25": "OI open for selected leverage > max allowed oi open",
+    "26": "Sender does not have permissions for the taker",
+    "27": "Maker: Order was already canceled",
+    "28": "Taker: Order was already canceled",
+    "29": "Maker: Order has invalid signature",
+    "30": "Taker: Order has invalid signature",
+    "31": "Maker: Order has expired",
+    "32": "Taker: Order has expired",
+    "33": "Maker: Fill price is invalid",
+    "34": "Taker: Fill price is invalid",
+    "35": "Maker: Order trigger price has not been reached",
+    "36": "Taker: Order trigger price has not been reached",
+    "37": "Maker: Fill does not decrease size",
+    "38": "Taker: Fill does not decrease size",
+    "39": "Maker: Invalid leverage",
+    "40": "Taker: Invalid leverage",
+    "41": "Maker: Leverage must be > 0",
+    "42": "Taker: Leverage must be > 0",
+    "43": "Maker: Cannot overfill order",
+    "44": "Taker: Cannot overfill order",
+    "45": "Maker: Cannot trade when loss exceeds margin. Please add margin",
+    "46": "Taker: Cannot trade when loss exceeds margin. Please add margin",
+    "47": "Taker: Order can not be of the same side as Maker"
 };

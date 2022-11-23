@@ -18,8 +18,8 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const provider = getProvider(
-    DeploymentConfig.rpcURL,
-    DeploymentConfig.faucetURL
+    DeploymentConfig.network.rpc,
+    DeploymentConfig.network.faucet
 );
 
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
@@ -441,7 +441,7 @@ describe("Evaluator", () => {
                 const tx = await onChainTestCall(callArgs);
                 expectTxToSucceed(tx);
             });
-            it("should revert becuase trade Qty < min Qty", async () => {
+            it("should revert because trade Qty < min Qty", async () => {
                 callArgs.push(toBigNumberStr(0.001)); // trade Quantity,
                 callArgs.push(toBigNumberStr(10)); //trade Price
                 callArgs.push(toBigNumberStr(11)); // oracle Price
@@ -452,7 +452,7 @@ describe("Evaluator", () => {
                 const tx = await onChainTestCall(callArgs);
                 expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[19]);
             });
-            it("should revert becuase trade price < min price", async () => {
+            it("should revert because trade price < min price", async () => {
                 callArgs.push(toBigNumberStr(10)); // trade Quantity,
                 callArgs.push(toBigNumberStr(0.01)); //trade Price
                 callArgs.push(toBigNumberStr(11)); // oracle Price

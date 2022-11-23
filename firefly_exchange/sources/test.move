@@ -2,15 +2,18 @@
 module firefly_exchange::test {
 
     use std::vector;
+    use std::hash;
     use sui::ecdsa;
     use sui::event;
-    use std::hash;
     use sui::bcs;
-    use sui::object;
     use firefly_exchange::evaluator::{initTradeChecks,verify_qty_checks,verify_price_checks,verify_market_take_bound_checks,verify_oi_open_for_account};
 
     struct SignatureVerifiedEvent has copy, drop {
         is_verified: bool,
+    }
+
+    struct PublicKeyRecoveredEvent has copy, drop {
+        public_key: vector<u8>,
     }
 
     struct HashGeneratedEvent has copy, drop {
@@ -27,7 +30,7 @@ module firefly_exchange::test {
 
     // public native fun ed25519_verify(signature: &vector<u8>, public_key: &vector<u8>, msg: &vector<u8>): bool;
 
-    public entry fun verifySignature(signature: vector<u8>, public_key: vector<u8>, hashed_msg: vector<u8>) {
+    public entry fun verify_signature(signature: vector<u8>, public_key: vector<u8>, hashed_msg: vector<u8>) {
         let is_verified;
         let length = vector::length(&signature);
         if(length == 64){ // ed25519 has signature length 654
@@ -52,10 +55,10 @@ module firefly_exchange::test {
         triggerPrice: u128,
     }
 
-    public entry fun hash(){
-        let value = @0x0000000000000000000000000000000000000000;
-        let bytes = bcs::to_bytes(&value);
-        let addr:address =  object::address_from_bytes(bytes);
+    public entry fun hash(addr:address){
+        // let value = @0x9e61bd8cac66d89b78ebd145d6bbfbdd6ff550cf;
+        // let bytes = bcs::to_bytes(&value);
+        // let addr:address =  object::address_from_bytes(bytes);
         let order = Order { 
             price: 1000000000,
             quantity:1000000000,
@@ -64,7 +67,7 @@ module firefly_exchange::test {
             reduceOnly: false,
             triggerPrice: 0,
             expiration: 3655643731,
-            salt: 425,
+            salt: 1668690862116,
             makerAddress: addr
         };
         
@@ -85,7 +88,7 @@ module firefly_exchange::test {
         let price_b = bcs::to_bytes(&order.price);
         let quantity_b = bcs::to_bytes(&order.quantity);
         let leverage_b = bcs::to_bytes(&order.leverage);
-        let maker_address_b = bcs::to_bytes(&order.makerAddress);
+        let maker_address_b = bcs::to_bytes(&order.makerAddress); // doesn't need reverse
         let expiration_b = bcs::to_bytes(&order.expiration);
         let salt_b = bcs::to_bytes(&order.salt);
         let trigger_price_b = bcs::to_bytes(&order.triggerPrice);
@@ -95,7 +98,6 @@ module firefly_exchange::test {
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
         vector::reverse(&mut leverage_b);
-        vector::reverse(&mut maker_address_b);
         vector::reverse(&mut expiration_b);
         vector::reverse(&mut salt_b);
         vector::reverse(&mut trigger_price_b);
@@ -110,11 +112,11 @@ module firefly_exchange::test {
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
 
-        event::emit(OrderSerializedEvent {serialized_order:serialized_order});
+        event::emit(OrderSerializedEvent {serialized_order});
         event::emit(HashGeneratedEvent {hash:hash::sha2_256(serialized_order)});
     }
 
-    public entry fun getPublicAddress(public_key: vector<u8>){
+    public entry fun get_public_address(public_key: vector<u8>){
         let buff = vector::empty<u8>();
 
         vector::append(&mut buff, vector[1]); // signature scheme for secp256k1

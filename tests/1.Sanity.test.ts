@@ -6,12 +6,9 @@ import {
     readFile,
     getProvider,
     getSignerSUIAddress,
-    getSignerFromSeed,
-    getKeyPairFromSeed,
-    requestGas
+    getSignerFromSeed
 } from "../src/utils";
-import { OnChainCalls } from "../src/classes";
-import { getCreatedObjects } from "../src/utils";
+import { OnChainCalls, Transaction } from "../src/classes";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { OWNERSHIP_ERROR } from "../src/errors";
 
@@ -19,8 +16,8 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const provider = getProvider(
-    DeploymentConfig.rpcURL,
-    DeploymentConfig.faucetURL
+    DeploymentConfig.network.rpc,
+    DeploymentConfig.network.faucet
 );
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
@@ -33,9 +30,6 @@ describe("Sanity Tests", () => {
     before(async () => {
         ownerAddress = await getSignerSUIAddress(ownerSigner);
         onChain = new OnChainCalls(ownerSigner, deployment);
-
-        // await requestGas(ownerAddress);
-        // await requestGas(TEST_WALLETS[0].address);
     });
 
     it("deployer should have non zero balance", async () => {
@@ -50,15 +44,13 @@ describe("Sanity Tests", () => {
         expect((details.owner as any).AddressOwner).to.be.equal(ownerAddress);
     });
 
-    it("should allow admin to create ETH perpetual", async () => {
-        const moveCallTxn = await onChain.createPerpetual({});
-        const objects = await getCreatedObjects(provider, moveCallTxn);
-
-        const details = await onChain.getOnChainObject(
-            onChain.getPerpetualID()
-        );
-
-        expect((details.data as any)["fields"]["name"]).to.be.equal("ETH-PERP");
+    it("should allow admin to create a perpetual", async () => {
+        const txResponse = await onChain.createPerpetual({ name: "TEST-PERP" });
+        const event = Transaction.getEvents(
+            txResponse,
+            "PerpetualCreationEvent"
+        )[0];
+        expect(event).to.not.be.undefined;
     });
 
     it("should revert when non-admin account tries to create a perpetual", async () => {

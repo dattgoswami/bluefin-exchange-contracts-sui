@@ -6,7 +6,8 @@ import {
     getSignerSUIAddress,
     getSignerFromSeed,
     publishPackage,
-    getCreatedObjects
+    getCreatedObjects,
+    publishPackageUsingClient
 } from "../src/utils";
 import { expectTxToSucceed, expectTxToFail } from "./helpers/expect";
 import { OnChainCalls, Transaction } from "../src/classes";
@@ -16,8 +17,8 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const provider = getProvider(
-    DeploymentConfig.rpcURL,
-    DeploymentConfig.faucetURL
+    DeploymentConfig.network.rpc,
+    DeploymentConfig.network.rpc
 );
 const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
@@ -30,7 +31,7 @@ describe("Operators", () => {
     });
 
     beforeEach(async () => {
-        const publishTxn = await publishPackage(ownerSigner);
+        const publishTxn = await publishPackageUsingClient();
         const objects = await getCreatedObjects(provider, publishTxn);
         const deployment = {
             deployer: ownerAddress,
@@ -42,7 +43,7 @@ describe("Operators", () => {
     });
 
     it("should set owner as settlement operator", async () => {
-        const txResponse = await onChain.updateOperator({
+        const txResponse = await onChain.setSettlementOperator({
             operator: ownerAddress,
             status: true
         });
@@ -50,13 +51,13 @@ describe("Operators", () => {
     });
 
     it("should remove settlement operator", async () => {
-        const txResponse = await onChain.updateOperator({
+        const txResponse = await onChain.setSettlementOperator({
             operator: ownerAddress,
             status: true
         });
         expectTxToSucceed(txResponse);
 
-        const tx = await onChain.updateOperator({
+        const tx = await onChain.setSettlementOperator({
             operator: ownerAddress,
             status: false
         });
@@ -64,13 +65,13 @@ describe("Operators", () => {
     });
 
     it("should revert when trying to add an already existing operator", async () => {
-        const txResponse = await onChain.updateOperator({
+        const txResponse = await onChain.setSettlementOperator({
             operator: ownerAddress,
             status: true
         });
         expectTxToSucceed(txResponse);
 
-        const tx = await onChain.updateOperator({
+        const tx = await onChain.setSettlementOperator({
             operator: ownerAddress,
             status: true
         });
@@ -78,7 +79,7 @@ describe("Operators", () => {
     });
 
     it("should revert when trying to remove a non-existing operator", async () => {
-        const tx = await onChain.updateOperator({
+        const tx = await onChain.setSettlementOperator({
             operator: ownerAddress,
             status: false
         });

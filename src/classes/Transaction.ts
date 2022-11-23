@@ -7,6 +7,14 @@ import { Object } from "../interfaces";
 import { ERROR_CODES } from "../errors";
 
 export class Transaction {
+    static getStatus(txResponse: SuiExecuteTransactionResponse) {
+        return (txResponse as any)["EffectsCert"] == undefined
+            ? (txResponse as any)["effects"]["status"]
+            : (txResponse as any)["EffectsCert"]["effects"]["effects"][
+                  "status"
+              ];
+    }
+
     static getErrorCode(tx: SuiExecuteTransactionResponse): number {
         let error = getExecutionStatusError(tx) as string;
         return Number(
@@ -19,15 +27,25 @@ export class Transaction {
         return (ERROR_CODES as any)[code];
     }
 
-    static getEvents(tx: SuiExecuteTransactionResponse | any) {
+    static getEvents(tx: SuiExecuteTransactionResponse | any, name = "") {
+        let events = [];
         if (tx?.EffectsCert) {
             const transactionEffects: SuiCertifiedTransactionEffects =
                 tx?.EffectsCert?.effects;
-            const events = transactionEffects?.effects?.events;
-            return events;
+
+            events = transactionEffects?.effects?.events as any;
+            if (name != "") {
+                events = events
+                    ?.filter(
+                        (x: any) => x["moveEvent"]?.type?.indexOf(name) >= 0
+                    )
+                    .map((x: any) => {
+                        return x["moveEvent"];
+                    });
+            }
         }
 
-        return [];
+        return events;
     }
 
     static getCreatedObjects(

@@ -15,25 +15,19 @@ import {
     Ed25519Keypair
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
-import { DeploymentObjectMap, wallet } from "../src/interfaces";
+import { DeploymentObjectMap } from "../src/interfaces";
 import { toBigNumber, bigNumber, ADDRESSES } from "./library";
 import { Order } from "../src/interfaces";
 import { config } from "dotenv";
+import { Client } from "./classes";
+import { network } from "./DeploymentConfig";
 
 const { execSync } = require("child_process");
 const fs = require("fs");
 config({ path: ".env" });
 
-const FAUCET_URL = process.env.FAUCET_URL;
-
 export function execCommand(command: string) {
     return execSync(command, { encoding: "utf-8" });
-}
-
-export function createWallet(): wallet {
-    const phrase = execCommand("sui client new-address ed25519");
-    const match = phrase.match(/(?<=\[)(.*?)(?=\])/g);
-    return { address: match[1], phrase: match[2] } as wallet;
 }
 
 export function writeFile(filePath: string, jsonData: any): any {
@@ -89,7 +83,7 @@ export function getSignerFromSeed(
 }
 
 export async function requestGas(address: string) {
-    const url = FAUCET_URL + "/gas";
+    const url = network.faucet + "/gas";
     try {
         const data = await fetch(url, {
             method: "POST",
@@ -111,18 +105,17 @@ export async function requestGas(address: string) {
 
 export function mintSUI(amount: number, address: string) {}
 
-export function getStatus(txResponse: SuiExecuteTransactionResponse) {
-    return (txResponse as any)["EffectsCert"]["effects"]["effects"]["status"];
-}
-
 export async function getCreatedObjects(
     provider: JsonRpcProvider,
     txResponse: SuiExecuteTransactionResponse
 ): Promise<DeploymentObjectMap> {
     const map: DeploymentObjectMap = {};
 
-    const createdObjects = (txResponse as any).EffectsCert.effects.effects
-        .created as OwnedObjectRef[];
+    const createdObjects =
+        (txResponse as any).EffectsCert == undefined
+            ? ((txResponse as any).effects.created as OwnedObjectRef[])
+            : ((txResponse as any).EffectsCert.effects.effects
+                  .created as OwnedObjectRef[]);
 
     // iterate over each object
     for (const itr in createdObjects) {
@@ -149,7 +142,12 @@ export async function getCreatedObjects(
         let dataType = "package";
         if (objectType == "moveObject") {
             const type = (objDetails.data as SuiMoveObject).type;
-            dataType = type.slice(type.lastIndexOf("::") + 2);
+            const tableIdx = type.lastIndexOf("Table");
+            if (tableIdx >= 0) {
+                dataType = type.slice(tableIdx);
+            } else {
+                dataType = type.slice(type.lastIndexOf("::") + 2);
+            }
         }
 
         map[dataType] = {
@@ -166,11 +164,7 @@ export async function publishPackage(
     signer: RawSigner
 ): Promise<SuiExecuteTransactionResponse> {
     const pkgPath = path.join(process.cwd(), "/firefly_exchange");
-    const compiledModules = JSON.parse(
-        execCommand(
-            `sui move build --dump-bytecode-as-base64 --path ${pkgPath}`
-        )
-    );
+    const compiledModules = Client.buildPackage(pkgPath);
 
     const modulesInBytes = compiledModules.map((m: any) =>
         Array.from(new Base64DataBuffer(m).getData())
@@ -181,6 +175,11 @@ export async function publishPackage(
         compiledModules: modulesInBytes,
         gasBudget: 10000
     });
+}
+
+export async function publishPackageUsingClient(): Promise<SuiExecuteTransactionResponse> {
+    const pkgPath = path.join(process.cwd(), "/firefly_exchange");
+    return Client.publishPackage(pkgPath) as SuiExecuteTransactionResponse;
 }
 
 export function getPrivateKey(keypair: Keypair) {
@@ -196,7 +195,7 @@ export const defaultOrder: Order = {
     triggerPrice: toBigNumber(0),
     maker: ADDRESSES.ZERO,
     expiration: bigNumber(3655643731),
-    salt: bigNumber(425)
+    salt: bigNumber(1668690862116)
 };
 
 export function createOrder(params: {
@@ -229,4 +228,27 @@ export function createOrder(params: {
         salt: params.salt ? bigNumber(params.salt) : bigNumber(Date.now()),
         maker: params.makerAddress ? params.makerAddress : defaultOrder.maker
     } as Order;
+}
+
+export function printOrder(order: Order) {
+    console.log(
+        "order.isBuy:",
+        order.isBuy,
+        "order.price:",
+        order.price.toFixed(0),
+        "order.quantity:",
+        order.quantity.toFixed(0),
+        "order.leverage:",
+        order.leverage.toFixed(0),
+        "order.reduceOnly:",
+        order.reduceOnly,
+        "order.triggerPrice:",
+        order.triggerPrice.toFixed(0),
+        "order.maker:",
+        order.maker,
+        "order.expiration:",
+        order.expiration.toFixed(0),
+        "order.salt:",
+        order.salt.toFixed(0)
+    );
 }

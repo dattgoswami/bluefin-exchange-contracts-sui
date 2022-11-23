@@ -1,4 +1,3 @@
-import { eventTopic } from "./Types";
 import { SuiEventType } from "./utils";
 
 // interface of the json contract events config

@@ -27,3 +27,9 @@ export interface UserDetails {
     mro: string;
     oiOpen: string;
 }
+
+export interface Network {
+    name: string;
+    rpc: string;
+    faucet: string;
+}

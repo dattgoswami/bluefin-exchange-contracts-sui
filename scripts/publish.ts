@@ -7,25 +7,20 @@ import {
     getProvider,
     publishPackageUsingClient
 } from "../src/utils";
-import { Client, OnChainCalls, Transaction } from "../src/classes";
+import { Transaction } from "../src/classes";
 import { DeploymentConfig } from "../src/DeploymentConfig";
 
 const provider = getProvider(
     DeploymentConfig.network.rpc,
     DeploymentConfig.network.faucet
 );
-
 const signer = getSignerFromSeed(DeploymentConfig.deployer, provider);
 
 async function main() {
     // info
-    console.log(`Performing deployment on: ${DeploymentConfig.network.rpc}`);
+    console.log(`Publishing package on: ${DeploymentConfig.network.rpc}`);
     const deployerAddress = await getSignerSUIAddress(signer);
-
     console.log(`Deployer SUI address: ${deployerAddress}`);
-
-    Client.switchEnv(DeploymentConfig.network.name);
-    Client.switchAccount(deployerAddress);
 
     // public package
     const publishTxn = await publishPackageUsingClient();
@@ -45,20 +40,6 @@ async function main() {
             objects: objects,
             markets: []
         };
-
-        const onChain = new OnChainCalls(signer, dataToWrite);
-
-        // create perpetual
-        console.log("Creating Perpetual Markets");
-        for (const market of DeploymentConfig.markets) {
-            console.log(`-> ${market.name}`);
-            const txResult = await onChain.createPerpetual(market);
-            const objects = await getCreatedObjects(provider, txResult);
-            (dataToWrite["markets"] as any).push({
-                Config: market,
-                Objects: objects
-            });
-        }
 
         await writeFile(DeploymentConfig.filePath, dataToWrite);
         console.log(

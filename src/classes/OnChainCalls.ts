@@ -4,8 +4,9 @@ import {
     SuiExecuteTransactionResponse,
     SuiObject
 } from "@mysten/sui.js";
-import { UserDetails } from "../interfaces";
-import { toBigNumberStr } from "../library";
+import BigNumber from "bignumber.js";
+import { UserDetails, Order } from "../interfaces";
+import { hexToBuffer, toBigNumberStr } from "../library";
 export class OnChainCalls {
     signer: SignerWithProvider;
     deployment: any;
@@ -77,7 +78,7 @@ export class OnChainCalls {
         return caller.executeMoveCallWithRequestType({
             packageObjectId: this.getPackageID(),
             module: this.getModuleName(),
-            function: "createPerpetual",
+            function: "create_perpetual",
             typeArguments: [],
             arguments: callArgs,
             gasBudget: 10000
@@ -365,7 +366,7 @@ export class OnChainCalls {
         });
     }
 
-    public async updateOperator(
+    public async setSettlementOperator(
         args: {
             adminID?: string;
             operator: string;
@@ -385,59 +386,78 @@ export class OnChainCalls {
         return caller.executeMoveCallWithRequestType({
             packageObjectId: this.getPackageID(),
             module: this.getModuleName(),
-            function: "updateOperator",
+            function: "setSettlementOperator",
             typeArguments: [],
             arguments: callArgs,
             gasBudget: 10000
         });
     }
 
-    public async updatePosition(
+    public async trade(
         args: {
             perpID?: string;
-            address?: string;
-            isPosPositive?: boolean;
-            qPos?: number;
-            margin?: number;
-            oiOpen?: number;
-            mro?: number;
+            makerOrder: Order;
+            makerSignature: string;
+            takerOrder: Order;
+            takerSignature: string;
+            fillPrice?: BigNumber;
+            fillQuantity?: BigNumber;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
         const caller = signer ? signer : this.signer;
 
         const callArgs = [];
-
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+
+        callArgs.push(this.getOperatorTableID());
+        callArgs.push(this.getOrdersTableID());
+
+        callArgs.push(args.makerOrder.triggerPrice.toFixed(0));
+        callArgs.push(args.makerOrder.isBuy);
+        callArgs.push(args.makerOrder.price.toFixed(0));
+        callArgs.push(args.makerOrder.quantity.toFixed(0));
+        callArgs.push(args.makerOrder.leverage.toFixed(0));
+        callArgs.push(args.makerOrder.reduceOnly);
+        callArgs.push(args.makerOrder.maker);
+        callArgs.push(args.makerOrder.expiration.toFixed(0));
+        callArgs.push(args.makerOrder.salt.toFixed(0));
+        callArgs.push(Array.from(hexToBuffer(args.makerSignature)));
+
+        callArgs.push(args.takerOrder.triggerPrice.toFixed(0));
+        callArgs.push(args.takerOrder.isBuy);
+        callArgs.push(args.takerOrder.price.toFixed(0));
+        callArgs.push(args.takerOrder.quantity.toFixed(0));
+        callArgs.push(args.takerOrder.leverage.toFixed(0));
+        callArgs.push(args.takerOrder.reduceOnly);
+        callArgs.push(args.takerOrder.maker);
+        callArgs.push(args.takerOrder.expiration.toFixed(0));
+        callArgs.push(args.takerOrder.salt.toFixed(0));
+        callArgs.push(Array.from(hexToBuffer(args.takerSignature)));
+
         callArgs.push(
-            args.address ? args.address : await this.signer.getAddress()
+            args.fillQuantity
+                ? args.fillQuantity.toFixed(0)
+                : args.makerOrder.quantity.lte(args.takerOrder.quantity)
+                ? args.makerOrder.quantity.toFixed(0)
+                : args.takerOrder.quantity.toFixed(0)
         );
 
-        callArgs.push(args.isPosPositive == true);
         callArgs.push(
-            args.qPos ? toBigNumberStr(args.qPos) : toBigNumberStr(1)
+            args.fillPrice
+                ? args.fillPrice.toFixed(0)
+                : args.makerOrder.price.toFixed(0)
         );
-        callArgs.push(
-            args.margin ? toBigNumberStr(args.margin) : toBigNumberStr(1)
-        );
-        callArgs.push(
-            args.oiOpen ? toBigNumberStr(args.oiOpen) : toBigNumberStr(1)
-        );
-        callArgs.push(args.mro ? toBigNumberStr(args.mro) : toBigNumberStr(1));
 
         return caller.executeMoveCallWithRequestType({
             packageObjectId: this.getPackageID(),
             module: this.getModuleName(),
-            function: "mutatePosition",
+            function: "trade",
             typeArguments: [],
             arguments: callArgs,
             gasBudget: 10000
         });
     }
-
-    // public async getUserPosition(objID:string){
-
-    // }
 
     // ===================================== //
     //          GETTER METHODS
@@ -479,5 +499,15 @@ export class OnChainCalls {
     getPerpetualID(market: number = 0): string {
         return this.deployment["markets"][market]["Objects"]["Perpetual"]
             .id as string;
+    }
+
+    getOperatorTableID(): string {
+        return this.deployment["objects"]["Table<address, bool>"].id as string;
+    }
+
+    getOrdersTableID(): string {
+        return this.deployment["objects"][
+            `Table<vector<u8>, ${this.getPackageID()}::perpetual::OrderStatus>`
+        ].id as string;
     }
 }

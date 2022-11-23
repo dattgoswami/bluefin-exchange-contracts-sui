@@ -12,17 +12,19 @@ import { bnToHex, hexToBuffer } from "../library";
 export class OrderSigner {
     constructor(private keypair: Keypair) {}
 
-    public async getSignedOrder(order: Order): Promise<SignedOrder> {
-        const typedSignature = await this.signOrder(order);
+    public getSignedOrder(order: Order): SignedOrder {
+        const typedSignature = this.signOrder(order);
         return {
             ...order,
             typedSignature
         };
     }
 
-    async signOrder(order: Order): Promise<string> {
+    signOrder(order: Order, keypair?: Keypair): string {
+        const signer = keypair || this.keypair;
+
         return Buffer.from(
-            this.keypair
+            signer
                 .signData(
                     new Base64DataBuffer(
                         hexToBuffer(this.getSerializedOrder(order))
@@ -53,7 +55,7 @@ export class OrderSigner {
         const expirationB = hexToBuffer(bnToHex(expiration));
         const saltB = hexToBuffer(bnToHex(salt));
         const triggerPriceB = hexToBuffer(bnToHex(triggerPrice));
-        const makerB = hexToBuffer(maker.substring(2, 42)); // 20 bytes address 40 hex chars
+        const makerB = hexToBuffer(maker); // 20 bytes address 40 hex chars
 
         buffer.set(priceB, 0);
         buffer.set(quantityB, 16);

@@ -10,14 +10,14 @@ import { pino } from "pino";
  ** fatal - when the application is halted
  */
 const pinoLogger = pino({
-  enabled: !(typeof global.it === "function"),
-  base: undefined,
-  level: process.env.LOG_LEVEL || "info",
-  formatters: {
-    level: (label) => {
-      return { level: label };
-    }
-  }
+    enabled: !(typeof global.it === "function"),
+    base: undefined,
+    level: process.env.LOG_LEVEL || "info",
+    formatters: {
+        level: (label) => {
+            return { level: label };
+        },
+    },
 });
 
 export const log = pinoLogger;
