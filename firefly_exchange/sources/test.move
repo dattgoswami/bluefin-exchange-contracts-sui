@@ -170,9 +170,11 @@ module firefly_exchange::test {
                 maxAllowedOIOpen
             );
 
+            let isTaker : u64 = 0;
+
             verify_qty_checks(checks,tradeQty);
             verify_price_checks(checks, tradePrice);
             verify_market_take_bound_checks(checks,tradePrice,oraclePrice,isBuy);
-            verify_oi_open_for_account(checks, mro, oiOpen);
+            verify_oi_open_for_account(checks, mro, oiOpen,isTaker);
         }
 }

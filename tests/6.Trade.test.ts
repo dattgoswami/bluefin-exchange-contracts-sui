@@ -69,7 +69,7 @@ describe("Trades", () => {
             alice.signer
         );
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[26]);
+        expect(Transaction.getError(txResponse), ERROR_CODES[27]);
     });
 
     it("should revert as maker and taker are both going long", async () => {
@@ -119,7 +119,7 @@ describe("Trades", () => {
         );
 
         expectTxToFail(tx);
-        expect(Transaction.getError(tx), ERROR_CODES[32]);
+        expect(Transaction.getError(tx), ERROR_CODES[33]);
     });
 
     it("should revert as fill price is invalid for maker/alice", async () => {
@@ -147,7 +147,7 @@ describe("Trades", () => {
             )
         );
         expectTxToFail(tx);
-        expect(Transaction.getError(tx), ERROR_CODES[33]);
+        expect(Transaction.getError(tx), ERROR_CODES[34]);
     });
 
     it("should revert as fill does not decrease size (reduce only)", async () => {
@@ -176,7 +176,7 @@ describe("Trades", () => {
         );
 
         expectTxToFail(tx);
-        expect(Transaction.getError(tx), ERROR_CODES[38]);
+        expect(Transaction.getError(tx), ERROR_CODES[39]);
     });
 
     it("should revert as maker/alice leverage is invalid", async () => {
@@ -206,7 +206,7 @@ describe("Trades", () => {
         );
 
         expectTxToFail(tx);
-        expect(Transaction.getError(tx), ERROR_CODES[39]);
+        expect(Transaction.getError(tx), ERROR_CODES[40]);
     });
 
     it("should revert as taker/bob leverage is invalid", async () => {
@@ -236,7 +236,7 @@ describe("Trades", () => {
         );
 
         expectTxToFail(tx);
-        expect(Transaction.getError(tx), ERROR_CODES[40]);
+        expect(Transaction.getError(tx), ERROR_CODES[41]);
     });
 
     it("should revert as taker/bob order is being over filled", async () => {
@@ -263,7 +263,7 @@ describe("Trades", () => {
 
         const tx = await onChain.trade(tradeParams);
         expectTxToFail(tx);
-        expect(Transaction.getError(tx), ERROR_CODES[28]);
+        expect(Transaction.getError(tx), ERROR_CODES[29]);
     });
 
     it("should revert as maker/alice order is being over filled", async () => {

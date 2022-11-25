@@ -15,6 +15,7 @@ module firefly_exchange::perpetual {
     use firefly_exchange::order::{Self, Order};
     use firefly_exchange::library::{Self};
     use firefly_exchange::signed_number::{Self, Number};
+    use firefly_exchange::error::{Self};
 
     //===========================================================//
     //                           EVENTS                          //
@@ -141,10 +142,10 @@ module firefly_exchange::perpetual {
      */
     public entry fun setSettlementOperator(_:&AdminCap, operatorTable: &mut Table<address, bool>, operator:address, status:bool){
         if(table::contains(operatorTable, operator)){
-            assert!(status == false, 7);
+            assert!(status == false, error::operator_already_whitelisted_for_settlement());
             table::remove(operatorTable, operator); 
         } else {
-            assert!(status == true, 8);
+            assert!(status == true, error::operator_not_found());
             table::add(operatorTable, operator, true);
         };
 
@@ -347,9 +348,9 @@ module firefly_exchange::perpetual {
             let sender = tx_context::sender(ctx);
 
             // check if caller has permission to trade on taker's behalf
-            assert!(has_account_permission(operatorTable, takerAddress, sender), 26);
+            assert!(has_account_permission(operatorTable, takerAddress, sender), error::sender_has_no_taker_permission());
 
-            assert!(makerIsBuy != takerIsBuy, 47);
+            assert!(makerIsBuy != takerIsBuy, error::order_cannot_be_of_same_side());
 
             // if maker/taker positions don't exist create them
             create_position(perpetual, makerAddress);
@@ -490,7 +491,7 @@ module firefly_exchange::perpetual {
 
             equityPerUnit = signed_number::add(marginPerUnit, copy pnlPerUnit);
             
-            assert!(signed_number::gte(equityPerUnit, 0), 45 + isTaker);
+            assert!(signed_number::gte(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
             
             // Max(0, equityPerUnit);
             let posValue = signed_number::positive_value(equityPerUnit);
@@ -539,7 +540,7 @@ module firefly_exchange::perpetual {
             equityPerUnit = signed_number::add(marginPerUnit, copy pnlPerUnit);
 
 
-            assert!(signed_number::gte(equityPerUnit, 0), 29 + isTaker);
+            assert!(signed_number::gte(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
 
             // Max(0, equityPerUnit);
             let posValue = signed_number::positive_value(equityPerUnit);
@@ -635,7 +636,7 @@ module firefly_exchange::perpetual {
     fun verify_order_state(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash:vector<u8>, isTaker:u64){
         
         let orderStatus = table::borrow(ordersTable, hash);
-        assert!(orderStatus.status != false, 42 + isTaker);
+        assert!(orderStatus.status != false, error::order_has_invalid_signature(isTaker));
 
     }
 
@@ -645,7 +646,7 @@ module firefly_exchange::perpetual {
         let orderStatus = table::borrow_mut(ordersTable, orderHash);
         orderStatus.filledQty = orderStatus.filledQty + fill;
 
-        assert!(orderStatus.filledQty  <=  order::quantity(order),  43 + isTaker);
+        assert!(orderStatus.filledQty  <=  order::quantity(order),  error::cannot_overfill_order(isTaker));
 
         emit(OrderFillEvent{
                 orderHash,
@@ -662,12 +663,12 @@ module firefly_exchange::perpetual {
 
         let publicAddress = library::get_public_address(publicKey);
 
-        assert!(order::maker(order)== publicAddress, 29 + isTaker);
+        assert!(order::maker(order)== publicAddress, error::order_has_invalid_signature(isTaker));
     }
 
     fun verify_order_expiry(order:Order, isTaker:u64){
         // TODO compare with chain time
-        assert!(order::expiration(order) == 0 || order::expiration(order) > 1, 31 + isTaker);
+        assert!(order::expiration(order) == 0 || order::expiration(order) > 1, error::order_has_expired(isTaker));
     }
 
     fun verify_order_fills(perpetual: &mut Perpetual, order:Order, fillQuantity: u128, fillPrice: u128, oraclePrice: u128, isTaker:u64){
@@ -681,13 +682,13 @@ module firefly_exchange::perpetual {
         // For short/sell orders, the fill price must be equal or higher
         let validPrice = if (isBuyOrder) { fillPrice <= price } else {fillPrice >= price};
 
-        assert!(validPrice, 33 + isTaker);
+        assert!(validPrice, error::fill_price_invalid(isTaker));
 
 
         // When triggerPrice is specified (for stop orders), ensure the trigger condition has been met. Will be 0 for market & limit orders.
         if (triggerPrice != 0) {
             let validTriggerPrice =  if (isBuyOrder) { triggerPrice <= oraclePrice } else {triggerPrice >= oraclePrice};
-            assert!(validTriggerPrice, 35 + isTaker);
+            assert!(validTriggerPrice, error::trigger_price_not_reached(isTaker));
         };
 
         // For reduce only orders, ensure that the order would result in an
@@ -702,7 +703,7 @@ module firefly_exchange::perpetual {
             // Reduce only order size must be less than open position size.
             // Size sign is stored separately (sizeIsPositive) so this is an absolute value comparison
             // regardless of position direction (Buy or Sell)
-            assert!(isBuyOrder != position::isPosPositive(userPosition) && fillQuantity <= position::qPos(userPosition), 37 + isTaker);        
+            assert!(isBuyOrder != position::isPosPositive(userPosition) && fillQuantity <= position::qPos(userPosition), error::fill_does_not_decrease_size(isTaker));        
         }
 
     }
@@ -715,9 +716,9 @@ module firefly_exchange::perpetual {
         let userPosition = *table::borrow(&mut perpetual.positions, maker);
         let mro = position::mro(userPosition);
 
-        assert!(leverage > 0, 41 + isTaker);
+        assert!(leverage > 0, error::leverage_must_be_greater_than_zero(isTaker));
         
-        assert!(mro == 0 || library::base_div(library::base_uint(), leverage) == mro, 39 + isTaker);
+        assert!(mro == 0 || library::base_div(library::base_uint(), leverage) == mro, error::invalid_leverage(isTaker));
 
 
     }

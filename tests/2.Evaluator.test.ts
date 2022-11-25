@@ -41,9 +41,8 @@ describe("Evaluator", () => {
         ];
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
-
-    describe("Price", async () => {
-        describe("Setters", async () => {
+    describe("Setters", async () => {
+        describe("Price", async () => {
             it("should set min price to 0.2", async () => {
                 await onChain.setMinPrice({ minPrice: 0.02 });
                 const details = await onChain.getPerpDetails(
@@ -110,36 +109,6 @@ describe("Evaluator", () => {
                 ).to.eventually.be.rejectedWith(expectedError);
             });
 
-            it("should set step size to 0.1", async () => {
-                await onChain.setStepSize({ stepSize: 0.1 });
-                const details = await onChain.getPerpDetails(
-                    onChain.getPerpetualID()
-                );
-                expect(
-                    (details.checks as any)["fields"]["stepSize"]
-                ).to.be.equal(toBigNumberStr(0.1));
-            });
-
-            it("should revert when trying to set step size as 0", async () => {
-                const tx = await onChain.setStepSize({ stepSize: 0 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[10]);
-            });
-
-            it("should revert when non-admin account tries to set step size", async () => {
-                const alice = getSignerFromSeed(
-                    TEST_WALLETS[0].phrase,
-                    provider
-                );
-                const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
-                    ownerAddress,
-                    TEST_WALLETS[0].address
-                );
-                await expect(
-                    onChain.setStepSize({ stepSize: 0.1 }, alice)
-                ).to.eventually.be.rejectedWith(expectedError);
-            });
-
             it("should set tick size to 0.1", async () => {
                 await onChain.setTickSize({ tickSize: 0.1 });
                 const details = await onChain.getPerpDetails(
@@ -169,72 +138,9 @@ describe("Evaluator", () => {
                     onChain.setTickSize({ tickSize: 0.1 }, alice)
                 ).to.eventually.be.rejectedWith(expectedError);
             });
+        });
 
-            it("should set market take bound (long) to 20%", async () => {
-                await onChain.setMtbLong({ mtbLong: 0.2 });
-                const details = await onChain.getPerpDetails(
-                    onChain.getPerpetualID()
-                );
-                expect(
-                    (details.checks as any)["fields"]["mtbLong"]
-                ).to.be.equal(toBigNumberStr(0.2));
-            });
-
-            it("should revert when trying to set market take bound (long) as 0", async () => {
-                const tx = await onChain.setMtbLong({ mtbLong: 0 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[12]);
-            });
-
-            it("should revert when non-admin account tries to set market take bound (long)", async () => {
-                const alice = getSignerFromSeed(
-                    TEST_WALLETS[0].phrase,
-                    provider
-                );
-                const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
-                    ownerAddress,
-                    TEST_WALLETS[0].address
-                );
-                await expect(
-                    onChain.setMtbLong({ mtbLong: 0.2 }, alice)
-                ).to.eventually.be.rejectedWith(expectedError);
-            });
-
-            it("should set market take bound (short) to 20%", async () => {
-                await onChain.setMtbShort({ mtbShort: 0.2 });
-                const details = await onChain.getPerpDetails(
-                    onChain.getPerpetualID()
-                );
-                expect(
-                    (details.checks as any)["fields"]["mtbShort"]
-                ).to.be.equal(toBigNumberStr(0.2));
-            });
-
-            it("should revert when trying to set market take bound (short) as 0", async () => {
-                const tx = await onChain.setMtbShort({ mtbShort: 0 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[13]);
-            });
-
-            it("should revert when trying to set market take bound (short) > 100%", async () => {
-                const tx = await onChain.setMtbShort({ mtbShort: 2 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[14]);
-            });
-
-            it("should revert when non-admin account tries to set market take bound (short)", async () => {
-                const alice = getSignerFromSeed(
-                    TEST_WALLETS[0].phrase,
-                    provider
-                );
-                const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
-                    ownerAddress,
-                    TEST_WALLETS[0].address
-                );
-                await expect(
-                    onChain.setMtbShort({ mtbShort: 0.2 }, alice)
-                ).to.eventually.be.rejectedWith(expectedError);
-            });
-
+        describe("Quantity", async () => {
             it("should set maximum quantity (limit) as 20000", async () => {
                 await onChain.setMaxQtyLimit({ maxQtyLimit: 20000 });
                 const details = await onChain.getPerpDetails(
@@ -341,6 +247,105 @@ describe("Evaluator", () => {
                 ).to.eventually.be.rejectedWith(expectedError);
             });
 
+            it("should set step size to 0.1", async () => {
+                await onChain.setStepSize({ stepSize: 0.1 });
+                const details = await onChain.getPerpDetails(
+                    onChain.getPerpetualID()
+                );
+                expect(
+                    (details.checks as any)["fields"]["stepSize"]
+                ).to.be.equal(toBigNumberStr(0.1));
+            });
+
+            it("should revert when trying to set step size as 0", async () => {
+                const tx = await onChain.setStepSize({ stepSize: 0 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[10]);
+            });
+
+            it("should revert when non-admin account tries to set step size", async () => {
+                const alice = getSignerFromSeed(
+                    TEST_WALLETS[0].phrase,
+                    provider
+                );
+                const expectedError = OWNERSHIP_ERROR(
+                    onChain.getAdminCap(),
+                    ownerAddress,
+                    TEST_WALLETS[0].address
+                );
+                await expect(
+                    onChain.setStepSize({ stepSize: 0.1 }, alice)
+                ).to.eventually.be.rejectedWith(expectedError);
+            });
+        });
+
+        describe("Market Take Bounds", async () => {
+            it("should set market take bound (long) to 20%", async () => {
+                await onChain.setMtbLong({ mtbLong: 0.2 });
+                const details = await onChain.getPerpDetails(
+                    onChain.getPerpetualID()
+                );
+                expect(
+                    (details.checks as any)["fields"]["mtbLong"]
+                ).to.be.equal(toBigNumberStr(0.2));
+            });
+
+            it("should revert when trying to set market take bound (long) as 0", async () => {
+                const tx = await onChain.setMtbLong({ mtbLong: 0 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[12]);
+            });
+
+            it("should revert when non-admin account tries to set market take bound (long)", async () => {
+                const alice = getSignerFromSeed(
+                    TEST_WALLETS[0].phrase,
+                    provider
+                );
+                const expectedError = OWNERSHIP_ERROR(
+                    onChain.getAdminCap(),
+                    ownerAddress,
+                    TEST_WALLETS[0].address
+                );
+                await expect(
+                    onChain.setMtbLong({ mtbLong: 0.2 }, alice)
+                ).to.eventually.be.rejectedWith(expectedError);
+            });
+
+            it("should set market take bound (short) to 20%", async () => {
+                await onChain.setMtbShort({ mtbShort: 0.2 });
+                const details = await onChain.getPerpDetails(
+                    onChain.getPerpetualID()
+                );
+                expect(
+                    (details.checks as any)["fields"]["mtbShort"]
+                ).to.be.equal(toBigNumberStr(0.2));
+            });
+
+            it("should revert when trying to set market take bound (short) as 0", async () => {
+                const tx = await onChain.setMtbShort({ mtbShort: 0 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[13]);
+            });
+
+            it("should revert when trying to set market take bound (short) > 100%", async () => {
+                const tx = await onChain.setMtbShort({ mtbShort: 2 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[14]);
+            });
+
+            it("should revert when non-admin account tries to set market take bound (short)", async () => {
+                const alice = getSignerFromSeed(
+                    TEST_WALLETS[0].phrase,
+                    provider
+                );
+                const expectedError = OWNERSHIP_ERROR(
+                    onChain.getAdminCap(),
+                    ownerAddress,
+                    TEST_WALLETS[0].address
+                );
+                await expect(
+                    onChain.setMtbShort({ mtbShort: 0.2 }, alice)
+                ).to.eventually.be.rejectedWith(expectedError);
+            });
+        });
+
+        describe("OI Open", async () => {
             it("should set max Allowed OI Open values", async () => {
                 let maxLimit = [];
                 maxLimit.push(toBigNumberStr(10000));
@@ -375,116 +380,109 @@ describe("Evaluator", () => {
                 ).to.eventually.be.rejectedWith(expectedError);
             });
         });
-        describe("Verifying Functions Test", async () => {
-            let callArgs: any = [];
-            let onChainTestCall: any;
-            beforeEach(async () => {
-                callArgs.push(
-                    args.minPrice ? args.minPrice : toBigNumberStr(0.1)
-                );
-                callArgs.push(
-                    args.maxPrice ? args.maxPrice : toBigNumberStr(100000)
-                );
-                callArgs.push(
-                    args.tickSize ? args.tickSize : toBigNumberStr(0.001)
-                );
-                callArgs.push(args.minQty ? args.minQty : toBigNumberStr(0.1));
+    });
 
-                callArgs.push(
-                    args.maxQtyLimit ? args.maxQtyLimit : toBigNumberStr(100000)
-                );
-                callArgs.push(
-                    args.maxQtyMarket ? args.maxQtyMarket : toBigNumberStr(1000)
-                );
-                callArgs.push(
-                    args.stepSize ? args.stepSize : toBigNumberStr(0.1)
-                );
-                callArgs.push(
-                    args.mtbLong ? args.mtbLong : toBigNumberStr(0.2)
-                );
-                callArgs.push(
-                    args.mtbShort ? args.mtbShort : toBigNumberStr(0.2)
-                );
+    describe("Verifying Functions Test", async () => {
+        let callArgs: any = [];
+        let onChainTestCall: any;
+        beforeEach(async () => {
+            callArgs.push(args.minPrice ? args.minPrice : toBigNumberStr(0.1));
+            callArgs.push(
+                args.maxPrice ? args.maxPrice : toBigNumberStr(100000)
+            );
+            callArgs.push(
+                args.tickSize ? args.tickSize : toBigNumberStr(0.001)
+            );
+            callArgs.push(args.minQty ? args.minQty : toBigNumberStr(0.1));
 
-                callArgs.push(
-                    args.maxAllowedOIOpen
-                        ? args.maxAllowedOIOpen
-                        : [
-                              toBigNumberStr(100000),
-                              toBigNumberStr(100000),
-                              toBigNumberStr(200000),
-                              toBigNumberStr(200000),
-                              toBigNumberStr(500000)
-                          ]
-                );
-                onChainTestCall = (callArgs: any) => {
-                    return ownerSigner.executeMoveCallWithRequestType({
-                        packageObjectId: deployment.objects.package.id,
-                        module: "test",
-                        function: "testTradeVerificationFunctions",
-                        typeArguments: [],
-                        arguments: callArgs,
-                        gasBudget: 1000
-                    });
-                };
-            });
-            afterEach(async () => {
-                callArgs = [];
-            });
-            it("should pass all the verification functions", async () => {
-                callArgs.push(toBigNumberStr(100)); // trade Quantity,
-                callArgs.push(toBigNumberStr(10)); //trade Price
-                callArgs.push(toBigNumberStr(11)); // oracle Price
-                callArgs.push(true); //isBuy
-                callArgs.push(toBigNumberStr(0.2));
-                callArgs.push(toBigNumberStr(1000));
-                const tx = await onChainTestCall(callArgs);
-                expectTxToSucceed(tx);
-            });
-            it("should revert because trade Qty < min Qty", async () => {
-                callArgs.push(toBigNumberStr(0.001)); // trade Quantity,
-                callArgs.push(toBigNumberStr(10)); //trade Price
-                callArgs.push(toBigNumberStr(11)); // oracle Price
-                callArgs.push(true); //isBuy
-                callArgs.push(toBigNumberStr(0.2));
-                callArgs.push(toBigNumberStr(1000));
+            callArgs.push(
+                args.maxQtyLimit ? args.maxQtyLimit : toBigNumberStr(100000)
+            );
+            callArgs.push(
+                args.maxQtyMarket ? args.maxQtyMarket : toBigNumberStr(1000)
+            );
+            callArgs.push(args.stepSize ? args.stepSize : toBigNumberStr(0.1));
+            callArgs.push(args.mtbLong ? args.mtbLong : toBigNumberStr(0.2));
+            callArgs.push(args.mtbShort ? args.mtbShort : toBigNumberStr(0.2));
 
-                const tx = await onChainTestCall(callArgs);
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[19]);
-            });
-            it("should revert because trade price < min price", async () => {
-                callArgs.push(toBigNumberStr(10)); // trade Quantity,
-                callArgs.push(toBigNumberStr(0.01)); //trade Price
-                callArgs.push(toBigNumberStr(11)); // oracle Price
-                callArgs.push(true); //isBuy
-                callArgs.push(toBigNumberStr(0.2));
-                callArgs.push(toBigNumberStr(1000));
+            callArgs.push(
+                args.maxAllowedOIOpen
+                    ? args.maxAllowedOIOpen
+                    : [
+                          toBigNumberStr(100000),
+                          toBigNumberStr(100000),
+                          toBigNumberStr(200000),
+                          toBigNumberStr(200000),
+                          toBigNumberStr(500000)
+                      ]
+            );
+            onChainTestCall = (callArgs: any) => {
+                return ownerSigner.executeMoveCallWithRequestType({
+                    packageObjectId: deployment.objects.package.id,
+                    module: "test",
+                    function: "testTradeVerificationFunctions",
+                    typeArguments: [],
+                    arguments: callArgs,
+                    gasBudget: 1000
+                });
+            };
+        });
+        afterEach(async () => {
+            callArgs = [];
+        });
+        it("should pass all the verification functions", async () => {
+            callArgs.push(toBigNumberStr(100)); // trade Quantity,
+            callArgs.push(toBigNumberStr(10)); //trade Price
+            callArgs.push(toBigNumberStr(11)); // oracle Price
+            callArgs.push(true); //isBuy
+            callArgs.push(toBigNumberStr(0.2));
+            callArgs.push(toBigNumberStr(1000));
+            const tx = await onChainTestCall(callArgs);
+            expectTxToSucceed(tx);
+        });
+        it("should revert because trade Qty < min Qty", async () => {
+            callArgs.push(toBigNumberStr(0.001)); // trade Quantity,
+            callArgs.push(toBigNumberStr(10)); //trade Price
+            callArgs.push(toBigNumberStr(11)); // oracle Price
+            callArgs.push(true); //isBuy
+            callArgs.push(toBigNumberStr(0.2));
+            callArgs.push(toBigNumberStr(1000));
 
-                const tx = await onChainTestCall(callArgs);
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[3]);
-            });
-            it("should revert because mtb short check", async () => {
-                callArgs.push(toBigNumberStr(10)); // trade Quantity,
-                callArgs.push(toBigNumberStr(10)); //trade Price
-                callArgs.push(toBigNumberStr(11)); // oracle Price
-                callArgs.push(false); //isBuy
-                callArgs.push(toBigNumberStr(0.2));
-                callArgs.push(toBigNumberStr(1000));
+            const tx = await onChainTestCall(callArgs);
+            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[19]);
+        });
+        it("should revert because trade price < min price", async () => {
+            callArgs.push(toBigNumberStr(10)); // trade Quantity,
+            callArgs.push(toBigNumberStr(0.01)); //trade Price
+            callArgs.push(toBigNumberStr(11)); // oracle Price
+            callArgs.push(true); //isBuy
+            callArgs.push(toBigNumberStr(0.2));
+            callArgs.push(toBigNumberStr(1000));
 
-                const tx = await onChainTestCall(callArgs);
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[24]);
-            });
-            it("should revert because oi open > max Allowed OI ", async () => {
-                callArgs.push(toBigNumberStr(10)); // trade Quantity,
-                callArgs.push(toBigNumberStr(10)); //trade Price
-                callArgs.push(toBigNumberStr(11)); // oracle Price
-                callArgs.push(true); //isBuy
-                callArgs.push(toBigNumberStr(0.2)); //mro
-                callArgs.push(toBigNumberStr(500001)); // oi open
+            const tx = await onChainTestCall(callArgs);
+            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[3]);
+        });
+        it("should revert because mtb short check", async () => {
+            callArgs.push(toBigNumberStr(10)); // trade Quantity,
+            callArgs.push(toBigNumberStr(10)); //trade Price
+            callArgs.push(toBigNumberStr(11)); // oracle Price
+            callArgs.push(false); //isBuy
+            callArgs.push(toBigNumberStr(0.2));
+            callArgs.push(toBigNumberStr(1000));
 
-                const tx = await onChainTestCall(callArgs);
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[25]);
-            });
+            const tx = await onChainTestCall(callArgs);
+            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[24]);
+        });
+        it("should revert because oi open > max Allowed OI ", async () => {
+            callArgs.push(toBigNumberStr(10)); // trade Quantity,
+            callArgs.push(toBigNumberStr(10)); //trade Price
+            callArgs.push(toBigNumberStr(11)); // oracle Price
+            callArgs.push(true); //isBuy
+            callArgs.push(toBigNumberStr(0.2)); //mro
+            callArgs.push(toBigNumberStr(500001)); // oi open
+
+            const tx = await onChainTestCall(callArgs);
+            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[25]);
         });
     });
 });
