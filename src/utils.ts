@@ -83,7 +83,7 @@ export function getSignerFromSeed(
 }
 
 export async function requestGas(address: string) {
-    const url = network.faucet + "/gas";
+    const url = network.faucet;
     try {
         const data = await fetch(url, {
             method: "POST",

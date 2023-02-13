@@ -4,8 +4,8 @@
     "faucet": "https://sui-faucet-dev.firefly.exchange/"
   },
   "cloud": {
-    "rpc": "https://sui-dev.firefly.exchange:443",
-    "faucet": "https://sui-faucet-dev.firefly.exchange/"
+    "rpc": "http://suitest.bluefin.io:9000",
+    "faucet": "http://suitest.bluefin.io/gas"
   },
   "devnet": {
     "rpc": "https://fullnode.devnet.sui.io:443",
