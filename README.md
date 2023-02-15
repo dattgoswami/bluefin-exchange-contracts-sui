@@ -7,7 +7,7 @@ Repository containing firefly core exchange contracts that allow users to do on-
 - Install dependencies using `yarn`
 - Create a wallet on sui using `sui client new-address secp256k1`
 - Create `.env` file using `.env.example` provided. Specify the DEPLOYER_SEED (secp256k1) and DEPLOY_ON (See `networks.json` for available networks to deploy) The Deployer account must be in sui-client addresses.
-- To deploy `firefly_exchange` contracts run `yarn deploy`
+- To deploy `firefly_exchange` contracts run `yarn deploy:full`
   The script will deploy the contracts, extract created objects and write them to `./deployment.json` file
   ```
   PS D:\Github\firefly-exchange-contracts-v2> yarn deploy:full

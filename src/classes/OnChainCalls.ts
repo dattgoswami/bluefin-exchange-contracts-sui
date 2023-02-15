@@ -34,6 +34,7 @@ export class OnChainCalls {
             mmr?: string;
             makerFee?: string;
             takerFee?: string;
+            maxAllowedPriceDiffInOP?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -73,6 +74,12 @@ export class OnChainCalls {
 
         callArgs.push(args.makerFee ? args.makerFee : toBigNumberStr(0.001));
         callArgs.push(args.takerFee ? args.takerFee : toBigNumberStr(0.0045));
+
+        callArgs.push(
+            args.maxAllowedPriceDiffInOP
+                ? args.maxAllowedPriceDiffInOP
+                : toBigNumberStr(1)
+        );
 
         const caller = signer ? signer : this.signer;
 
@@ -348,6 +355,78 @@ export class OnChainCalls {
         return this.signAndCall(caller, "trade", callArgs);
     }
 
+    public async updateOraclePrice(
+        args: {
+            perpID?: string;
+            updateOPCapID?: string;
+            price: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(
+            args.updateOPCapID
+                ? args.updateOPCapID
+                : this.getUpdateOraclePriceCapabilityID()
+        );
+        callArgs.push(args.price);
+
+        return this.signAndCall(caller, "set_oracle_price", callArgs);
+    }
+
+    public async updatePriceOracleOperator(
+        args: {
+            adminCapID?: string;
+            updateOPCapID?: string;
+            perpID?: string;
+            operator: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminCapID ? args.adminCapID : this.getAdminCap());
+        callArgs.push(
+            args.updateOPCapID
+                ? args.updateOPCapID
+                : this.getUpdateOraclePriceCapabilityID()
+        );
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+
+        callArgs.push(args.operator);
+
+        return this.signAndCall(caller, "set_price_oracle_operator", callArgs);
+    }
+
+    public async updatePriceOracleMaxAllowedPriceDifference(
+        args: {
+            adminCapID?: string;
+            perpID?: string;
+            maxAllowedPriceDifference: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminCapID ? args.adminCapID : this.getAdminCap());
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.maxAllowedPriceDifference);
+
+        return this.signAndCall(
+            caller,
+            "set_oracle_price_max_allowed_diff",
+            callArgs
+        );
+    }
+
     public signAndCall(
         caller: SignerWithProvider,
         method: string,
@@ -408,6 +487,11 @@ export class OnChainCalls {
             .id as string;
     }
 
+    getUpdateOraclePriceCapabilityID(market: number = 0): string {
+        return this.deployment["markets"][market]["Objects"][
+            "UpdateOraclePriceCapability"
+        ].id as string;
+    }
     getOperatorTableID(): string {
         return this.deployment["objects"]["Table<address, bool>"].id as string;
     }

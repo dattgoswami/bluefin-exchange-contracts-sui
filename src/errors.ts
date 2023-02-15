@@ -56,5 +56,10 @@ export const ERROR_CODES = {
     "45": "Taker: Cannot overfill order",
     "46": "Maker: Cannot trade when loss exceeds margin. Please add margin",
     "47": "Taker: Cannot trade when loss exceeds margin. Please add margin",
-    "48": "Taker: Order can not be of the same side as Maker"
+    "48": "Taker: Order can not be of the same side as Maker",
+    "100": "Sender is not a valid price oracle operator",
+    "101": "Address is already price oracle operator",
+    "102": "Price is out of max allowed price difference bounds",
+    "103": "Max allowed price difference cannot be 0%",
+    "104": "UpdateOraclePriceCapability's Perpetual ID mismatch with provided Perpetual ID"
 };

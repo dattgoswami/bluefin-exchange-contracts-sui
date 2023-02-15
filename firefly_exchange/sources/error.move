@@ -150,4 +150,25 @@ module firefly_exchange::error {
     public fun operator_not_found() : u64 {
         return 8
     }
+
+    public fun not_valid_price_oracle_operator() : u64 {
+        return 100
+    }
+
+    public fun already_price_oracle_operator() : u64 {
+        return 101
+    }
+
+    public fun out_of_max_allowed_price_diff_bounds() : u64 {
+        return 102
+    }
+
+    public fun max_allowed_price_diff_cannot_be_zero() : u64 {
+        return 103
+    }
+
+    public fun invalid_price_oracle_capability() : u64 {
+        return 104
+    }
+
 }

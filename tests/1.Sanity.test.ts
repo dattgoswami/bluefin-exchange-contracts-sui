@@ -10,6 +10,7 @@ import {
 import { OnChainCalls, Transaction } from "../src/classes";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { OWNERSHIP_ERROR } from "../src/errors";
+import { fundTestAccounts } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -27,6 +28,7 @@ describe("Sanity Tests", () => {
 
     // deploy package once
     before(async () => {
+        await fundTestAccounts();
         ownerAddress = await getSignerSUIAddress(ownerSigner);
         onChain = new OnChainCalls(ownerSigner, deployment);
     });

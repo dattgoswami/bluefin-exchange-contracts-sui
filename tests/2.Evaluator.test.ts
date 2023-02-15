@@ -9,9 +9,9 @@ import {
     getSignerFromSeed
 } from "../src/utils";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
-import { toBigNumber, toBigNumberStr } from "../src/library";
+import { toBigNumberStr } from "../src/library";
 import { TEST_WALLETS } from "./helpers/accounts";
-import { test_deploy_market } from "./helpers/utils";
+import { fundTestAccounts, test_deploy_market } from "./helpers/utils";
 import { expectTxToSucceed } from "./helpers/expect";
 
 chai.use(chaiAsPromised);
@@ -31,6 +31,7 @@ describe("Evaluator", () => {
     let ownerAddress: string;
 
     before(async () => {
+        await fundTestAccounts();
         ownerAddress = await getSignerSUIAddress(ownerSigner);
     });
 
@@ -41,8 +42,14 @@ describe("Evaluator", () => {
         ];
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
+
     describe("Setters", async () => {
         describe("Price", async () => {
+            deployment["markets"] = [
+                await test_deploy_market(deployment, ownerSigner, provider)
+            ];
+            onChain = new OnChainCalls(ownerSigner, deployment);
+
             it("should set min price to 0.2", async () => {
                 await onChain.setMinPrice({ minPrice: 0.02 });
                 const details = await onChain.getPerpDetails(
@@ -58,7 +65,7 @@ describe("Evaluator", () => {
                 expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[1]);
             });
 
-            it("should revert as min price can be > max price", async () => {
+            it("should revert as min price can not be > max price", async () => {
                 const tx = await onChain.setMinPrice({ minPrice: 1_000_000 });
                 expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[2]);
             });
@@ -171,21 +178,6 @@ describe("Evaluator", () => {
                 ).to.eventually.be.rejectedWith(expectedError);
             });
 
-            it("should set market take bound (long) to 20%", async () => {
-                await onChain.setMTBLong({ mtbLong: 0.2 });
-                const details = await onChain.getPerpDetails(
-                    onChain.getPerpetualID()
-                );
-                expect(
-                    (details.checks as any)["fields"]["maxQtyMarket"]
-                ).to.be.equal(toBigNumberStr(20000));
-            });
-
-            it("should revert when trying to set market take bound (long) as 0", async () => {
-                const tx = await onChain.setMTBLong({ mtbLong: 0 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[12]);
-            });
-
             it("should revert when non-admin account tries to set maximum quantity (market)", async () => {
                 const alice = getSignerFromSeed(
                     TEST_WALLETS[0].phrase,
@@ -199,26 +191,6 @@ describe("Evaluator", () => {
                 await expect(
                     onChain.setMTBLong({ mtbLong: 0.2 }, alice)
                 ).to.eventually.be.rejectedWith(expectedError);
-            });
-
-            it("should set market take bound (short) to 20%", async () => {
-                await onChain.setMTBShort({ mtbShort: 0.2 });
-                const details = await onChain.getPerpDetails(
-                    onChain.getPerpetualID()
-                );
-                expect((details.checks as any)["fields"]["minQty"]).to.be.equal(
-                    toBigNumberStr(0.02)
-                );
-            });
-
-            it("should revert when trying to set market take bound (short) as 0", async () => {
-                const tx = await onChain.setMTBShort({ mtbShort: 0 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[13]);
-            });
-
-            it("should revert when trying to set market take bound (short) > 100%", async () => {
-                const tx = await onChain.setMTBShort({ mtbShort: 2 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[14]);
             });
 
             it("should revert when trying to set minimum quantity  as 0", async () => {
@@ -236,10 +208,8 @@ describe("Evaluator", () => {
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
-
-                await onChain.setMinQty({ minQty: 0.02 }, alice);
                 await expect(
-                    onChain.setMTBShort({ mtbShort: 0.2 }, alice)
+                    onChain.setMinQty({ minQty: 0.02 }, alice)
                 ).to.eventually.be.rejectedWith(expectedError);
             });
 
@@ -275,6 +245,21 @@ describe("Evaluator", () => {
         });
 
         describe("Market Take Bounds", async () => {
+            it("should revert when trying to set market take bound (long) as 0", async () => {
+                const tx = await onChain.setMTBLong({ mtbLong: 0 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[12]);
+            });
+
+            it("should revert when trying to set market take bound (short) as 0", async () => {
+                const tx = await onChain.setMTBShort({ mtbShort: 0 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[13]);
+            });
+
+            it("should revert when trying to set market take bound (short) > 100%", async () => {
+                const tx = await onChain.setMTBShort({ mtbShort: 2 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[14]);
+            });
+
             it("should set market take bound (long) to 20%", async () => {
                 await onChain.setMTBLong({ mtbLong: 0.2 });
                 const details = await onChain.getPerpDetails(

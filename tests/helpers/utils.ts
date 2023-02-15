@@ -2,7 +2,8 @@ import { JsonRpcProvider, RawSigner } from "@mysten/sui.js";
 import { OnChainCalls } from "../../src/classes/OnChainCalls";
 import { UserPosition } from "../../src/interfaces";
 import { BASE_DECIMALS, bigNumber } from "../../src/library";
-import { getCreatedObjects, publishPackage } from "../../src/utils";
+import { getCreatedObjects, publishPackage, requestGas } from "../../src/utils";
+import { TEST_WALLETS } from "./accounts";
 import { TestPositionExpect } from "./interfaces";
 
 export async function test_deploy_package(
@@ -49,6 +50,12 @@ export function getExpectedTestPosition(expect: any): TestPositionExpect {
                 : undefined,
         fee: expect.fee != undefined ? bigNumber(expect.fee) : undefined
     } as TestPositionExpect;
+}
+
+export async function fundTestAccounts() {
+    for (const wallet of TEST_WALLETS) {
+        await requestGas(wallet.address);
+    }
 }
 
 // export function toTestPositionExpect(

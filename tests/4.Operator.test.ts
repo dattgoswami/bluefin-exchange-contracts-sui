@@ -11,6 +11,7 @@ import {
 import { expectTxToSucceed } from "./helpers/expect";
 import { OnChainCalls, Transaction } from "../src/classes";
 import { ERROR_CODES } from "../src/errors";
+import { fundTestAccounts } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -26,6 +27,7 @@ describe("Operators", () => {
     let ownerAddress: string;
 
     before(async () => {
+        await fundTestAccounts();
         ownerAddress = await getSignerSUIAddress(ownerSigner);
     });
 

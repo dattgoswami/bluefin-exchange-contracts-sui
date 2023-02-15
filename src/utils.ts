@@ -77,6 +77,10 @@ export function getSignerFromSeed(
     return getSignerFromKeyPair(getKeyPairFromSeed(seed), provider);
 }
 
+export async function getAddressFromSigner(signer: RawSigner): Promise<string> {
+    return `0x${await signer.getAddress()}`;
+}
+
 export async function requestGas(address: string) {
     const url = network.faucet;
     try {

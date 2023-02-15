@@ -11,6 +11,7 @@ module firefly_exchange::perpetual {
 
     // custom modules
     use firefly_exchange::position::{Self, UserPosition};
+    use firefly_exchange::price_oracle::{Self, OraclePrice, UpdateOraclePriceCapability};
     use firefly_exchange::evaluator::{Self, TradeChecks};
     use firefly_exchange::order::{Self, Order};
     use firefly_exchange::library::{Self};
@@ -80,6 +81,7 @@ module firefly_exchange::perpetual {
     struct AdminCap has key {
         id: UID,
     }
+     
 
     struct Perpetual has key, store {
         id: UID,
@@ -97,6 +99,8 @@ module firefly_exchange::perpetual {
         takerFee: u128,
         /// table containing user positions for this market/perpetual
         positions: Table<address,UserPosition>,
+        /// PriceOracle
+        oraclePrice: OraclePrice
     }
 
     struct OrderStatus has store, drop {
@@ -179,6 +183,7 @@ module firefly_exchange::perpetual {
         maintenanceMarginRequired: u128,
         makerFee: u128,
         takerFee: u128,
+        maxAllowedPriceDiffInOP: u128,
         ctx: &mut TxContext
         ){
         
@@ -201,6 +206,15 @@ module firefly_exchange::perpetual {
             maxAllowedOIOpen
             );
 
+        let oraclePrice = price_oracle::initOraclePrice(
+            0, 
+            maxAllowedPriceDiffInOP,
+            0, 
+            perpID, 
+            tx_context::sender(ctx), 
+            ctx
+        );
+
         let perpetual = Perpetual {
             id: id,
             name: string::utf8(name),
@@ -210,6 +224,7 @@ module firefly_exchange::perpetual {
             makerFee,
             takerFee,
             positions,
+            oraclePrice
         };
 
         emit(PerpetualCreationEvent {
@@ -221,7 +236,8 @@ module firefly_exchange::perpetual {
             makerFee,
             takerFee    
         });
-        
+
+
         transfer::share_object(perpetual);
 
     }
@@ -445,7 +461,6 @@ module firefly_exchange::perpetual {
             });
     }
 
-
     fun apply_isolated_margin(balance: &mut UserPosition, order:Order, fillQuantity: u128, fillPrice: u128, feePerUnit: u128, isTaker: u64): IMResponse {
         
         // update user mro
@@ -597,7 +612,7 @@ module firefly_exchange::perpetual {
 
     }
 
-     fun verify_order(perpetual: &mut Perpetual, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, signature: vector<u8>, fillQuantity: u128, fillPrice: u128, isTaker: u64){
+    fun verify_order(perpetual: &mut Perpetual, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, signature: vector<u8>, fillQuantity: u128, fillPrice: u128, isTaker: u64){
 
             verify_order_state(ordersTable, hash, isTaker);
 
@@ -612,7 +627,6 @@ module firefly_exchange::perpetual {
             verify_order_leverage(perpetual, order, isTaker);
 
             verify_and_fill_order_qty(ordersTable, order, hash, fillQuantity, isTaker);
-
     }
 
     //===========================================================//
@@ -733,5 +747,26 @@ module firefly_exchange::perpetual {
         return (leverage / library::base_uint()) * library::base_uint()
     }
 
+
+    /*
+     * Sets OraclePrice  
+     */
+    public entry fun set_oracle_price(perp: &mut Perpetual, cap: &UpdateOraclePriceCapability, price: u128, ctx: &mut TxContext){
+        price_oracle::set_oracle_price(object::uid_to_inner(&perp.id), cap, &mut perp.oraclePrice, price, tx_context::sender(ctx));
+    }
+
+    /*
+     * Sets Max difference allowed in percentage between New Oracle Price & Old Oracle Price
+     */
+    public entry fun set_oracle_price_max_allowed_diff(_: &AdminCap, perp: &mut Perpetual, maxAllowedPriceDifference: u128){
+        price_oracle::set_oracle_price_max_allowed_diff(object::uid_to_inner(&perp.id), &mut perp.oraclePrice, maxAllowedPriceDifference);
+    }
+
+    /*
+     * Sets operator address who is allowed to update oracle price 
+     */
+    public entry fun set_price_oracle_operator(_: &AdminCap, cap: &mut UpdateOraclePriceCapability, perp: &Perpetual, operator: address){
+       price_oracle::set_price_oracle_operator(object::uid_to_inner(&perp.id), cap, operator);
+    }
 }
 

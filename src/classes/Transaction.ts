@@ -25,15 +25,19 @@ export class Transaction {
         return (ERROR_CODES as any)[code];
     }
 
-    static getEvents(tx: SuiExecuteTransactionResponse | any, name = "") {
+    static getEvents(
+        tx: SuiExecuteTransactionResponse | any,
+        eventName?: string
+    ) {
         let events = [];
 
         if (tx?.effects) {
             events = tx?.effects?.effects?.events as any;
-            if (name != "") {
+            if (eventName != "") {
                 events = events
                     ?.filter(
-                        (x: any) => x["moveEvent"]?.type?.indexOf(name) >= 0
+                        (x: any) =>
+                            x["moveEvent"]?.type?.indexOf(eventName) >= 0
                     )
                     .map((x: any) => {
                         return x["moveEvent"];

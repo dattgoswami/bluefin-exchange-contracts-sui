@@ -42,6 +42,8 @@ interface Perpetual {
     makerFee: string;
     // default taker order fee for this Perpetual
     takerFee: string;
+    // maximum allowed difference in consecutive Oracle Price updates
+    maxAllowedPriceDiffInOP: string;
 }
 
 export const market = process.env.MARKET;
@@ -77,7 +79,8 @@ export const DeploymentConfig: DeploymentConfig = {
             initialMarginRequired: toBigNumberStr(0.475),
             maintenanceMarginRequired: toBigNumberStr(0.3),
             makerFee: toBigNumberStr(0.001),
-            takerFee: toBigNumberStr(0.0045)
+            takerFee: toBigNumberStr(0.0045),
+            maxAllowedPriceDiffInOP: toBigNumberStr(1)
         }
     ]
 };

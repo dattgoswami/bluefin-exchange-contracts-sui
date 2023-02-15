@@ -21,3 +21,14 @@ export function expectPosition(expectedPosition: any, position: any) {
     // expect(position.isPosPositive).to.be.equal(expectedPosition);
     // expect(bigNumber(position.mro).shiftedBy(-BASE_DECIMALS).toFixed(3)).to.be.equal(string(expectedPosition.mro));
 }
+
+export function expectTxToEmitEvent(
+    txResponse: SuiExecuteTransactionResponse,
+    eventName: string,
+    eventsCount: number = 1
+) {
+    const events = Transaction.getEvents(txResponse, eventName);
+
+    expect(events?.length).to.equal(eventsCount);
+    expect(events?.[0]).to.not.be.undefined;
+}
