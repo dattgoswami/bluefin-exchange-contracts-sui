@@ -1,12 +1,12 @@
-module firefly_exchange::price_oracle {
+module bluefin_exchange::price_oracle {
 
     use sui::object::{Self, ID, UID};
     use sui::event::{emit};
     use sui::tx_context::{TxContext};
     use sui::transfer;
 
-    use firefly_exchange::error::{Self};
-    use firefly_exchange::library::{base_uint};
+    use bluefin_exchange::error::{Self};
+    use bluefin_exchange::library::{base_uint};
 
     struct OraclePriceUpdated has copy, drop {
         id: ID,

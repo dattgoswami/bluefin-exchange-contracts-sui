@@ -1,5 +1,5 @@
 
-module firefly_exchange::perpetual {
+module bluefin_exchange::perpetual {
 
     use sui::object::{Self, ID, UID};
     use sui::tx_context::{Self, TxContext};
@@ -10,13 +10,13 @@ module firefly_exchange::perpetual {
     use sui::ecdsa_k1;
 
     // custom modules
-    use firefly_exchange::position::{Self, UserPosition};
-    use firefly_exchange::price_oracle::{Self, OraclePrice, UpdateOraclePriceCapability};
-    use firefly_exchange::evaluator::{Self, TradeChecks};
-    use firefly_exchange::order::{Self, Order};
-    use firefly_exchange::library::{Self};
-    use firefly_exchange::signed_number::{Self, Number};
-    use firefly_exchange::error::{Self};
+    use bluefin_exchange::position::{Self, UserPosition};
+    use bluefin_exchange::price_oracle::{Self, OraclePrice, UpdateOraclePriceCapability};
+    use bluefin_exchange::evaluator::{Self, TradeChecks};
+    use bluefin_exchange::order::{Self, Order};
+    use bluefin_exchange::library::{Self};
+    use bluefin_exchange::signed_number::{Self, Number};
+    use bluefin_exchange::error::{Self};
 
     //===========================================================//
     //                           EVENTS                          //

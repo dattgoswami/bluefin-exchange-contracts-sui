@@ -1,4 +1,4 @@
-module firefly_exchange::position {
+module bluefin_exchange::position {
     use sui::object::{ID};
 
     struct UserPosition has copy, drop, store {

@@ -1,4 +1,4 @@
-module firefly_exchange::error {
+module bluefin_exchange::error {
 
     // Setter Errors
     public fun min_price_greater_than_zero() : u64 {

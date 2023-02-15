@@ -172,7 +172,7 @@ export async function publishPackage(
 }
 
 export async function publishPackageUsingClient(): Promise<SuiExecuteTransactionResponse> {
-    const pkgPath = path.join(process.cwd(), "/firefly_exchange");
+    const pkgPath = path.join(process.cwd(), "/bluefin_exchange");
     return Client.publishPackage(pkgPath) as SuiExecuteTransactionResponse;
 }
 

@@ -1,10 +1,10 @@
-module firefly_exchange::evaluator {
+module bluefin_exchange::evaluator {
 
     use sui::object::{ID};
     use sui::event::{emit};
     use std::vector;
-    use firefly_exchange::library::{Self};
-    use firefly_exchange::error::{Self};
+    use bluefin_exchange::library::{Self};
+    use bluefin_exchange::error::{Self};
 
 
     //===========================================================//

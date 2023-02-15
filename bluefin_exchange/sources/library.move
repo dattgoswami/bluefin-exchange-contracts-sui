@@ -1,4 +1,4 @@
-module firefly_exchange::library {
+module bluefin_exchange::library {
     use std::vector;
     use sui::address;
     use std::hash;

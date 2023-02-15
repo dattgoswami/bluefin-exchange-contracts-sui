@@ -1,6 +1,6 @@
 {
-  "name": "firefly-exchange-contracts-v2",
-  "description": "Repository containing firefly core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.",
+  "name": "bluefin-exchange-contracts-sui",
+  "description": "Repository containing Bluefin core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.",
   "version": "1.0.0",
   "directories": {
     "test": "tests"
@@ -34,8 +34,8 @@
     "typescript": "^4.8.4"
   },
   "scripts": {
-    "build": "sui move build --path firefly_exchange",
-    "deploy:full": "ts-node ./scripts/deploy/full.ts",
+    "build": "sui move build --path bluefin_exchange",
+    "deploy": "ts-node ./scripts/deploy/full.ts",
     "deploy:package": "ts-node ./scripts/deploy/package.ts",
     "deploy:market": "ts-node ./scripts/deploy/market.ts",
     "faucet": "ts-node ./scripts/faucet.ts",
@@ -46,14 +46,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fireflyprotocol/firefly-exchange-contracts-v2.git"
+    "url": "git+https://github.com/fireflyprotocol/bluefin-exchange-contracts-sui.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/fireflyprotocol/firefly-exchange-contracts-v2/issues"
+    "url": "https://github.com/fireflyprotocol/bluefin-exchange-contracts-sui/issues"
   },
-  "homepage": "https://github.com/fireflyprotocol/firefly-exchange-contracts-v2#readme",
+  "homepage": "https://github.com/fireflyprotocol/bluefin-exchange-contracts-sui#readme",
   "lint-staged": {
     "**/*.{js,ts,json}": "prettier --write",
     "**/*.{js,ts}": "eslint --fix"

@@ -1,6 +1,6 @@
-module firefly_exchange::signed_number {
+module bluefin_exchange::signed_number {
 
-    use firefly_exchange::library::{Self};
+    use bluefin_exchange::library::{Self};
 
     struct Number has store, copy, drop {
         value: u128,
