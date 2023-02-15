@@ -1,6 +1,5 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-
 import { DeploymentConfig } from "../src/DeploymentConfig";
 import {
     readFile,
@@ -60,6 +59,7 @@ describe("Sanity Tests", () => {
             ownerAddress,
             TEST_WALLETS[0].address
         );
+
         await expect(
             onChain.createPerpetual({}, alice)
         ).to.eventually.be.rejectedWith(expectedError);

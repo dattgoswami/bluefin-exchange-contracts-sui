@@ -7,7 +7,7 @@ module firefly_exchange::perpetual {
     use sui::transfer;
     use sui::event::{emit};
     use sui::table::{Self, Table};
-    use sui::ecdsa;
+    use sui::ecdsa_k1;
 
     // custom modules
     use firefly_exchange::position::{Self, UserPosition};
@@ -53,12 +53,14 @@ module firefly_exchange::perpetual {
     }
 
     struct AccountPositionUpdateEvent has copy, drop {
+        perpID: ID,
         account:address,
         position:UserPosition,
         action: u64
     }
 
     struct TradeExecutedEvent has copy, drop {
+        perpID: ID,
         tradeType: u64,
         maker: address,
         taker: address,
@@ -140,7 +142,7 @@ module firefly_exchange::perpetual {
      * Updates status(active/inactive) of settlement operator
      * Only Admin can invoke this method
      */
-    public entry fun setSettlementOperator(_:&AdminCap, operatorTable: &mut Table<address, bool>, operator:address, status:bool){
+    public entry fun set_settlement_operator(_:&AdminCap, operatorTable: &mut Table<address, bool>, operator:address, status:bool){
         if(table::contains(operatorTable, operator)){
             assert!(status == false, error::operator_already_whitelisted_for_settlement());
             table::remove(operatorTable, operator); 
@@ -228,86 +230,85 @@ module firefly_exchange::perpetual {
      * Updates minimum price of the perpetual 
      * Only Admin can update price
      */
-    public entry fun setMinPrice( _: &AdminCap, perpetual: &mut Perpetual, minPrice: u128){
-        evaluator::setMinPrice(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, minPrice);
+    public entry fun set_min_price( _: &AdminCap, perpetual: &mut Perpetual, minPrice: u128){
+        evaluator::set_min_price(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, minPrice);
     }   
 
     /** Updates maximum price of the perpetual 
      * Only Admin can update price
      */
-    public entry fun setMaxPrice( _: &AdminCap, perpetual: &mut Perpetual, maxPrice: u128){
-        evaluator::setMaxPrice(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxPrice);
+    public entry fun set_max_price( _: &AdminCap, perpetual: &mut Perpetual, maxPrice: u128){
+        evaluator::set_max_price(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxPrice);
     }   
 
     /**
      * Updates step size of the perpetual 
      * Only Admin can update size
      */
-    public entry fun setStepSize( _: &AdminCap, perpetual: &mut Perpetual, stepSize: u128){
-        evaluator::setStepSize(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, stepSize);
+    public entry fun set_step_size( _: &AdminCap, perpetual: &mut Perpetual, stepSize: u128){
+        evaluator::set_step_size(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, stepSize);
     }   
 
     /**
      * Updates tick size of the perpetual 
      * Only Admin can update size
      */
-    public entry fun setTickSize( _: &AdminCap, perpetual: &mut Perpetual, tickSize: u128){
-        evaluator::setTickSize(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, tickSize);
+    public entry fun set_tick_size( _: &AdminCap, perpetual: &mut Perpetual, tickSize: u128){
+        evaluator::set_tick_size(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, tickSize);
     }   
 
     /**
      * Updates market take bound (long) of the perpetual 
      * Only Admin can update MTB long
      */
-    public entry fun setMtbLong( _: &AdminCap, perpetual: &mut Perpetual, mtbLong: u128){
-        evaluator::setMtbLong(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbLong);
+    public entry fun set_mtb_long( _: &AdminCap, perpetual: &mut Perpetual, mtbLong: u128){
+        evaluator::set_mtb_long(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbLong);
     }  
 
     /**
      * Updates market take bound (short) of the perpetual 
      * Only Admin can update MTB short
      */
-    public entry fun setMtbShort( _: &AdminCap, perpetual: &mut Perpetual, mtbShort: u128){
-        evaluator::setMtbShort(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbShort);
+    public entry fun set_mtb_short( _: &AdminCap, perpetual: &mut Perpetual, mtbShort: u128){
+        evaluator::set_mtb_short(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbShort);
     }   
 
     /**
      * Updates maximum quantity for limit orders of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun setMaxQtyLimit( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
-        evaluator::setMaxQtyLimit(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    public entry fun set_max_qty_limit( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
+        evaluator::set_max_qty_limit(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
     }   
 
     /**
      * Updates maximum quantity for market orders of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun setMaxQtyMarket( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
-        evaluator::setMaxQtyMarket(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    public entry fun set_max_qty_market( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
+        evaluator::set_max_qty_market(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
     }  
 
     /**
      * Updates minimum quantity of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun setMinQty( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
-        evaluator::setMinQty(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    public entry fun set_min_qty( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
+        evaluator::set_min_qty(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
     }   
 
     /**
      * updates max allowed oi open for selected mro
      * Only Admin can update max allowed OI open
      */
-    public entry fun setMaxOIOpen( _: &AdminCap, perpetual: &mut Perpetual, maxLimit: vector<u128>){
-        evaluator::setMaxOIOpen(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxLimit);
+    public entry fun set_max_oi_open( _: &AdminCap, perpetual: &mut Perpetual, maxLimit: vector<u128>){
+        evaluator::set_max_oi_open(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxLimit);
     }
 
 
     /**
      * Used to perofrm on-chain trade between two orders (maker/taker)
      */ 
-
     public entry fun trade(
         perpetual: &mut Perpetual, 
         operatorTable: &mut Table<address, bool>,
@@ -353,8 +354,8 @@ module firefly_exchange::perpetual {
             assert!(makerIsBuy != takerIsBuy, error::order_cannot_be_of_same_side());
 
             // if maker/taker positions don't exist create them
-            create_position(perpetual, makerAddress);
-            create_position(perpetual, takerAddress);
+            create_position(perpID, &mut perpetual.positions, makerAddress);
+            create_position(perpID, &mut perpetual.positions, takerAddress);
 
             // TODO check if trading is allowed by guardian for given perpetual or not
 
@@ -412,18 +413,21 @@ module firefly_exchange::perpetual {
             let newTakerPosition = *table::borrow(&mut perpetual.positions, takerAddress);
             
             emit (AccountPositionUpdateEvent{
+                perpID, 
                 account: makerAddress,
                 position: newMakerPosition,
                 action: 0
             });
 
             emit (AccountPositionUpdateEvent{
+                perpID, 
                 account: takerAddress,
                 position: newTakerPosition,
                 action: 0
             });
 
             emit(TradeExecutedEvent{
+                perpID,
                 tradeType: 0,
                 maker: makerAddress,
                 taker: takerAddress,
@@ -615,12 +619,10 @@ module firefly_exchange::perpetual {
     //                      HELPER METHODS
     //===========================================================//
 
-    fun create_position(perpetual: &mut Perpetual, addr: address){
-
-        let perpID = object::uid_to_inner(&perpetual.id);
+    fun create_position(perpID:ID, positions: &mut Table<address, UserPosition>, addr: address){
         
-        if(!table::contains(&mut perpetual.positions, addr)){
-            table::add(&mut perpetual.positions, addr, position::initPosition(perpID, addr));
+        if(!table::contains(positions, addr)){
+            table::add(positions, addr, position::initPosition(perpID, addr));
         };
 
     }   
@@ -659,7 +661,7 @@ module firefly_exchange::perpetual {
 
     fun verify_order_signature(order:Order, hash:vector<u8>, signature:vector<u8>, isTaker:u64){
 
-        let publicKey = ecdsa::ecrecover(&signature, &hash);
+        let publicKey = ecdsa_k1::ecrecover(&signature, &hash);
 
         let publicAddress = library::get_public_address(publicKey);
 

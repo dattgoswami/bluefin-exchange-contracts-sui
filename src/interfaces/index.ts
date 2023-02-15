@@ -20,12 +20,17 @@ export interface wallet {
     phrase: string;
 }
 
-export interface UserDetails {
+export interface UserPosition {
     isPosPositive: string;
     qPos: string;
     margin: string;
     mro: string;
     oiOpen: string;
+}
+
+export interface UserPositionExtended extends UserPosition {
+    perpID: string;
+    user: string;
 }
 
 export interface Network {

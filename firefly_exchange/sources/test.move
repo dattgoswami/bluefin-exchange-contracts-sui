@@ -3,7 +3,7 @@ module firefly_exchange::test {
 
     use std::vector;
     use std::hash;
-    use sui::ecdsa;
+    use sui::ecdsa_k1;
     use sui::event;
     use sui::bcs;
     use firefly_exchange::evaluator::{initTradeChecks,verify_qty_checks,verify_price_checks,verify_market_take_bound_checks,verify_oi_open_for_account};
@@ -37,7 +37,7 @@ module firefly_exchange::test {
             is_verified = false;
             // ed25519_verify(&signature, &public_key, &hashed_msg);
         }else { // secp256k1 has signature length 65
-            is_verified = ecdsa::secp256k1_verify(&signature, &public_key, &hashed_msg);
+            is_verified = ecdsa_k1::secp256k1_verify(&signature, &public_key, &hashed_msg);
         };
 
         event::emit(SignatureVerifiedEvent {is_verified:is_verified});

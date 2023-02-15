@@ -44,6 +44,8 @@ interface Perpetual {
     takerFee: string;
 }
 
+export const market = process.env.MARKET;
+
 export const network = {
     ...(Networks as any)[process.env.DEPLOY_ON as any],
     name: process.env.DEPLOY_ON

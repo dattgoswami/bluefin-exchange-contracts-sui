@@ -1,6 +1,6 @@
-import { JsonRpcProvider, Keypair, RawSigner } from "@mysten/sui.js";
+import { JsonRpcProvider, Keypair } from "@mysten/sui.js";
 import { Order } from "../interfaces";
-import { getSignerFromKeyPair } from "../utils";
+import { getSignerFromKeyPair, getSignerSUIAddress } from "../utils";
 import { OrderSigner } from "./OrderSigner";
 
 export class Trader {
@@ -12,10 +12,9 @@ export class Trader {
         makerOrder: Order,
         takerOrder?: Order
     ) {
-        const takerAddress = await getSignerFromKeyPair(
-            taker,
-            provider
-        ).getAddress();
+        const takerAddress = await getSignerSUIAddress(
+            getSignerFromKeyPair(taker, provider)
+        );
 
         const _takerOrder = takerOrder || {
             ...makerOrder,

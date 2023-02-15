@@ -28,7 +28,8 @@ export class OrderSigner {
                 .signData(
                     new Base64DataBuffer(
                         hexToBuffer(this.getSerializedOrder(order))
-                    )
+                    ),
+                    true
                 )
                 .getData()
         ).toString("hex");

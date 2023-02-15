@@ -6,10 +6,10 @@ export class Client {
     static createWallet(): wallet {
         const phrase = execCommand("sui client new-address secp256k1");
         const match = phrase.match(/(?<=\[)(.*?)(?=\])/g);
-        return { address: match[1], phrase: match[2] } as wallet;
+        return { address: match[0], phrase: match[1] } as wallet;
     }
 
-    static switchEnv(env: String) {
+    static switchEnv(env: String): boolean {
         try {
             // try to switch to env if already exists
             execCommand(`sui client switch --env ${env}`);
@@ -25,15 +25,17 @@ export class Client {
             } catch (e) {
                 console.log("Error switching to env");
                 console.log(e);
+                return false;
             }
         }
         console.log(`Switched client env to: ${env}`);
+        return true;
     }
 
     static publishPackage(pkgPath: string) {
         return JSON.parse(
             execCommand(
-                `sui client publish --gas-budget 30000 --json --path ${pkgPath}`
+                `sui client publish --gas-budget 30000 --json ${pkgPath}`
             )
         );
     }
@@ -46,12 +48,14 @@ export class Client {
         );
     }
 
-    static switchAccount(address: string) {
+    static switchAccount(address: string): boolean {
         try {
             execCommand(`sui client switch --address ${address}`);
             console.log(`Switched client account to: ${address}`);
+            return true;
         } catch (e) {
             console.log(`Address ${address} does not exist on client`);
+            return false;
         }
     }
 }

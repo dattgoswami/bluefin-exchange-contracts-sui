@@ -2,7 +2,6 @@ import path from "path";
 
 import {
     RawSigner,
-    LocalTxnDataSerializer,
     Keypair,
     JsonRpcProvider,
     SuiObject,
@@ -68,11 +67,7 @@ export function getSignerFromKeyPair(
     keypair: Keypair,
     provider: JsonRpcProvider
 ): RawSigner {
-    return new RawSigner(
-        keypair,
-        provider,
-        new LocalTxnDataSerializer(provider)
-    );
+    return new RawSigner(keypair, provider);
 }
 
 export function getSignerFromSeed(
@@ -103,19 +98,15 @@ export async function requestGas(address: string) {
     return false;
 }
 
-export function mintSUI(amount: number, address: string) {}
-
 export async function getCreatedObjects(
     provider: JsonRpcProvider,
     txResponse: SuiExecuteTransactionResponse
 ): Promise<DeploymentObjectMap> {
     const map: DeploymentObjectMap = {};
 
-    const createdObjects =
-        (txResponse as any).EffectsCert == undefined
-            ? ((txResponse as any).effects.created as OwnedObjectRef[])
-            : ((txResponse as any).EffectsCert.effects.effects
-                  .created as OwnedObjectRef[]);
+    const createdObjects = (txResponse as any).effects.created
+        ? ((txResponse as any).effects.created as OwnedObjectRef[])
+        : ((txResponse as any).effects.effects.created as OwnedObjectRef[]);
 
     // iterate over each object
     for (const itr in createdObjects) {
@@ -133,8 +124,7 @@ export async function getCreatedObjects(
         const owner =
             objDetails.owner == OBJECT_OWNERSHIP_STATUS.IMMUTABLE
                 ? OBJECT_OWNERSHIP_STATUS.IMMUTABLE
-                : objDetails.owner == OBJECT_OWNERSHIP_STATUS.SHARED ||
-                  (objDetails.owner as any)["Shared"] != undefined
+                : Object.keys(objDetails.owner).indexOf("Shared") >= 0
                 ? OBJECT_OWNERSHIP_STATUS.SHARED
                 : OBJECT_OWNERSHIP_STATUS.OWNED;
 
@@ -171,7 +161,7 @@ export async function publishPackage(
     );
 
     // publish package
-    return signer.publishWithRequestType({
+    return signer.publish({
         compiledModules: modulesInBytes,
         gasBudget: 10000
     });

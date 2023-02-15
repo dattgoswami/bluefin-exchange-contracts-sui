@@ -45,15 +45,14 @@ describe("Trades", () => {
     });
 
     it("should execute trade call", async () => {
-        const tx = await onChain.trade(
-            await Trader.setupNormalTrade(
-                provider,
-                orderSigner,
-                alice.keyPair,
-                bob.keyPair,
-                defaultOrder
-            )
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            defaultOrder
         );
+        const tx = await onChain.trade(trade);
         expectTxToSucceed(tx);
     });
 

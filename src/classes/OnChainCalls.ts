@@ -5,7 +5,7 @@ import {
     SuiObject
 } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
-import { UserDetails, Order } from "../interfaces";
+import { UserPosition, Order } from "../interfaces";
 import { hexToBuffer, toBigNumberStr } from "../library";
 export class OnChainCalls {
     signer: SignerWithProvider;
@@ -40,6 +40,7 @@ export class OnChainCalls {
         const callArgs = [];
 
         callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+
         callArgs.push(args.name ? args.name : "ETH-PERP");
 
         callArgs.push(args.minPrice ? args.minPrice : toBigNumberStr(0.1));
@@ -75,14 +76,7 @@ export class OnChainCalls {
 
         const caller = signer ? signer : this.signer;
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "create_perpetual",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "create_perpetual", callArgs);
     }
 
     public async setMinPrice(
@@ -101,14 +95,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minPrice));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setMinPrice",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_min_price", callArgs);
     }
 
     public async setMaxPrice(
@@ -127,14 +114,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxPrice));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setMaxPrice",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_max_price", callArgs);
     }
 
     public async setStepSize(
@@ -153,14 +133,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.stepSize));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setStepSize",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_step_size", callArgs);
     }
 
     public async setTickSize(
@@ -179,17 +152,10 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.tickSize));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setTickSize",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_tick_size", callArgs);
     }
 
-    public async setMtbLong(
+    public async setMTBLong(
         args: {
             adminID?: string;
             perpID?: string;
@@ -205,17 +171,10 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbLong));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setMtbLong",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_mtb_long", callArgs);
     }
 
-    public async setMtbShort(
+    public async setMTBShort(
         args: {
             adminID?: string;
             perpID?: string;
@@ -231,14 +190,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbShort));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setMtbShort",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_mtb_short", callArgs);
     }
 
     public async setMaxQtyLimit(
@@ -257,14 +209,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxQtyLimit));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setMaxQtyLimit",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_max_qty_limit", callArgs);
     }
 
     public async setMaxQtyMarket(
@@ -283,14 +228,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxQtyMarket));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setMaxQtyMarket",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_max_qty_market", callArgs);
     }
 
     public async setMinQty(
@@ -309,14 +247,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minQty));
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setMinQty",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_min_qty", callArgs);
     }
 
     public async setMaxAllowedOIOpen(
@@ -335,35 +266,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(args.maxLimit);
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setMaxOIOpen",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
-    }
-    public async createPosition(
-        args: {
-            perpID?: string;
-        },
-        signer?: RawSigner
-    ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
-
-        const callArgs = [];
-
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
-
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "createPosition",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_max_oi_open", callArgs);
     }
 
     public async setSettlementOperator(
@@ -383,14 +286,7 @@ export class OnChainCalls {
         callArgs.push(args.operator);
         callArgs.push(args.status);
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "setSettlementOperator",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
-        });
+        return this.signAndCall(caller, "set_settlement_operator", callArgs);
     }
 
     public async trade(
@@ -449,13 +345,24 @@ export class OnChainCalls {
                 : args.makerOrder.price.toFixed(0)
         );
 
-        return caller.executeMoveCallWithRequestType({
-            packageObjectId: this.getPackageID(),
-            module: this.getModuleName(),
-            function: "trade",
-            typeArguments: [],
-            arguments: callArgs,
-            gasBudget: 10000
+        return this.signAndCall(caller, "trade", callArgs);
+    }
+
+    public signAndCall(
+        caller: SignerWithProvider,
+        method: string,
+        callArgs: any[]
+    ): Promise<SuiExecuteTransactionResponse> {
+        return caller.signAndExecuteTransaction({
+            kind: "moveCall",
+            data: {
+                packageObjectId: this.getPackageID(),
+                module: this.getModuleName(),
+                function: method,
+                arguments: callArgs,
+                typeArguments: [],
+                gasBudget: 10000
+            }
         });
     }
 
@@ -469,7 +376,7 @@ export class OnChainCalls {
         return objDetails;
     }
 
-    async getUserDetails(id: string): Promise<UserDetails> {
+    async getUserPosition(id: string): Promise<UserPosition> {
         const details = await this.getOnChainObject(id);
         return (details.data as any).fields.value.fields;
     }

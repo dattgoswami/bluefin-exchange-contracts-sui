@@ -171,8 +171,8 @@ describe("Evaluator", () => {
                 ).to.eventually.be.rejectedWith(expectedError);
             });
 
-            it("should set maximum quantity (market) as 20000", async () => {
-                await onChain.setMaxQtyMarket({ maxQtyMarket: 20000 });
+            it("should set market take bound (long) to 20%", async () => {
+                await onChain.setMTBLong({ mtbLong: 0.2 });
                 const details = await onChain.getPerpDetails(
                     onChain.getPerpetualID()
                 );
@@ -181,11 +181,9 @@ describe("Evaluator", () => {
                 ).to.be.equal(toBigNumberStr(20000));
             });
 
-            it("should revert when trying to set maximum quantity for market trade < minimum trade quantity", async () => {
-                const tx = await onChain.setMaxQtyMarket({
-                    maxQtyMarket: 0.001
-                });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[16]);
+            it("should revert when trying to set market take bound (long) as 0", async () => {
+                const tx = await onChain.setMTBLong({ mtbLong: 0 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[12]);
             });
 
             it("should revert when non-admin account tries to set maximum quantity (market)", async () => {
@@ -199,12 +197,12 @@ describe("Evaluator", () => {
                     TEST_WALLETS[0].address
                 );
                 await expect(
-                    onChain.setMaxQtyMarket({ maxQtyMarket: 2000 }, alice)
+                    onChain.setMTBLong({ mtbLong: 0.2 }, alice)
                 ).to.eventually.be.rejectedWith(expectedError);
             });
 
-            it("should set minimum quantity as 0.02", async () => {
-                await onChain.setMinQty({ minQty: 0.02 });
+            it("should set market take bound (short) to 20%", async () => {
+                await onChain.setMTBShort({ mtbShort: 0.2 });
                 const details = await onChain.getPerpDetails(
                     onChain.getPerpetualID()
                 );
@@ -213,16 +211,14 @@ describe("Evaluator", () => {
                 );
             });
 
-            it("should revert when trying to set minimum quantity  > max trade limit quantity", async () => {
-                await onChain.setMaxQtyLimit({ maxQtyLimit: 1 });
-                const tx = await onChain.setMinQty({ minQty: 2 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[17]);
+            it("should revert when trying to set market take bound (short) as 0", async () => {
+                const tx = await onChain.setMTBShort({ mtbShort: 0 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[13]);
             });
 
-            it("should revert when trying to set minimum quantity  > max trade market quantity", async () => {
-                await onChain.setMaxQtyMarket({ maxQtyMarket: 1 });
-                const tx = await onChain.setMinQty({ minQty: 2 });
-                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[17]);
+            it("should revert when trying to set market take bound (short) > 100%", async () => {
+                const tx = await onChain.setMTBShort({ mtbShort: 2 });
+                expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[14]);
             });
 
             it("should revert when trying to set minimum quantity  as 0", async () => {
@@ -243,7 +239,7 @@ describe("Evaluator", () => {
 
                 await onChain.setMinQty({ minQty: 0.02 }, alice);
                 await expect(
-                    onChain.setMinQty({ minQty: 0.02 }, alice)
+                    onChain.setMTBShort({ mtbShort: 0.2 }, alice)
                 ).to.eventually.be.rejectedWith(expectedError);
             });
 
@@ -280,7 +276,7 @@ describe("Evaluator", () => {
 
         describe("Market Take Bounds", async () => {
             it("should set market take bound (long) to 20%", async () => {
-                await onChain.setMtbLong({ mtbLong: 0.2 });
+                await onChain.setMTBLong({ mtbLong: 0.2 });
                 const details = await onChain.getPerpDetails(
                     onChain.getPerpetualID()
                 );
@@ -290,7 +286,7 @@ describe("Evaluator", () => {
             });
 
             it("should revert when trying to set market take bound (long) as 0", async () => {
-                const tx = await onChain.setMtbLong({ mtbLong: 0 });
+                const tx = await onChain.setMTBLong({ mtbLong: 0 });
                 expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[12]);
             });
 
@@ -305,12 +301,12 @@ describe("Evaluator", () => {
                     TEST_WALLETS[0].address
                 );
                 await expect(
-                    onChain.setMtbLong({ mtbLong: 0.2 }, alice)
+                    onChain.setMTBLong({ mtbLong: 0.2 }, alice)
                 ).to.eventually.be.rejectedWith(expectedError);
             });
 
             it("should set market take bound (short) to 20%", async () => {
-                await onChain.setMtbShort({ mtbShort: 0.2 });
+                await onChain.setMTBShort({ mtbShort: 0.2 });
                 const details = await onChain.getPerpDetails(
                     onChain.getPerpetualID()
                 );
@@ -320,12 +316,12 @@ describe("Evaluator", () => {
             });
 
             it("should revert when trying to set market take bound (short) as 0", async () => {
-                const tx = await onChain.setMtbShort({ mtbShort: 0 });
+                const tx = await onChain.setMTBShort({ mtbShort: 0 });
                 expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[13]);
             });
 
             it("should revert when trying to set market take bound (short) > 100%", async () => {
-                const tx = await onChain.setMtbShort({ mtbShort: 2 });
+                const tx = await onChain.setMTBShort({ mtbShort: 2 });
                 expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[14]);
             });
 
@@ -340,7 +336,7 @@ describe("Evaluator", () => {
                     TEST_WALLETS[0].address
                 );
                 await expect(
-                    onChain.setMtbShort({ mtbShort: 0.2 }, alice)
+                    onChain.setMTBShort({ mtbShort: 0.2 }, alice)
                 ).to.eventually.be.rejectedWith(expectedError);
             });
         });
@@ -417,7 +413,7 @@ describe("Evaluator", () => {
                       ]
             );
             onChainTestCall = (callArgs: any) => {
-                return ownerSigner.executeMoveCallWithRequestType({
+                return ownerSigner.executeMoveCall({
                     packageObjectId: deployment.objects.package.id,
                     module: "test",
                     function: "testTradeVerificationFunctions",
@@ -430,6 +426,7 @@ describe("Evaluator", () => {
         afterEach(async () => {
             callArgs = [];
         });
+
         it("should pass all the verification functions", async () => {
             callArgs.push(toBigNumberStr(100)); // trade Quantity,
             callArgs.push(toBigNumberStr(10)); //trade Price

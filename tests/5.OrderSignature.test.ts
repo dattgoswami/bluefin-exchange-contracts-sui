@@ -40,7 +40,7 @@ describe("Order Signer", () => {
         const packageId = deployment.objects.package.id;
         const pubkey = await ownerKeyPair.getPublicKey();
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "verify_signature",
@@ -71,7 +71,7 @@ describe("Order Signer", () => {
         const packageId = deployment.objects.package.id;
         const pubkey = ownerKeyPair.getPublicKey();
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "verify_signature",
@@ -101,7 +101,7 @@ describe("Order Signer", () => {
         const packageId = deployment.objects.package.id;
         const pubkey = await ownerKeyPair.getPublicKey();
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "verify_signature",
@@ -198,7 +198,7 @@ describe("Order Signer", () => {
         const packageId = deployment.objects.package.id;
         const pubkey = await ownerKeyPair.getPublicKey();
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "verify_signature",
@@ -233,7 +233,7 @@ describe("Order Signer", () => {
         const packageId = deployment.objects.package.id;
         const pubkey = await ownerKeyPair.getPublicKey();
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "verify_signature",
@@ -261,7 +261,7 @@ describe("Order Signer", () => {
 
         const packageId = deployment.objects.package.id;
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "hash",
@@ -290,7 +290,7 @@ describe("Order Signer", () => {
     it("should generate off-chain public address exactly equal to on-chain public address", async () => {
         const packageId = deployment.objects.package.id;
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "get_public_address",
@@ -322,7 +322,7 @@ describe("Order Signer", () => {
     it("should generate off-chain public address exactly equal to on-chain public address", async () => {
         const packageId = deployment.objects.package.id;
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "get_public_address",
@@ -357,7 +357,7 @@ describe("Order Signer", () => {
         const signature = orderSigner.signOrder(order);
         const pubkey = await ownerKeyPair.getPublicKey();
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "get_public_key",
@@ -387,7 +387,7 @@ describe("Order Signer", () => {
         const hash = orderSigner.getOrderHash(updatedOrder);
         const pubkey = await ownerKeyPair.getPublicKey();
 
-        const receipt = await ownerSigner.executeMoveCallWithRequestType({
+        const receipt = await ownerSigner.executeMoveCall({
             packageObjectId: packageId,
             module: "test",
             function: "get_public_key",

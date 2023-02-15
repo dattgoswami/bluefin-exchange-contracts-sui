@@ -1,6 +1,6 @@
 module firefly_exchange::library {
     use std::vector;
-    use sui::object;
+    use sui::address;
     use std::hash;
     
     const BASE_UINT : u128 = 1000000000;
@@ -56,8 +56,6 @@ module firefly_exchange::library {
             i = i + 1;
         };
 
-        return object::address_from_bytes(addr)
+        return address::from_bytes(addr)
     }
-
-
 }

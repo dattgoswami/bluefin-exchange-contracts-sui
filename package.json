@@ -6,7 +6,7 @@
     "test": "tests"
   },
   "dependencies": {
-    "@mysten/sui.js": "^0.15.0",
+    "@mysten/sui.js": "^0.26.1",
     "@noble/hashes": "^1.1.3",
     "@noble/secp256k1": "^1.7.0",
     "add": "^2.0.6",
@@ -16,6 +16,7 @@
     "dotenv": "^16.0.3",
     "lint-staged": "^13.0.3",
     "ts-binary-serializer": "^2.1.3",
+    "yargs": "^17.6.2",
     "yarn": "^1.22.19"
   },
   "devDependencies": {
@@ -34,8 +35,10 @@
   },
   "scripts": {
     "build": "sui move build --path firefly_exchange",
-    "deploy": "ts-node ./scripts/deploy.ts",
-    "publish:package": "ts-node ./scripts/publish.ts",
+    "deploy:full": "ts-node ./scripts/deploy/full.ts",
+    "deploy:package": "ts-node ./scripts/deploy/package.ts",
+    "deploy:market": "ts-node ./scripts/deploy/market.ts",
+    "faucet": "ts-node ./scripts/faucet.ts",
     "debug": "ts-node ./scripts/debug.ts",
     "test": "ts-mocha --no-timeout tests/*.test.ts",
     "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",

@@ -5,11 +5,10 @@ import {
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed,
-    publishPackage,
     getCreatedObjects,
     publishPackageUsingClient
 } from "../src/utils";
-import { expectTxToSucceed, expectTxToFail } from "./helpers/expect";
+import { expectTxToSucceed } from "./helpers/expect";
 import { OnChainCalls, Transaction } from "../src/classes";
 import { ERROR_CODES } from "../src/errors";
 

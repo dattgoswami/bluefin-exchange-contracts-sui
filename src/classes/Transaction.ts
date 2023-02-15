@@ -3,16 +3,14 @@ import {
     getExecutionStatusError,
     SuiCertifiedTransactionEffects
 } from "@mysten/sui.js";
-import { Object } from "../interfaces";
+import { Object, UserPositionExtended } from "../interfaces";
 import { ERROR_CODES } from "../errors";
 
 export class Transaction {
     static getStatus(txResponse: SuiExecuteTransactionResponse) {
-        return (txResponse as any)["EffectsCert"] == undefined
-            ? (txResponse as any)["effects"]["status"]
-            : (txResponse as any)["EffectsCert"]["effects"]["effects"][
-                  "status"
-              ];
+        return (txResponse as any)["effects"]["status"] == undefined
+            ? (txResponse as any)["effects"]["effects"]["status"]["status"]
+            : (txResponse as any)["effects"]["status"]["status"];
     }
 
     static getErrorCode(tx: SuiExecuteTransactionResponse): number {
@@ -29,11 +27,9 @@ export class Transaction {
 
     static getEvents(tx: SuiExecuteTransactionResponse | any, name = "") {
         let events = [];
-        if (tx?.EffectsCert) {
-            const transactionEffects: SuiCertifiedTransactionEffects =
-                tx?.EffectsCert?.effects;
 
-            events = transactionEffects?.effects?.events as any;
+        if (tx?.effects) {
+            events = tx?.effects?.effects?.events as any;
             if (name != "") {
                 events = events
                     ?.filter(
@@ -71,5 +67,21 @@ export class Transaction {
         }
 
         return objects;
+    }
+
+    static getAccountPositionFromEvent(
+        tx: SuiExecuteTransactionResponse,
+        address: string
+    ): undefined | UserPositionExtended {
+        const events = Transaction.getEvents(tx, "AccountPositionUpdateEvent");
+        let userPosition;
+
+        if (events[0].fields.account == address)
+            userPosition = events[0].fields.position;
+        else if (events[1].fields.account == address)
+            userPosition = events[1].fields.position.fields;
+        else return undefined;
+
+        return userPosition.fields as UserPositionExtended;
     }
 }
