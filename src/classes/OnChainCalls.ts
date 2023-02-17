@@ -430,13 +430,14 @@ export class OnChainCalls {
     public signAndCall(
         caller: SignerWithProvider,
         method: string,
-        callArgs: any[]
+        callArgs: any[],
+        moduleName?: string
     ): Promise<SuiExecuteTransactionResponse> {
         return caller.signAndExecuteTransaction({
             kind: "moveCall",
             data: {
                 packageObjectId: this.getPackageID(),
-                module: this.getModuleName(),
+                module: moduleName ? moduleName : this.getModuleName(),
                 function: method,
                 arguments: callArgs,
                 typeArguments: [],

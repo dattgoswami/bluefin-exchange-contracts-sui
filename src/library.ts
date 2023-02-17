@@ -6,7 +6,7 @@ export const BASE_DECIMALS = 9;
 export const BIGNUMBER_BASE = new BigNumber(1).shiftedBy(BASE_DECIMALS);
 
 export const ADDRESSES = {
-    ZERO: "0000000000000000000000000000000000000000"
+    ZERO: "0x0000000000000000000000000000000000000000"
 };
 
 const toBnBase = (base: number) => {

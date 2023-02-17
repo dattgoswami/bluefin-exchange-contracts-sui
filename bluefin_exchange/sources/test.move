@@ -36,8 +36,8 @@ module bluefin_exchange::test {
         if(length == 64){ // ed25519 has signature length 654
             is_verified = false;
             // ed25519_verify(&signature, &public_key, &hashed_msg);
-        }else { // secp256k1 has signature length 65
-            is_verified = ecdsa_k1::secp256k1_verify(&signature, &public_key, &hashed_msg);
+        } else { // secp256k1 has signature length 65
+            is_verified = ecdsa_k1::secp256k1_verify_recoverable(&signature, &public_key, &hashed_msg);
         };
 
         event::emit(SignatureVerifiedEvent {is_verified:is_verified});
@@ -131,6 +131,21 @@ module bluefin_exchange::test {
             i = i + 1;
         };
         event::emit(PublicAddressGeneratedEvent {address:address});
+    }
+    
+    public entry fun get_public_key(signature: vector<u8>, hash: vector<u8>){
+        // Normalize the last byte of the signature to be 0 or 1.
+        let v = vector::borrow_mut(&mut signature, 64);
+        if (*v == 27) {
+            *v = 0;
+        } else if (*v == 28) {
+            *v = 1;
+        } else if (*v > 35) {
+            *v = (*v - 1) % 2;
+        };
+
+        let pubkey = ecdsa_k1::ecrecover(&signature, &hash);
+        event::emit(PublicKeyRecoveredEvent {public_key:pubkey});
     }
 
     public entry fun testTradeVerificationFunctions(
