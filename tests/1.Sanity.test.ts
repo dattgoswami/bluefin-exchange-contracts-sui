@@ -1,6 +1,6 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfig } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     readFile,
     getProvider,
@@ -16,13 +16,13 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const provider = getProvider(
-    DeploymentConfig.network.rpc,
-    DeploymentConfig.network.faucet
+    DeploymentConfigs.network.rpc,
+    DeploymentConfigs.network.faucet
 );
-const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
+const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Sanity Tests", () => {
-    let deployment = readFile(DeploymentConfig.filePath);
+    let deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls;
     let ownerAddress: string;
 

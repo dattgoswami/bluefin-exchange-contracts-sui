@@ -1,12 +1,12 @@
 
-module bluefin_exchange::test {
+module bluefin_foundation::test {
 
     use std::vector;
     use std::hash;
     use sui::ecdsa_k1;
     use sui::event;
     use sui::bcs;
-    use bluefin_exchange::evaluator::{initTradeChecks,verify_qty_checks,verify_price_checks,verify_market_take_bound_checks,verify_oi_open_for_account};
+    use bluefin_foundation::evaluator::{initTradeChecks,verify_qty_checks,verify_price_checks,verify_market_take_bound_checks,verify_oi_open_for_account};
 
     struct SignatureVerifiedEvent has copy, drop {
         is_verified: bool,

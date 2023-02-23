@@ -1,13 +1,14 @@
 import { getMakerTakerAccounts, MakerTakerAccounts } from "./accounts";
-import { network, DeploymentConfig } from "../../src/DeploymentConfig";
+import { network, DeploymentConfigs } from "../../src/DeploymentConfig";
 import {
+    createMarket,
     createOrder,
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
     readFile
 } from "../../src/utils";
-import { BASE_DECIMALS, toBigNumber, toBigNumberStr } from "../../src/library";
+import { toBigNumber } from "../../src/library";
 import {
     OnChainCalls,
     OrderSigner,
@@ -22,12 +23,7 @@ import {
     expectTxToSucceed
 } from "./expect";
 import { MarketConfig } from "./interfaces";
-import {
-    getExpectedTestPosition,
-    printPosition,
-    test_deploy_market,
-    toExpectedPositionFormat
-} from "./utils";
+import { getExpectedTestPosition, toExpectedPositionFormat } from "./utils";
 import { Balance } from "../../src/classes/Balance";
 import { UserPositionExtended } from "../../src/interfaces";
 import { ERROR_CODES } from "../../src/errors";
@@ -40,10 +36,10 @@ config({ path: ".env" });
 const DEBUG = process.env.DEBUG == "true";
 
 const provider = getProvider(network.rpc, network.faucet);
-const ownerKeyPair = getKeyPairFromSeed(DeploymentConfig.deployer);
-const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
+const ownerKeyPair = getKeyPairFromSeed(DeploymentConfigs.deployer);
+const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const orderSigner = new OrderSigner(ownerKeyPair);
-let deployment = readFile(DeploymentConfig.filePath);
+let deployment = readFile(DeploymentConfigs.filePath);
 let onChain: OnChainCalls;
 
 export async function executeTests(
@@ -63,12 +59,14 @@ export async function executeTests(
                     lastOraclePrice = new BigNumber(0);
                     // init state
                     deployment["markets"] = [
-                        await test_deploy_market(
-                            deployment,
-                            ownerSigner,
-                            provider,
-                            marketConfig
-                        )
+                        {
+                            Objects: await createMarket(
+                                deployment,
+                                ownerSigner,
+                                provider,
+                                marketConfig
+                            )
+                        }
                     ];
 
                     onChain = new OnChainCalls(ownerSigner, deployment);

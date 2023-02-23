@@ -1,10 +1,10 @@
-module bluefin_exchange::evaluator {
+module bluefin_foundation::evaluator {
 
     use sui::object::{ID};
     use sui::event::{emit};
     use std::vector;
-    use bluefin_exchange::library::{Self};
-    use bluefin_exchange::error::{Self};
+    use bluefin_foundation::library::{Self};
+    use bluefin_foundation::error::{Self};
 
 
     //===========================================================//

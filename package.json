@@ -34,7 +34,7 @@
     "typescript": "^4.8.4"
   },
   "scripts": {
-    "build": "sui move build --path bluefin_exchange",
+    "build": "sui move build --path bluefin_foundation",
     "deploy": "ts-node ./scripts/deploy/full.ts",
     "deploy:package": "ts-node ./scripts/deploy/package.ts",
     "deploy:market": "ts-node ./scripts/deploy/market.ts",

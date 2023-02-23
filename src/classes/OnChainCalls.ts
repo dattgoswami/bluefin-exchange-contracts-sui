@@ -555,7 +555,7 @@ export class OnChainCalls {
 
     getOrdersTableID(): string {
         return this.deployment["objects"][
-            `Table<vector<u8>, ${this.getPackageID()}::perpetual::OrderStatus>`
+            `Table<vector<u8>, ${this.getPackageID()}::${this.getModuleName()}::OrderStatus>`
         ].id as string;
     }
 }

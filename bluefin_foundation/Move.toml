@@ -1,9 +1,9 @@
 [package]
-name = "bluefin_exchange"
+name = "bluefin_foundation"
 version = "0.0.1"
 
 [dependencies]
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework", rev = "devnet" }
 
 [addresses]
-bluefin_exchange =  "0x0"
+bluefin_foundation =  "0x0"

@@ -1,8 +1,8 @@
-module bluefin_exchange::margin_math {
+module bluefin_foundation::margin_math {
 
-    use bluefin_exchange::position::{Self, UserPosition};
-    use bluefin_exchange::library::{Self};
-    use bluefin_exchange::signed_number::{Self};
+    use bluefin_foundation::position::{Self, UserPosition};
+    use bluefin_foundation::library::{Self};
+    use bluefin_foundation::signed_number::{Self};
 
     /**
      * @dev returns margin left in an account's position at the time of position closure

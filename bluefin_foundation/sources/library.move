@@ -1,4 +1,4 @@
-module bluefin_exchange::library {
+module bluefin_foundation::library {
     use std::vector;
     use sui::address;
     use std::hash;

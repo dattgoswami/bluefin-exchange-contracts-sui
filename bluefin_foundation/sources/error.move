@@ -1,4 +1,4 @@
-module bluefin_exchange::error {
+module bluefin_foundation::error {
 
     // Setter Errors
     public fun min_price_greater_than_zero() : u64 {

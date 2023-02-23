@@ -1,4 +1,4 @@
-module bluefin_exchange::order {
+module bluefin_foundation::order {
     use std::vector;
     use std::hash;
     use sui::bcs;

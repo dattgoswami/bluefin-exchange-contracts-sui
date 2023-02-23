@@ -1,32 +1,33 @@
 import {
     getSignerSUIAddress,
     writeFile,
-    publishPackage,
     getCreatedObjects,
     getSignerFromSeed,
     getProvider,
-    publishPackageUsingClient
+    publishPackageUsingClient,
+    getDeploymentData,
+    createMarket
 } from "../../src/utils";
 import { Client, OnChainCalls, Transaction } from "../../src/classes";
-import { DeploymentConfig } from "../../src/DeploymentConfig";
+import { DeploymentConfigs } from "../../src/DeploymentConfig";
 
 const provider = getProvider(
-    DeploymentConfig.network.rpc,
-    DeploymentConfig.network.faucet
+    DeploymentConfigs.network.rpc,
+    DeploymentConfigs.network.faucet
 );
 
-const signer = getSignerFromSeed(DeploymentConfig.deployer, provider);
+const signer = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 async function main() {
     // info
     console.log(
-        `Performing full deployment on: ${DeploymentConfig.network.rpc}`
+        `Performing full deployment on: ${DeploymentConfigs.network.rpc}`
     );
     const deployerAddress = await getSignerSUIAddress(signer);
 
     console.log(`Deployer SUI address: ${deployerAddress}`);
 
-    if (!Client.switchEnv(DeploymentConfig.network.name)) {
+    if (!Client.switchEnv(DeploymentConfigs.network.name)) {
         process.exit(1);
     }
 
@@ -45,31 +46,26 @@ async function main() {
     if (status == "success") {
         // fetch created objects
         const objects = await getCreatedObjects(provider, publishTxn);
-
-        const dataToWrite = {
-            deployer: deployerAddress,
-            moduleName: "perpetual", //TODO extract from deployed module
-            objects: objects,
-            markets: []
-        };
-
-        const onChain = new OnChainCalls(signer, dataToWrite);
+        const deploymentData = getDeploymentData(deployerAddress, objects);
 
         // create perpetual
         console.log("Creating Perpetual Markets");
-        for (const market of DeploymentConfig.markets) {
-            console.log(`-> ${market.name}`);
-            const txResult = await onChain.createPerpetual(market);
-            const objects = await getCreatedObjects(provider, txResult);
-            (dataToWrite["markets"] as any).push({
-                Config: market,
-                Objects: objects
+        for (const marketConfig of DeploymentConfigs.markets) {
+            console.log(`-> ${marketConfig.name}`);
+            const marketObjects = await createMarket(
+                deploymentData,
+                signer,
+                provider,
+                marketConfig
+            );
+            deploymentData["markets"].push({
+                Config: marketConfig,
+                Objects: marketObjects
             });
         }
-
-        await writeFile(DeploymentConfig.filePath, dataToWrite);
+        await writeFile(DeploymentConfigs.filePath, deploymentData);
         console.log(
-            `Object details written to file: ${DeploymentConfig.filePath}`
+            `Object details written to file: ${DeploymentConfigs.filePath}`
         );
     }
 }

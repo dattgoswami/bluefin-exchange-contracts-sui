@@ -1,24 +1,24 @@
 import {
     getSignerSUIAddress,
     writeFile,
-    publishPackage,
     getCreatedObjects,
     getSignerFromSeed,
     getProvider,
-    publishPackageUsingClient
+    publishPackageUsingClient,
+    getDeploymentData
 } from "../../src/utils";
 import { Transaction } from "../../src/classes";
-import { DeploymentConfig } from "../../src/DeploymentConfig";
+import { DeploymentConfigs } from "../../src/DeploymentConfig";
 
 const provider = getProvider(
-    DeploymentConfig.network.rpc,
-    DeploymentConfig.network.faucet
+    DeploymentConfigs.network.rpc,
+    DeploymentConfigs.network.faucet
 );
-const signer = getSignerFromSeed(DeploymentConfig.deployer, provider);
+const signer = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 async function main() {
     // info
-    console.log(`Publishing package on: ${DeploymentConfig.network.rpc}`);
+    console.log(`Publishing package on: ${DeploymentConfigs.network.rpc}`);
     const deployerAddress = await getSignerSUIAddress(signer);
     console.log(`Deployer SUI address: ${deployerAddress}`);
 
@@ -34,16 +34,11 @@ async function main() {
         // fetch created objects
         const objects = await getCreatedObjects(provider, publishTxn);
 
-        const dataToWrite = {
-            deployer: deployerAddress,
-            moduleName: "perpetual", //TODO extract from deployed module
-            objects: objects,
-            markets: []
-        };
+        const deploymentData = getDeploymentData(deployerAddress, objects);
 
-        await writeFile(DeploymentConfig.filePath, dataToWrite);
+        await writeFile(DeploymentConfigs.filePath, deploymentData);
         console.log(
-            `Object details written to file: ${DeploymentConfig.filePath}`
+            `Object details written to file: ${DeploymentConfigs.filePath}`
         );
     }
 }

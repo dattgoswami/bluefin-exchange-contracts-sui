@@ -1,6 +1,6 @@
-module bluefin_exchange::signed_number {
+module bluefin_foundation::signed_number {
 
-    use bluefin_exchange::library::{Self};
+    use bluefin_foundation::library::{Self};
 
     struct Number has store, copy, drop {
         value: u128,

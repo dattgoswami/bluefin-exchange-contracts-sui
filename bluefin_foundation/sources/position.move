@@ -1,7 +1,7 @@
-module bluefin_exchange::position {
+module bluefin_foundation::position {
     use sui::object::{ID};
-    use bluefin_exchange::library::{Self};
-    use bluefin_exchange::signed_number::{Self, Number};
+    use bluefin_foundation::library::{Self};
+    use bluefin_foundation::signed_number::{Self, Number};
 
     struct UserPosition has copy, drop, store {
         user:address,

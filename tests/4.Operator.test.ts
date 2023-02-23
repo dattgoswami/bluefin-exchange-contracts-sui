@@ -1,12 +1,13 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfig } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed,
     getCreatedObjects,
-    publishPackageUsingClient
+    publishPackageUsingClient,
+    getDeploymentData
 } from "../src/utils";
 import { expectTxToSucceed } from "./helpers/expect";
 import { OnChainCalls, Transaction } from "../src/classes";
@@ -17,10 +18,10 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const provider = getProvider(
-    DeploymentConfig.network.rpc,
-    DeploymentConfig.network.rpc
+    DeploymentConfigs.network.rpc,
+    DeploymentConfigs.network.rpc
 );
-const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
+const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Operators", () => {
     let onChain: OnChainCalls;
@@ -34,13 +35,8 @@ describe("Operators", () => {
     beforeEach(async () => {
         const publishTxn = await publishPackageUsingClient();
         const objects = await getCreatedObjects(provider, publishTxn);
-        const deployment = {
-            deployer: ownerAddress,
-            moduleName: "perpetual",
-            objects: objects,
-            markets: []
-        };
-        onChain = new OnChainCalls(ownerSigner, deployment);
+        const deploymentData = await getDeploymentData(ownerAddress, objects);
+        onChain = new OnChainCalls(ownerSigner, deploymentData);
     });
 
     it("should set owner as settlement operator", async () => {

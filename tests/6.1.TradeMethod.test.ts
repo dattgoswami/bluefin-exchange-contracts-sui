@@ -1,6 +1,6 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfig } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     readFile,
     getProvider,
@@ -21,8 +21,8 @@ const expect = chai.expect;
 const provider = getProvider(network.rpc, network.faucet);
 
 describe("Trades", () => {
-    const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
-    let deployment = readFile(DeploymentConfig.filePath);
+    const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
+    let deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls = new OnChainCalls(ownerSigner, deployment);
     let ownerAddress: string;
 

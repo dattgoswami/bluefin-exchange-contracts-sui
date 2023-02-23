@@ -7,7 +7,7 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 - Install dependencies using `yarn`
 - Create a wallet on sui using `sui client new-address secp256k1`
 - Create `.env` file using `.env.example` provided. Specify the DEPLOYER_SEED (secp256k1) and DEPLOY_ON (See `networks.json` for available networks to deploy) The Deployer account must be in sui-client addresses.
-- To deploy `bluefin_exchange` contracts run `yarn deploy`
+- To deploy `bluefin_foundation` contracts run `yarn deploy`
   The script will deploy the contracts, extract created objects and write them to `./deployment.json` file
   ```
   PS D:\Github\bluefin-exchange-contracts-v2> yarn deploy
@@ -17,7 +17,7 @@ Repository containing bluefin core exchange contracts that allow users to do on-
   Deployer SUI address: 0x38b0c33f3d0433fb1a0312b40c6131f62c0dd14f
   INCLUDING DEPENDENCY MoveStdlib
   INCLUDING DEPENDENCY Sui
-  BUILDING bluefin_exchange
+  BUILDING bluefin_foundation
   Package published
   Creating Perpetual Markets
   -> ETH-PERP

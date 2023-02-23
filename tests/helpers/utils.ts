@@ -1,34 +1,12 @@
-import { JsonRpcProvider, RawSigner, SystemParameters } from "@mysten/sui.js";
+import { RawSigner } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
-import { Transaction } from "../../src";
 import { Balance } from "../../src/classes/Balance";
 import { OnChainCalls } from "../../src/classes/OnChainCalls";
 import { UserPosition, UserPositionExtended } from "../../src/interfaces";
 import { BASE_DECIMALS, bigNumber, toBaseNumber } from "../../src/library";
-import {
-    getCreatedObjects,
-    getSignerSUIAddress,
-    publishPackage,
-    requestGas
-} from "../../src/utils";
+import { getSignerSUIAddress, requestGas } from "../../src/utils";
 import { TEST_WALLETS } from "./accounts";
-import { MarketConfig, TestPositionExpect } from "./interfaces";
-
-export async function test_deploy_package(
-    ownerAddress: string,
-    ownerSigner: RawSigner,
-    provider: JsonRpcProvider
-): Promise<any> {
-    const publishTX = await publishPackage(ownerSigner);
-    const objects = await getCreatedObjects(provider, publishTX);
-    const deployment = {
-        deployer: ownerAddress,
-        moduleName: "perpetual",
-        objects: objects,
-        markets: []
-    };
-    return deployment as any;
-}
+import { TestPositionExpect } from "./interfaces";
 
 export async function postDeployment(
     onChain: OnChainCalls,
@@ -38,24 +16,6 @@ export async function postDeployment(
         { operator: await getSignerSUIAddress(ownerSigner), status: true },
         ownerSigner
     );
-}
-
-export async function test_deploy_market(
-    deployment: any,
-    ownerSigner: RawSigner,
-    provider: JsonRpcProvider,
-    marketConfig?: MarketConfig
-) {
-    const onChain = new OnChainCalls(ownerSigner, deployment);
-    const txResult = await onChain.createPerpetual({ ...marketConfig });
-    const error = Transaction.getError(txResult);
-    if (error != "") {
-        console.error(`Error while deploying market: ${error}`);
-        process.exit(1);
-    }
-    const objects = await getCreatedObjects(provider, txResult);
-
-    return { Objects: objects };
 }
 
 export async function fundTestAccounts() {

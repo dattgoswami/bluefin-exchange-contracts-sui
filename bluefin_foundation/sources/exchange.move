@@ -1,5 +1,5 @@
 
-module bluefin_exchange::perpetual {
+module bluefin_foundation::exchange {
 
     use sui::object::{Self, ID, UID};
     use sui::tx_context::{Self, TxContext};
@@ -10,14 +10,14 @@ module bluefin_exchange::perpetual {
     use sui::ecdsa_k1;
 
     // custom modules
-    use bluefin_exchange::position::{Self, UserPosition};
-    use bluefin_exchange::price_oracle::{Self, OraclePrice, UpdateOraclePriceCapability};
-    use bluefin_exchange::evaluator::{Self, TradeChecks};
-    use bluefin_exchange::order::{Self, Order};
-    use bluefin_exchange::library::{Self};
-    use bluefin_exchange::signed_number::{Self, Number};
-    use bluefin_exchange::error::{Self};
-    use bluefin_exchange::margin_math::{Self};
+    use bluefin_foundation::position::{Self, UserPosition};
+    use bluefin_foundation::price_oracle::{Self, OraclePrice, UpdateOraclePriceCapability};
+    use bluefin_foundation::evaluator::{Self, TradeChecks};
+    use bluefin_foundation::order::{Self, Order};
+    use bluefin_foundation::library::{Self};
+    use bluefin_foundation::signed_number::{Self, Number};
+    use bluefin_foundation::error::{Self};
+    use bluefin_foundation::margin_math::{Self};
 
     //===========================================================//
     //                           EVENTS                          //

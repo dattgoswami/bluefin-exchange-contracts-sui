@@ -1,7 +1,7 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
-import { DeploymentConfig } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../src/DeploymentConfig";
 import { Order } from "../src/interfaces";
 import {
     getKeyPairFromSeed,
@@ -22,15 +22,15 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const provider = getProvider(
-    DeploymentConfig.network.rpc,
-    DeploymentConfig.network.faucet
+    DeploymentConfigs.network.rpc,
+    DeploymentConfigs.network.faucet
 );
 
-const ownerKeyPair = getKeyPairFromSeed(DeploymentConfig.deployer);
-const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
+const ownerKeyPair = getKeyPairFromSeed(DeploymentConfigs.deployer);
+const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Order Signer", () => {
-    let deployment = readFile(DeploymentConfig.filePath);
+    let deployment = readFile(DeploymentConfigs.filePath);
     const order: Order = defaultOrder;
     const orderSigner = new OrderSigner(ownerKeyPair);
 
@@ -183,7 +183,7 @@ describe("Order Signer", () => {
 
     xit("should verify hash to given address with ed25519", async () => {
         const ownerKeyPair = getKeyPairFromSeed(
-            DeploymentConfig.deployer,
+            DeploymentConfigs.deployer,
             "ED25519"
         );
         const orderSigner = new OrderSigner(ownerKeyPair);
@@ -214,7 +214,7 @@ describe("Order Signer", () => {
     it("should not verify hash to given address ed25519", async () => {
         const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase, "ED25519");
         const ownerKeyPair = getKeyPairFromSeed(
-            DeploymentConfig.deployer,
+            DeploymentConfigs.deployer,
             "ED25519"
         );
         const orderSigner = new OrderSigner(alice);

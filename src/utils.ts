@@ -14,12 +14,13 @@ import {
     Ed25519Keypair
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
-import { DeploymentObjectMap } from "../src/interfaces";
+import { DeploymentData, DeploymentObjectMap } from "../src/interfaces";
 import { toBigNumber, bigNumber, ADDRESSES } from "./library";
 import { Order } from "../src/interfaces";
 import { config } from "dotenv";
-import { Client } from "./classes";
-import { network } from "./DeploymentConfig";
+import { Client, OnChainCalls, Transaction } from "./classes";
+import { network, moduleName, packageName } from "./DeploymentConfig";
+import { MarketConfig } from "../tests/helpers/interfaces";
 
 const { execSync } = require("child_process");
 const fs = require("fs");
@@ -157,7 +158,7 @@ export async function getCreatedObjects(
 export async function publishPackage(
     signer: RawSigner
 ): Promise<SuiExecuteTransactionResponse> {
-    const pkgPath = path.join(process.cwd(), "/bluefin_exchange");
+    const pkgPath = path.join(process.cwd(), `/${packageName}`);
     const compiledModules = Client.buildPackage(pkgPath);
 
     const modulesInBytes = compiledModules.map((m: any) =>
@@ -172,12 +173,40 @@ export async function publishPackage(
 }
 
 export async function publishPackageUsingClient(): Promise<SuiExecuteTransactionResponse> {
-    const pkgPath = `"${path.join(process.cwd(), "/bluefin_exchange")}"`;
+    const pkgPath = `"${path.join(process.cwd(), `/${packageName}`)}"`;
     return Client.publishPackage(pkgPath) as SuiExecuteTransactionResponse;
+}
+
+export async function createMarket(
+    deployment: DeploymentData,
+    deployer: RawSigner,
+    provider: JsonRpcProvider,
+    marketConfig?: MarketConfig
+): Promise<DeploymentObjectMap> {
+    const onChain = new OnChainCalls(deployer, deployment);
+    const txResult = await onChain.createPerpetual({ ...marketConfig });
+    const error = Transaction.getError(txResult);
+    if (error) {
+        console.error(`Error while deploying market: ${error}`);
+        process.exit(1);
+    }
+    return await getCreatedObjects(provider, txResult);
 }
 
 export function getPrivateKey(keypair: Keypair) {
     return (keypair as any).keypair.secretKey;
+}
+
+export function getDeploymentData(
+    deployer: string,
+    objects: DeploymentObjectMap
+): DeploymentData {
+    return {
+        deployer,
+        objects,
+        markets: [],
+        moduleName
+    };
 }
 
 export const defaultOrder: Order = {

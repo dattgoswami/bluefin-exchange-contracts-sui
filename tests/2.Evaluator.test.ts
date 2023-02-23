@@ -1,32 +1,33 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfig } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../src/DeploymentConfig";
 import { OnChainCalls, Transaction } from "../src/classes";
 import {
     readFile,
     getProvider,
     getSignerSUIAddress,
-    getSignerFromSeed
+    getSignerFromSeed,
+    createMarket
 } from "../src/utils";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { toBigNumberStr } from "../src/library";
 import { TEST_WALLETS } from "./helpers/accounts";
-import { fundTestAccounts, test_deploy_market } from "./helpers/utils";
+import { fundTestAccounts } from "./helpers/utils";
 import { expectTxToSucceed } from "./helpers/expect";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const provider = getProvider(
-    DeploymentConfig.network.rpc,
-    DeploymentConfig.network.faucet
+    DeploymentConfigs.network.rpc,
+    DeploymentConfigs.network.faucet
 );
 
-const ownerSigner = getSignerFromSeed(DeploymentConfig.deployer, provider);
+const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Evaluator", () => {
-    let deployment = readFile(DeploymentConfig.filePath);
-    let args = DeploymentConfig.markets[0];
+    let deployment = readFile(DeploymentConfigs.filePath);
+    let args = DeploymentConfigs.markets[0];
     let onChain: OnChainCalls;
     let ownerAddress: string;
 
@@ -38,7 +39,9 @@ describe("Evaluator", () => {
     // deploy the market again before each test
     beforeEach(async () => {
         deployment["markets"] = [
-            await test_deploy_market(deployment, ownerSigner, provider)
+            {
+                Objects: await createMarket(deployment, ownerSigner, provider)
+            }
         ];
         onChain = new OnChainCalls(ownerSigner, deployment);
     });

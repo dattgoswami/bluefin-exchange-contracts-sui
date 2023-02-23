@@ -11,7 +11,7 @@ Cargo.lock
 
 /node_modules
 
-/bluefin_exchange/build
+/bluefin_foundation/build
 
 .env
 
