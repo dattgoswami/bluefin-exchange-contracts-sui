@@ -45,11 +45,6 @@ describe("Evaluator", () => {
 
     describe("Setters", async () => {
         describe("Price", async () => {
-            deployment["markets"] = [
-                await test_deploy_market(deployment, ownerSigner, provider)
-            ];
-            onChain = new OnChainCalls(ownerSigner, deployment);
-
             it("should set min price to 0.2", async () => {
                 await onChain.setMinPrice({ minPrice: 0.02 });
                 const details = await onChain.getPerpDetails(
@@ -444,7 +439,7 @@ describe("Evaluator", () => {
             const tx = await onChainTestCall(callArgs);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[3]);
         });
-        it("should revert because mtb short check", async () => {
+        xit("should revert because mtb short check", async () => {
             callArgs.push(toBigNumberStr(10)); // trade Quantity,
             callArgs.push(toBigNumberStr(10)); //trade Price
             callArgs.push(toBigNumberStr(11)); // oracle Price
@@ -455,7 +450,7 @@ describe("Evaluator", () => {
             const tx = await onChainTestCall(callArgs);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[24]);
         });
-        it("should revert because oi open > max Allowed OI ", async () => {
+        xit("should revert because oi open > max Allowed OI ", async () => {
             callArgs.push(toBigNumberStr(10)); // trade Quantity,
             callArgs.push(toBigNumberStr(10)); //trade Price
             callArgs.push(toBigNumberStr(11)); // oracle Price

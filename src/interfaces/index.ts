@@ -21,7 +21,7 @@ export interface wallet {
 }
 
 export interface UserPosition {
-    isPosPositive: string;
+    isPosPositive: boolean;
     qPos: string;
     margin: string;
     mro: string;

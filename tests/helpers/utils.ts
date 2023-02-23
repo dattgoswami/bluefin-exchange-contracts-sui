@@ -1,10 +1,18 @@
-import { JsonRpcProvider, RawSigner } from "@mysten/sui.js";
+import { JsonRpcProvider, RawSigner, SystemParameters } from "@mysten/sui.js";
+import BigNumber from "bignumber.js";
+import { Transaction } from "../../src";
+import { Balance } from "../../src/classes/Balance";
 import { OnChainCalls } from "../../src/classes/OnChainCalls";
-import { UserPosition } from "../../src/interfaces";
-import { BASE_DECIMALS, bigNumber } from "../../src/library";
-import { getCreatedObjects, publishPackage, requestGas } from "../../src/utils";
+import { UserPosition, UserPositionExtended } from "../../src/interfaces";
+import { BASE_DECIMALS, bigNumber, toBaseNumber } from "../../src/library";
+import {
+    getCreatedObjects,
+    getSignerSUIAddress,
+    publishPackage,
+    requestGas
+} from "../../src/utils";
 import { TEST_WALLETS } from "./accounts";
-import { TestPositionExpect } from "./interfaces";
+import { MarketConfig, TestPositionExpect } from "./interfaces";
 
 export async function test_deploy_package(
     ownerAddress: string,
@@ -22,17 +30,38 @@ export async function test_deploy_package(
     return deployment as any;
 }
 
+export async function postDeployment(
+    onChain: OnChainCalls,
+    ownerSigner: RawSigner
+) {
+    await onChain.setSettlementOperator(
+        { operator: await getSignerSUIAddress(ownerSigner), status: true },
+        ownerSigner
+    );
+}
+
 export async function test_deploy_market(
     deployment: any,
     ownerSigner: RawSigner,
-    provider: JsonRpcProvider
+    provider: JsonRpcProvider,
+    marketConfig?: MarketConfig
 ) {
     const onChain = new OnChainCalls(ownerSigner, deployment);
-
-    const txResult = await onChain.createPerpetual({});
+    const txResult = await onChain.createPerpetual({ ...marketConfig });
+    const error = Transaction.getError(txResult);
+    if (error != "") {
+        console.error(`Error while deploying market: ${error}`);
+        process.exit(1);
+    }
     const objects = await getCreatedObjects(provider, txResult);
 
     return { Objects: objects };
+}
+
+export async function fundTestAccounts() {
+    for (const wallet of TEST_WALLETS) {
+        await requestGas(wallet.address);
+    }
 }
 
 export function getExpectedTestPosition(expect: any): TestPositionExpect {
@@ -52,28 +81,32 @@ export function getExpectedTestPosition(expect: any): TestPositionExpect {
     } as TestPositionExpect;
 }
 
-export async function fundTestAccounts() {
-    for (const wallet of TEST_WALLETS) {
-        await requestGas(wallet.address);
-    }
+export function toExpectedPositionFormat(
+    balance: Balance,
+    oraclePrice: BigNumber,
+    bankBalance?: BigNumber,
+    fee?: BigNumber
+): TestPositionExpect {
+    return {
+        isPosPositive: balance.isPosPositive,
+        mro: balance.mro.shiftedBy(-BASE_DECIMALS),
+        oiOpen: balance.oiOpen.shiftedBy(-BASE_DECIMALS),
+        qPos: balance.qPos.shiftedBy(-BASE_DECIMALS),
+        margin: balance.margin.shiftedBy(-BASE_DECIMALS),
+        pPos: balance.pPos().shiftedBy(-BASE_DECIMALS),
+        marginRatio: balance.marginRatio(oraclePrice).shiftedBy(-BASE_DECIMALS),
+        bankBalance: bankBalance
+            ? bankBalance.shiftedBy(-BASE_DECIMALS)
+            : undefined,
+        fee: fee ? fee.shiftedBy(-BASE_DECIMALS) : undefined
+    } as TestPositionExpect;
 }
 
-// export function toTestPositionExpect(
-//     balance: UserPosition,
-//     // pPos: BigNumber,
-//     // marginRatio: BigNumber,
-//     // bankBalance?: BigNumber,
-//     // fee?: BigNumber
-// ): TestPositionExpect {
-//     return {
-//         isPosPositive: balance.isPosPositive,
-//         mro: bigNumber(balance.mro).shiftedBy(-BASE_DECIMALS),
-//         oiOpen: bigNumber(balance.oiOpen.shiftedBy(-BASE_DECIMALS)),
-//         qPos: bigNumber(balance.qPos.shiftedBy(-BASE_DECIMALS)),
-//         margin: bigNumber(balance.margin.shiftedBy(-BASE_DECIMALS)),
-//         pPos: pPos.shiftedBy(-BASE_DECIMALS),
-//         marginRatio: marginRatio.shiftedBy(-BASE_DECIMALS),
-//         bankBalance: bankBalance ? bankBalance.shiftedBy(-BASE_DECIMALS) : undefined,
-//         fee: fee ? fee.shiftedBy(-BASE_DECIMALS) : undefined
-//     } as TestPositionExpect;
-// }
+export function printPosition(position: UserPosition | UserPositionExtended) {
+    console.log("========= User Position =========");
+    console.log("isPosPositive:", position.isPosPositive);
+    console.log("margin:", toBaseNumber(position.margin));
+    console.log("oiOpen:", toBaseNumber(position.oiOpen));
+    console.log("qPos:", toBaseNumber(position.qPos));
+    console.log("mro:", toBaseNumber(position.mro));
+}

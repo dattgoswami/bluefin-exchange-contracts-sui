@@ -39,20 +39,36 @@ export function getTestAccounts(provider: JsonRpcProvider): TestAccount[] {
 }
 
 export function getMakerTakerAccounts(
-    provider: JsonRpcProvider
+    provider: JsonRpcProvider,
+    createNew: boolean = false
 ): MakerTakerAccounts {
-    const w1 = Client.createWallet();
-    const w2 = Client.createWallet();
-    return {
-        maker: {
-            signer: getSignerFromSeed(w1.phrase, provider),
-            keyPair: getKeyPairFromSeed(w1.phrase),
-            address: w1.address
-        },
-        taker: {
-            signer: getSignerFromSeed(w2.phrase, provider),
-            keyPair: getKeyPairFromSeed(w2.phrase),
-            address: w2.address
-        }
-    };
+    if (createNew) {
+        const w1 = Client.createWallet();
+        const w2 = Client.createWallet();
+        return {
+            maker: {
+                signer: getSignerFromSeed(w1.phrase, provider),
+                keyPair: getKeyPairFromSeed(w1.phrase),
+                address: w1.address
+            },
+            taker: {
+                signer: getSignerFromSeed(w2.phrase, provider),
+                keyPair: getKeyPairFromSeed(w2.phrase),
+                address: w2.address
+            }
+        };
+    } else {
+        return {
+            maker: {
+                signer: getSignerFromSeed(TEST_WALLETS[0].phrase, provider),
+                keyPair: getKeyPairFromSeed(TEST_WALLETS[0].phrase),
+                address: TEST_WALLETS[0].address
+            },
+            taker: {
+                signer: getSignerFromSeed(TEST_WALLETS[1].phrase, provider),
+                keyPair: getKeyPairFromSeed(TEST_WALLETS[1].phrase),
+                address: TEST_WALLETS[1].address
+            }
+        };
+    }
 }

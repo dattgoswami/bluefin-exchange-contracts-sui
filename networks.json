@@ -1,7 +1,7 @@
 {
   "local": {
     "rpc": "http://127.0.0.1:9000",
-    "faucet": "https://sui-faucet-dev.firefly.exchange/"
+    "faucet": "http://127.0.0.1:5003/gas"
   },
   "cloud": {
     "rpc": "http://suitest.bluefin.io:9000",

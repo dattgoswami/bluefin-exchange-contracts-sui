@@ -62,11 +62,16 @@ export class OnChainCalls {
             args.maxAllowedOIOpen
                 ? args.maxAllowedOIOpen
                 : [
-                      toBigNumberStr(100000),
-                      toBigNumberStr(100000),
-                      toBigNumberStr(200000),
-                      toBigNumberStr(200000),
-                      toBigNumberStr(500000)
+                      toBigNumberStr(1_000_000), //1x
+                      toBigNumberStr(1_000_000), //2x
+                      toBigNumberStr(500_000), //3x
+                      toBigNumberStr(500_000), //4x
+                      toBigNumberStr(250_000), //5x
+                      toBigNumberStr(250_000), //6x
+                      toBigNumberStr(250_000), //7x
+                      toBigNumberStr(250_000), //8x
+                      toBigNumberStr(100_000), //9x
+                      toBigNumberStr(100_000) //10x
                   ]
         );
         callArgs.push(args.imr ? args.imr : toBigNumberStr(0.1));
@@ -353,6 +358,57 @@ export class OnChainCalls {
         );
 
         return this.signAndCall(caller, "trade", callArgs);
+    }
+
+    public async addMargin(
+        args: {
+            perpID?: string;
+            amount: number;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.amount));
+
+        return this.signAndCall(caller, "add_margin", callArgs);
+    }
+
+    public async removeMargin(
+        args: {
+            perpID?: string;
+            amount: number;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.amount));
+
+        return this.signAndCall(caller, "remove_margin", callArgs);
+    }
+
+    public async adjustLeverage(
+        args: {
+            perpID?: string;
+            leverage: number;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.leverage));
+
+        return this.signAndCall(caller, "adjust_leverage", callArgs);
     }
 
     public async updateOraclePrice(

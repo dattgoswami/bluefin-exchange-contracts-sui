@@ -107,7 +107,7 @@ module bluefin_exchange::price_oracle {
     public fun set_oracle_price(perp: ID, cap: &UpdateOraclePriceCapability, op: &mut OraclePrice, price: u128, sender: address){
         assert!(sender == cap.account, error::not_valid_price_oracle_operator());
         assert!(
-            verifyOPUpdateDiff(op.maxAllowedPriceDifference,price, op.price), 
+            verify_oracle_price_update_diff(op.maxAllowedPriceDifference,price, op.price), 
             error::out_of_max_allowed_price_diff_bounds());
 
         op.price = price;
@@ -120,7 +120,7 @@ module bluefin_exchange::price_oracle {
 
 
 
-    public fun verifyOPUpdateDiff(maxPriceUpdateDiff:u128, newPrice: u128, oldPrice: u128): bool {
+    fun verify_oracle_price_update_diff(maxPriceUpdateDiff:u128, newPrice: u128, oldPrice: u128): bool {
 
         // @dev This is case where intially oraclePrice is not set against a Market.
         if (oldPrice == 0) {
@@ -141,6 +141,10 @@ module bluefin_exchange::price_oracle {
         };
 
         return true
+    }
+
+    public fun price(op: OraclePrice): u128 {
+        return op.price
     }
 
 }

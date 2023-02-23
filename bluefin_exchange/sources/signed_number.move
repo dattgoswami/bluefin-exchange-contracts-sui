@@ -21,6 +21,13 @@ module bluefin_exchange::signed_number {
         }
     }   
 
+    public fun one():Number {
+        return Number {
+            value: library::base_uint(),
+            sign: true
+        }
+    }   
+
     public fun add_uint(a:Number, b: u128): Number {
 
         let value = a.value; 
@@ -38,7 +45,6 @@ module bluefin_exchange::signed_number {
             sign
         }
     }
-
 
     public fun sub_uint(a:Number, b: u128): Number {
 
@@ -61,6 +67,13 @@ module bluefin_exchange::signed_number {
     public fun mul_uint(a:Number, b: u128): Number {
         return Number { 
             value: library::base_mul(a.value, b),
+            sign: a.sign
+        }
+    }
+
+    public fun div_uint(a:Number, b: u128): Number {
+        return Number { 
+            value: library::base_div(a.value, b),
             sign: a.sign
         }
     }
@@ -97,9 +110,34 @@ module bluefin_exchange::signed_number {
 
     }
 
+    public fun sub(a:Number, b:Number): Number {
 
-    public fun gte(a:Number, num: u128): bool {
-        if (a.sign == false ){
+        let value;
+        let sign;
+        b.sign = !b.sign;
+
+        if (a.sign == b.sign ) { 
+            value = a.value + b.value;
+            sign = a.sign;
+            } 
+        else if (a.value >= b.value) {
+            value = a.value - b.value;
+            sign = a.sign;
+        }
+        else {
+            value = b.value - a.value;
+            sign = b.sign;
+        };
+
+        return Number {
+            value,
+            sign 
+        }
+
+    }
+
+    public fun gte_uint(a:Number, num: u128): bool {
+        if (!a.sign){
             return false
         }
         else if (a.value >= num ){
@@ -110,6 +148,22 @@ module bluefin_exchange::signed_number {
         }
     }
 
+    public fun gte(a:Number, b: Number): bool {
+        // if (a.sign == false && b.sign == true){
+        //         return false
+        // } else if (a.sign == true && b.sign == false){
+        //         return true
+        // };        
+        // return a.value >= b.value
+
+        if(a.sign && b.sign){
+            return a.value >= b.value
+        } else if(!a.sign && !b.sign){
+            return a.value <= b.value
+        } else {
+            return a.sign
+        }
+    }
 
     public fun from_subtraction(a:u128, b:u128):Number {
         

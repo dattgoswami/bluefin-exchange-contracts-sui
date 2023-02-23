@@ -11,7 +11,7 @@ import {
 import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { ERROR_CODES } from "../src/errors";
-import { bigNumber, toBigNumber } from "../src/library";
+import { bigNumber, toBigNumber, toBigNumberStr } from "../src/library";
 import { getTestAccounts } from "./helpers/accounts";
 import { Trader } from "../src/classes/Trader";
 import { network } from "../src/DeploymentConfig";
@@ -45,6 +45,11 @@ describe("Trades", () => {
     });
 
     it("should execute trade call", async () => {
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1)
+        });
+        expectTxToSucceed(priceTx);
+
         const trade = await Trader.setupNormalTrade(
             provider,
             orderSigner,

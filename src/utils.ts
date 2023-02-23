@@ -157,7 +157,7 @@ export async function getCreatedObjects(
 export async function publishPackage(
     signer: RawSigner
 ): Promise<SuiExecuteTransactionResponse> {
-    const pkgPath = path.join(process.cwd(), "/firefly_exchange");
+    const pkgPath = path.join(process.cwd(), "/bluefin_exchange");
     const compiledModules = Client.buildPackage(pkgPath);
 
     const modulesInBytes = compiledModules.map((m: any) =>
@@ -172,7 +172,7 @@ export async function publishPackage(
 }
 
 export async function publishPackageUsingClient(): Promise<SuiExecuteTransactionResponse> {
-    const pkgPath = path.join(process.cwd(), "/bluefin_exchange");
+    const pkgPath = `"${path.join(process.cwd(), "/bluefin_exchange")}"`;
     return Client.publishPackage(pkgPath) as SuiExecuteTransactionResponse;
 }
 

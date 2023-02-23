@@ -35,7 +35,7 @@ export class Client {
     static publishPackage(pkgPath: string) {
         return JSON.parse(
             execCommand(
-                `sui client publish --gas-budget 30000 --json ${pkgPath}`
+                `sui client publish --gas-budget 30000 --json ${pkgPath} --skip-dependency-verification`
             )
         );
     }

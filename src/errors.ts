@@ -61,5 +61,20 @@ export const ERROR_CODES = {
     "101": "Address is already price oracle operator",
     "102": "Price is out of max allowed price difference bounds",
     "103": "Max allowed price difference cannot be 0%",
-    "104": "UpdateOraclePriceCapability's Perpetual ID mismatch with provided Perpetual ID"
+    "104": "UpdateOraclePriceCapability's Perpetual ID mismatch with provided Perpetual ID",
+    "400": "Maker: MR < IMR, can not open a new or flip position",
+    "401": "Taker: MR < IMR, can not open a new or flip position",
+    "402": "Maker: MR < IMR, Margin Ratio must improve or stay the same",
+    "403": "Taker: MR < IMR, Margin Ratio must improve or stay the same",
+    "404": "Maker: MR <= MMR, position size can only be reduced",
+    "405": "Taker: MR <= MMR, position size can only be reduced",
+    "406": "Maker: MR < 0, please add margin to avoid liquidation",
+    "407": "Taker: MR < 0, please add margin to avoid liquidation",
+    "500": "Margin amount must be > 0",
+    "501": "User has no position object",
+    "502": "User has zero sized position",
+    "503": "Margin to be removed can not be > max removable margin amount",
+    "504": "Leverage can not be set to zero",
+    "600": "Maker: Insufficient margin in margin bank",
+    "601": "Taker: Insufficient margin in margin bank"
 };

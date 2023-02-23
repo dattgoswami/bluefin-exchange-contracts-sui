@@ -20,6 +20,7 @@ module bluefin_exchange::library {
         return HALF_BASE_UINT
     }
 
+
     /**
      * @dev Multiplication by a base value with the result rounded down
      */
@@ -39,6 +40,20 @@ module bluefin_exchange::library {
      */
     public fun ceil(a : u128, m : u128) :u128 {
         return ((a + m - 1) / m) * m
+    }
+    
+    /**
+     * @dev Returns Min(a,b)
+     */
+    public fun min(a : u128, b : u128) :u128 {
+        return if ( a < b ) {a} else {b}
+    }
+
+    /**
+     * @dev Returns a - b if possible else 0
+     */
+    public fun sub(a : u128, b : u128) :u128 {
+        return if (a > b) { a - b } else {0}
     }
 
     public fun get_public_address(public_key: vector<u8>):address {

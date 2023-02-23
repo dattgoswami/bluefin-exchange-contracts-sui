@@ -1,7 +1,6 @@
 import {
     SuiExecuteTransactionResponse,
-    getExecutionStatusError,
-    SuiCertifiedTransactionEffects
+    getExecutionStatusError
 } from "@mysten/sui.js";
 import { Object, UserPositionExtended } from "../interfaces";
 import { ERROR_CODES } from "../errors";
@@ -13,16 +12,24 @@ export class Transaction {
             : (txResponse as any)["effects"]["status"]["status"];
     }
 
+    // if no error returns error code as 0
     static getErrorCode(tx: SuiExecuteTransactionResponse): number {
-        let error = getExecutionStatusError(tx) as string;
-        return Number(
-            error.slice(error.lastIndexOf(",") + 1, error.length - 1)
-        );
+        if (Transaction.getStatus(tx) == "failure") {
+            let error = getExecutionStatusError(tx) as string;
+            return Number(
+                error.slice(error.lastIndexOf(",") + 1, error.length - 1)
+            );
+        }
+        return 0;
     }
 
     static getError(tx: SuiExecuteTransactionResponse): string {
         const code = Transaction.getErrorCode(tx);
-        return (ERROR_CODES as any)[code];
+        if (code > 0) {
+            return (ERROR_CODES as any)[code];
+        } else {
+            return "";
+        }
     }
 
     static getEvents(
@@ -78,14 +85,14 @@ export class Transaction {
         address: string
     ): undefined | UserPositionExtended {
         const events = Transaction.getEvents(tx, "AccountPositionUpdateEvent");
-        let userPosition;
+        let userPosition: UserPositionExtended;
 
         if (events[0].fields.account == address)
-            userPosition = events[0].fields.position;
+            userPosition = events[0].fields.position.fields;
         else if (events[1].fields.account == address)
             userPosition = events[1].fields.position.fields;
         else return undefined;
 
-        return userPosition.fields as UserPositionExtended;
+        return userPosition;
     }
 }

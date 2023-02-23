@@ -17,19 +17,11 @@ module bluefin_exchange::perpetual {
     use bluefin_exchange::library::{Self};
     use bluefin_exchange::signed_number::{Self, Number};
     use bluefin_exchange::error::{Self};
+    use bluefin_exchange::margin_math::{Self};
 
     //===========================================================//
     //                           EVENTS                          //
     //===========================================================//
-
-    struct DebugEvent has copy, drop {
-        orderAddress: address,
-        extractedAddress: vector<u8>
-    }
-
-    struct DebugOrder has copy, drop {
-        order: Order
-    }
 
     struct PerpetualCreationEvent has copy, drop {
         id: ID,
@@ -364,6 +356,8 @@ module bluefin_exchange::perpetual {
             let perpID = object::uid_to_inner(&perpetual.id);
             let sender = tx_context::sender(ctx);
 
+            let oraclePrice = price_oracle::price(perpetual.oraclePrice);
+
             // check if caller has permission to trade on taker's behalf
             assert!(has_account_permission(operatorTable, takerAddress, sender), error::sender_has_no_taker_permission());
 
@@ -403,31 +397,56 @@ module bluefin_exchange::perpetual {
             verify_order(perpetual, ordersTable, makerOrder, makerHash, makerSignature, fillQuantity, fillPrice, 0);
             verify_order(perpetual, ordersTable, takerOrder, takerHash, takerSignature, fillQuantity, fillPrice, 1);
 
-            // TODO verify pre-trade checks over here
+            // verify pre-trade checks
+            evaluator::verify_price_checks(perpetual.checks, fillPrice);
+            evaluator::verify_qty_checks(perpetual.checks, fillQuantity);
+            evaluator::verify_market_take_bound_checks(perpetual.checks, fillPrice, oraclePrice, takerIsBuy);
+
+            let initMakerPosition = *table::borrow(&mut perpetual.positions, makerAddress);
+            let initTakerPosition = *table::borrow(&mut perpetual.positions, takerAddress);
 
             // apply isolated margin
-            let _curMakerPosition = *table::borrow(&mut perpetual.positions, makerAddress);
-            let _curTakerPosition = *table::borrow(&mut perpetual.positions, takerAddress);
-
             let makerResponse = apply_isolated_margin(
+                perpetual.checks,
                 table::borrow_mut(&mut perpetual.positions, makerAddress), 
                 makerOrder, 
                 fillQuantity, 
                 fillPrice, 
-                library::base_div(fillPrice, perpetual.makerFee),
+                library::base_mul(fillPrice, perpetual.makerFee),
                 0);
 
             let takerResponse = apply_isolated_margin(
+                perpetual.checks,
                 table::borrow_mut(&mut perpetual.positions, takerAddress), 
                 takerOrder, 
                 fillQuantity, 
                 fillPrice, 
-                library::base_div(fillPrice, perpetual.takerFee),
+                library::base_mul(fillPrice, perpetual.takerFee),
                 1);
+
 
             let newMakerPosition = *table::borrow(&mut perpetual.positions, makerAddress);
             let newTakerPosition = *table::borrow(&mut perpetual.positions, takerAddress);
-            
+                                   
+            // verify collateralization of maker and take
+            verify_collat_checks(
+                initMakerPosition, 
+                newMakerPosition, 
+                perpetual.initialMarginRequired, 
+                perpetual.maintenanceMarginRequired, 
+                oraclePrice, 
+                1, 
+                0);
+
+            verify_collat_checks(
+                initTakerPosition, 
+                newTakerPosition, 
+                perpetual.initialMarginRequired, 
+                perpetual.maintenanceMarginRequired, 
+                oraclePrice, 
+                1, 
+                1);
+
             emit (AccountPositionUpdateEvent{
                 perpID, 
                 account: makerAddress,
@@ -444,7 +463,7 @@ module bluefin_exchange::perpetual {
 
             emit(TradeExecutedEvent{
                 perpID,
-                tradeType: 0,
+                tradeType: 1,
                 maker: makerAddress,
                 taker: takerAddress,
                 makerOrderHash: makerHash,
@@ -461,11 +480,164 @@ module bluefin_exchange::perpetual {
             });
     }
 
-    fun apply_isolated_margin(balance: &mut UserPosition, order:Order, fillQuantity: u128, fillPrice: u128, feePerUnit: u128, isTaker: u64): IMResponse {
-        
-        // update user mro
-        position::set_mro(balance, library::base_div(library::base_uint(), order::leverage(order)));
 
+    /**
+     * Allows caller to add margin to their position
+     */
+    public entry fun add_margin(perpetual: &mut Perpetual, amount: u128, ctx: &mut TxContext){
+        assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
+        let user = tx_context::sender(ctx);
+
+        assert!(table::contains(&mut perpetual.positions, user), error::user_has_no_position_in_table());
+
+        let balance = table::borrow_mut(&mut perpetual.positions, user);
+
+        let qPos = position::qPos(*balance);
+        let margin = position::margin(*balance);
+
+        assert!(qPos > 0, error::user_position_size_is_zero());
+
+        // TODO transfer margin amount from user to perpetual in margin bank
+
+        // update margin of user in storage
+        position::set_margin(balance, margin + amount);
+
+        // TODO: apply funding rate
+        // user must add enough margin that can pay for its all settlement dues
+
+        emit (AccountPositionUpdateEvent{
+                perpID: object::uid_to_inner(&perpetual.id), 
+                account: user,
+                // TODO confirm if balance being emitted has updated margin
+                position: *balance,
+                action: 1 // ADD_MARGIN
+            });
+
+    }
+
+    /**
+     * Allows caller to remove margin from their position
+     */
+    public entry fun remove_margin(perpetual: &mut Perpetual, amount: u128, ctx: &mut TxContext){
+        assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
+
+        let user = tx_context::sender(ctx);
+        let oraclePrice = price_oracle::price(perpetual.oraclePrice);
+
+        assert!(table::contains(&mut perpetual.positions, user), error::user_has_no_position_in_table());
+
+        let initBalance = *table::borrow(&mut perpetual.positions, user);
+        let balance = table::borrow_mut(&mut perpetual.positions, user);
+
+        let qPos = position::qPos(*balance);
+        let margin = position::margin(*balance);
+
+        assert!(qPos > 0, error::user_position_size_is_zero());
+
+
+        let maxRemovableAmount = margin_math::get_max_removeable_margin(*balance, oraclePrice);
+
+        assert!(amount <= maxRemovableAmount, error::margin_must_be_less_than_max_removable_margin());
+        
+        // TODO transfer margin amount from perpetual to user address in margin bank
+
+        // update margin of user in storage
+        position::set_margin(balance, margin - amount);
+
+        // TODO: apply funding rate
+
+        let currBalance = *table::borrow(&mut perpetual.positions, user);
+
+        verify_collat_checks(
+            initBalance, 
+            currBalance, 
+            perpetual.initialMarginRequired, 
+            perpetual.maintenanceMarginRequired, 
+            oraclePrice, 
+            0, 
+            0);
+
+        emit (AccountPositionUpdateEvent{
+                perpID: object::uid_to_inner(&perpetual.id), 
+                account: user,
+                position: currBalance,
+                action: 2 // REMOVE_MARGIN
+            });
+
+    }
+
+
+    /**
+     * Allows caller to adjust their leverage
+     */
+    public entry fun adjust_leverage(perpetual: &mut Perpetual, leverage: u128, ctx: &mut TxContext){
+
+        // get precise(whole number) leverage 1, 2, 3...n
+        leverage = get_precise_leverage(leverage);
+
+        assert!(leverage > 0, error::leverage_can_not_be_set_to_zero());
+
+        let user = tx_context::sender(ctx);
+        let oraclePrice = price_oracle::price(perpetual.oraclePrice);
+
+        assert!(table::contains(&mut perpetual.positions, user), error::user_has_no_position_in_table());
+
+        // TODO: apply funding rate and get updated position Balance
+        // initBalance will be returned by funding rate method
+        let initBalance = *table::borrow(&mut perpetual.positions, user);
+
+        let balance = table::borrow_mut(&mut perpetual.positions, user);
+        let margin = position::margin(*balance);
+
+        let targetMargin = margin_math::get_target_margin(*balance, leverage, oraclePrice);
+
+        if(margin > targetMargin){
+            // TODO: if user position has more margin than required for leverage, 
+            // move extra margin back to bank
+        } else if (margin < targetMargin) {
+            // TODO: if user position has < margin than required target margin, 
+            // move required margin from bank to perpetual
+        };
+
+        // update mro to target leverage
+        position::set_mro(balance, library::base_div(library::base_uint(), leverage));
+
+        // update margin to be target margin
+        position::set_margin(balance, targetMargin);
+
+        // verify oi open
+        evaluator::verify_oi_open_for_account(
+            perpetual.checks, 
+            position::mro(*balance), 
+            position::oiOpen(*balance), 
+            0
+        );
+
+        let currBalance = *table::borrow(&mut perpetual.positions, user);
+
+        verify_collat_checks(
+            initBalance,
+            currBalance,
+            perpetual.initialMarginRequired, 
+            perpetual.maintenanceMarginRequired, 
+            oraclePrice, 
+            0, 
+            0);
+
+        emit (AccountPositionUpdateEvent{
+                perpID: object::uid_to_inner(&perpetual.id), 
+                account: user,
+                position: currBalance,
+                action: 3 // ADJUST_LEVERAGE
+            });
+    }
+
+    //===========================================================//
+    //                      HELPER METHODS
+    //===========================================================//
+
+    fun apply_isolated_margin(checks:TradeChecks, balance: &mut UserPosition, order:Order, fillQuantity: u128, fillPrice: u128, feePerUnit: u128, isTaker: u64): IMResponse {
+        
         let marginPerUnit;
         let fundsFlow;
         let pnlPerUnit = signed_number::new();
@@ -473,33 +645,38 @@ module bluefin_exchange::perpetual {
 
         let isBuy = order::isBuy(order);
         let isReduceOnly = order::reduceOnly(order);
-
+        
         let oiOpen = position::oiOpen(*balance);
         let qPos = position::qPos(*balance);
         let isPosPositive = position::isPosPositive(*balance);
-        let mro = position::mro(*balance);
         let margin = position::margin(*balance);
+        let mro = library::base_div(library::base_uint(), order::leverage(order));
 
-        let pPos = if ( oiOpen == 0 ) { 0 } else { library::base_div(oiOpen, qPos) }; 
+        let pPos = if ( qPos == 0 ) { 0 } else { library::base_div(oiOpen, qPos) }; 
 
         // case 1: Opening position or adding to position size
         if (qPos == 0 || isBuy == isPosPositive) {
-            position::set_oiOpen(balance, oiOpen + library::base_mul(fillQuantity, fillPrice));
-            position::set_qPos(balance, qPos + fillQuantity);
             marginPerUnit = signed_number::from(library::base_mul(fillPrice, mro), true);
             fundsFlow = signed_number::from(library::base_mul(fillQuantity, signed_number::value(marginPerUnit) + feePerUnit), true);
-            position::set_margin(balance, margin + library::base_mul(library::base_mul(fillQuantity,fillPrice), mro));
+            let updatedOiOpen = oiOpen + library::base_mul(fillQuantity, fillPrice);
+
+            position::set_oiOpen(balance, updatedOiOpen);
+            position::set_qPos(balance, qPos + fillQuantity);
+            position::set_margin(balance, margin + library::base_mul(library::base_mul(fillQuantity, fillPrice), mro));
             position::set_isPosPositive(balance, isBuy);
 
-            // TODO verify oi open for account condition still holds
-            // IEvaluator(evaluator).verifyOIOpenForAccount(order.maker, balance);
+            // verify that oi open checks still hold                       
+            evaluator::verify_oi_open_for_account(
+                checks, 
+                mro,
+                updatedOiOpen,
+                isTaker
+            );
+
         } 
         // case 2: Reduce only order
         else if (isReduceOnly || ( isBuy != isPosPositive && fillQuantity <= qPos)){
             let newQPos = qPos - fillQuantity;
-            position::set_qPos(balance, newQPos);
-            position::set_oiOpen(balance, (oiOpen * newQPos) / qPos);
-
             marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
 
             pnlPerUnit = if ( isPosPositive ) { 
@@ -510,7 +687,7 @@ module bluefin_exchange::perpetual {
 
             equityPerUnit = signed_number::add(marginPerUnit, copy pnlPerUnit);
             
-            assert!(signed_number::gte(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
+            assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
             
             // Max(0, equityPerUnit);
             let posValue = signed_number::positive_value(equityPerUnit);
@@ -527,26 +704,24 @@ module bluefin_exchange::perpetual {
 
 
             fundsFlow = signed_number::positive_number(fundsFlow);
-
+            pnlPerUnit = signed_number::mul_uint(pnlPerUnit, fillQuantity);
+            
             position::set_margin(balance, (margin*newQPos) / qPos);
-
-
+            position::set_qPos(balance, newQPos);
+            position::set_oiOpen(balance, (oiOpen * newQPos) / qPos);
             // even if new position size is zero we are setting isPosPositive to false
             // this is what default value for isPosPositive is
-            
             if(newQPos == 0){
                 position::set_isPosPositive(balance, false);
             };
 
-            pnlPerUnit = signed_number::mul_uint(pnlPerUnit, fillQuantity);
 
         } 
         // case 3: flipping position side
         else {
             
             let newQPos = fillQuantity - qPos;
-            position::set_qPos(balance, newQPos);
-            position::set_oiOpen(balance, library::base_mul(newQPos, fillPrice));
+            let updatedOIOpen = library::base_mul(newQPos, fillPrice);
 
             marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
 
@@ -559,7 +734,7 @@ module bluefin_exchange::perpetual {
             equityPerUnit = signed_number::add(marginPerUnit, copy pnlPerUnit);
 
 
-            assert!(signed_number::gte(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
+            assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
 
             // Max(0, equityPerUnit);
             let posValue = signed_number::positive_value(equityPerUnit);
@@ -583,25 +758,35 @@ module bluefin_exchange::perpetual {
                                     mro) 
                                 + feePerUnit)
                         );
-            position::set_isPosPositive(balance, !isPosPositive);
 
             feePerUnit = library::base_mul(qPos, closingFeePerUnit) 
                          + ((newQPos * feePerUnit) / fillQuantity);
 
 
-            // TODO verify oi open for account condition still holds
-            // IEvaluator(evaluator).verifyOIOpenForAccount(order.maker, balance);
-
-            position::set_margin(balance, library::base_mul(oiOpen, mro));
 
             pnlPerUnit = signed_number::mul_uint(pnlPerUnit, qPos);
 
-        };
+            // verify that oi open checks still hold                       
+            evaluator::verify_oi_open_for_account(
+                checks, 
+                mro,
+                updatedOIOpen,
+                isTaker
+            );
 
+            position::set_qPos(balance, newQPos);
+            position::set_oiOpen(balance, updatedOIOpen);
+            position::set_margin(balance, library::base_mul(updatedOIOpen, mro));
+            position::set_isPosPositive(balance, !isPosPositive);
+
+        };
 
         //  if position is closed due to reducing trade reset mro to zero
         if (position::qPos(*balance) == 0) {
             position::set_mro(balance, 0);
+        } else {
+        // update user mro as per order
+            position::set_mro(balance, mro);
         };
 
         return IMResponse {
@@ -620,18 +805,14 @@ module bluefin_exchange::perpetual {
 
             verify_order_expiry(order, isTaker);
 
-            // TODO, pass oracle price in 5th argument
-            verify_order_fills(perpetual, order, fillQuantity, fillPrice, fillPrice, isTaker);
+            let oraclePrice = price_oracle::price(perpetual.oraclePrice);
 
+            verify_order_fills(perpetual, order, fillQuantity, fillPrice, oraclePrice, isTaker);
 
             verify_order_leverage(perpetual, order, isTaker);
 
             verify_and_fill_order_qty(ordersTable, order, hash, fillQuantity, isTaker);
     }
-
-    //===========================================================//
-    //                      HELPER METHODS
-    //===========================================================//
 
     fun create_position(perpID:ID, positions: &mut Table<address, UserPosition>, addr: address){
         
@@ -740,11 +921,59 @@ module bluefin_exchange::perpetual {
     }
 
     fun has_account_permission(operatorTable: &mut Table<address, bool>, taker:address, sender:address):bool{
-        return taker == sender || table::contains(operatorTable,sender)
+        return taker == sender || table::contains(operatorTable, sender)
     }
 
     fun get_precise_leverage(leverage:u128): u128 {
         return (leverage / library::base_uint()) * library::base_uint()
+    }
+
+    fun verify_collat_checks(initialPosition: UserPosition, currentPosition: UserPosition, imr: u128, mmr: u128, oraclePrice:u128, tradeType: u64, isTaker:u64){
+
+            let initMarginRatio = position::margin_ratio(initialPosition, oraclePrice);
+            let currentMarginRatio = position::margin_ratio(currentPosition, oraclePrice);
+
+            // Case 0: Current Margin Ratio >= IMR: User can increase and reduce positions.
+            if (signed_number::gte_uint(currentMarginRatio, imr)) {
+                return
+            };
+
+            // Case I: For MR < IMR: If flipping or new trade, current ratio can only be >= IMR
+            assert!(
+                position::isPosPositive(currentPosition) == position::isPosPositive(initialPosition)
+                && 
+                position::qPos(initialPosition) > 0,
+                error::mr_less_than_imr_can_not_open_or_flip_position(isTaker)
+            );
+
+            // Case II: For MR < IMR: require MR to have improved or stayed the same
+            assert!(
+                signed_number::gte(currentMarginRatio, initMarginRatio), 
+                error::mr_less_than_imr_mr_must_improve(isTaker)
+                );
+
+            // Case III: For MR <= MMR require qPos to go down or stay the same
+            assert!(
+                signed_number::gte_uint(currentMarginRatio, mmr)
+                ||
+                (
+                    position::qPos(initialPosition) >= position::qPos(currentPosition)
+                    &&
+                    position::isPosPositive(initialPosition) == position::isPosPositive(currentPosition)
+                ),
+                error::mr_less_than_imr_position_can_only_reduce(isTaker)
+            );
+
+            // Case IV: For MR < 0 require that its a liquidation
+            // @dev A normal trade type is 1
+            // @dev A liquidation trade type is 2
+            // @dev A deleveraging trade type is 3
+            assert!(
+                signed_number::gte_uint(currentMarginRatio, 0)
+                || 
+                tradeType == 2 || tradeType == 3,
+                error::mr_less_than_zero(isTaker)
+                );
     }
 
 

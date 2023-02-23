@@ -31,6 +31,10 @@ export function toBigNumberStr(
     return toBigNumber(val, base).toFixed(0);
 }
 
+export function toBaseNumber(val: BigNumberable, decimals: number = 3): Number {
+    return Number(new BigNumber(val).shiftedBy(-BASE_DECIMALS).toFixed(3));
+}
+
 export function bnToHex(bn: BigNumber) {
     // u128 on chain = 16 bytes = 32 hex characters (2 char / byte)
     return bn.toString(16).padStart(32, "0");

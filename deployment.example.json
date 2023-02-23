@@ -1,12 +1,66 @@
 {
-  "AdminCap": {
-    "id": "0x7592556d6120051bbaabe7e4aeae662fdb265c2b",
-    "owner": "Owned",
-    "dataType": "AdminCap"
+  "deployer": "0x42696a5734546c3acc9019ef93543609cb5c5c89",
+  "moduleName": "perpetual",
+  "objects": {
+    "Table<vector<u8>, 0xb60ea7d9e7afeebba1fc941dcd241af5ba2e1b8b::perpetual::OrderStatus>": {
+      "id": "0x075f97877aee6b1309f08dbc82e3222ed5588f56",
+      "owner": "Shared",
+      "dataType": "Table<vector<u8>, 0xb60ea7d9e7afeebba1fc941dcd241af5ba2e1b8b::perpetual::OrderStatus>"
+    },
+    "Table<address, bool>": {
+      "id": "0x4da2766a129b208e4edae4920de76b2039faa1c9",
+      "owner": "Shared",
+      "dataType": "Table<address, bool>"
+    },
+    "AdminCap": {
+      "id": "0x5b738b060b22bff4dd696ad67c49971408fecc15",
+      "owner": "Owned",
+      "dataType": "AdminCap"
+    },
+    "package": {
+      "id": "0xb60ea7d9e7afeebba1fc941dcd241af5ba2e1b8b",
+      "owner": "Immutable",
+      "dataType": "package"
+    }
   },
-  "package": {
-    "id": "0xf8a7ce243ac70503368227293b863f0c1fd603e6",
-    "owner": "Immutable",
-    "dataType": "package"
-  }
+  "markets": [
+    {
+      "Config": {
+        "name": "ETH-PERP",
+        "minPrice": "100000000",
+        "maxPrice": "100000000000000",
+        "tickSize": "1000000",
+        "minQty": "10000000",
+        "maxQtyLimit": "100000000000000",
+        "maxQtyMarket": "1000000000000",
+        "stepSize": "10000000",
+        "mtbLong": "200000000",
+        "mtbShort": "200000000",
+        "maxAllowedOIOpen": [
+          "100000000000000",
+          "100000000000000",
+          "200000000000000",
+          "200000000000000",
+          "500000000000000"
+        ],
+        "initialMarginRequired": "475000000",
+        "maintenanceMarginRequired": "300000000",
+        "makerFee": "1000000",
+        "takerFee": "4500000",
+        "maxAllowedPriceDiffInOP": "1000000000"
+      },
+      "Objects": {
+        "UpdateOraclePriceCapability": {
+          "id": "0x47105c3252721819096763d9ac6fd203145864d8",
+          "owner": "Shared",
+          "dataType": "UpdateOraclePriceCapability"
+        },
+        "Perpetual": {
+          "id": "0x98f258fef6a48a5892089a72fa4a5d22aa62367c",
+          "owner": "Shared",
+          "dataType": "Perpetual"
+        }
+      }
+    }
+  ]
 }

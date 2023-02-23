@@ -114,7 +114,7 @@ module bluefin_exchange::evaluator {
             maxAllowedOIOpen
         };
 
-        verifyPreInitChecks(tradeChecks);
+        verify_pre_init_checks(tradeChecks);
 
 
         return tradeChecks
@@ -247,7 +247,7 @@ module bluefin_exchange::evaluator {
     /**
      * @dev internal function that verifies all pre initialization checks
      */
-    fun verifyPreInitChecks(checks: TradeChecks)
+    fun verify_pre_init_checks(checks: TradeChecks)
     {
         assert!(checks.minPrice > 0, error::min_price_greater_than_zero());
         assert!(checks.minPrice < checks.maxPrice, error::min_price_less_than_max_price());
@@ -286,8 +286,8 @@ module bluefin_exchange::evaluator {
      * @dev reversion implies maker order is at fault
      */
     public fun verify_price_checks(checks: TradeChecks, price: u128){
-        verify_min_max_price(checks,price);
-        verify_tick_size(checks,price);
+        verify_min_max_price(checks, price);
+        verify_tick_size(checks, price);
     }
 
     /**
@@ -328,10 +328,10 @@ module bluefin_exchange::evaluator {
         isBuy: bool
     ) {
         if(isBuy){
-            assert!(tradePrice <= (oraclePrice + library::base_mul(oraclePrice,checks.mtbLong)),error::trade_price_greater_than_mtb_long());
+            assert!(tradePrice <= (oraclePrice + library::base_mul(oraclePrice, checks.mtbLong)), error::trade_price_greater_than_mtb_long());
         }
         else {
-            assert!(tradePrice >= (oraclePrice + library::base_mul(oraclePrice,checks.mtbShort)),error::trade_price_greater_than_mtb_short());
+            assert!(tradePrice >= (oraclePrice - library::base_mul(oraclePrice, checks.mtbShort)), error::trade_price_greater_than_mtb_short());
         };
     }
 

@@ -171,4 +171,40 @@ module bluefin_exchange::error {
         return 104
     }
 
+    public fun mr_less_than_imr_can_not_open_or_flip_position(isTaker: u64): u64 {
+        return 400 + isTaker
+    }
+
+    public fun mr_less_than_imr_mr_must_improve(isTaker: u64): u64 {
+        return 402 + isTaker
+    }
+
+    public fun mr_less_than_imr_position_can_only_reduce(isTaker: u64): u64 {
+        return 404 + isTaker
+    }
+
+    public fun mr_less_than_zero(isTaker: u64): u64 {
+        return 406 + isTaker
+    }
+
+
+    public fun margin_amount_must_be_greater_than_zero(): u64 {
+        return 500
+    }
+
+    public fun user_has_no_position_in_table(): u64 {
+        return 501
+    }
+
+    public fun user_position_size_is_zero(): u64 {
+        return 502
+    }
+
+    public fun margin_must_be_less_than_max_removable_margin(): u64 {
+        return 503
+    }
+
+    public fun leverage_can_not_be_set_to_zero(): u64 {
+        return 504
+    }
 }
