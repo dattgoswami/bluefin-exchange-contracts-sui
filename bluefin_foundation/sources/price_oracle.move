@@ -5,8 +5,13 @@ module bluefin_foundation::price_oracle {
     use sui::tx_context::{TxContext};
     use sui::transfer;
 
+    // custom
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{base_uint};
+
+    //===========================================================//
+    //                           EVENTS                          //
+    //===========================================================//
 
     struct OraclePriceUpdated has copy, drop {
         id: ID,
@@ -24,6 +29,10 @@ module bluefin_foundation::price_oracle {
         maxAllowedPriceDifference: u128
     }
 
+
+    //===========================================================//
+    //                           STORAGE                         //
+    //===========================================================//
 
     struct UpdateOraclePriceCapability has key {
         id: UID,
@@ -43,7 +52,11 @@ module bluefin_foundation::price_oracle {
         maxAllowedPriceDifference: u128
     }
 
-    public fun initOraclePrice(
+    //===========================================================//
+    //                      INITIALIZATION                       //
+    //===========================================================//
+
+    public fun initialize(
        price: u128, 
        maxAllowedPriceDifference: u128, 
        updatedAt: u128,
@@ -84,6 +97,10 @@ module bluefin_foundation::price_oracle {
         return op
     }
 
+    //===========================================================//
+    //                         SETTERS                           //
+    //===========================================================//
+
     public fun set_price_oracle_operator(perp: ID, cap: &mut UpdateOraclePriceCapability, operator: address){
         assert!(cap.account != operator, error::already_price_oracle_operator());
         assert!(cap.perpetualID == perp, error::invalid_price_oracle_capability());
@@ -119,6 +136,17 @@ module bluefin_foundation::price_oracle {
     }
 
 
+    //===========================================================//
+    //                          ACCESSORS                        //
+    //===========================================================//
+
+    public fun price(op: OraclePrice): u128 {
+        return op.price
+    }
+
+    //===========================================================//
+    //                         HELPERS                           //
+    //===========================================================//
 
     fun verify_oracle_price_update_diff(maxPriceUpdateDiff:u128, newPrice: u128, oldPrice: u128): bool {
 
@@ -142,9 +170,4 @@ module bluefin_foundation::price_oracle {
 
         return true
     }
-
-    public fun price(op: OraclePrice): u128 {
-        return op.price
-    }
-
 }

@@ -61,6 +61,10 @@ module bluefin_foundation::evaluator {
         maxAllowedOIOpen : vector<u128>
     }
 
+    //===========================================================//
+    //                           STORAGE                         //
+    //===========================================================//
+
     struct TradeChecks has copy, drop, store {
         /// min price at which asset can be traded
         minPrice: u128,
@@ -84,7 +88,11 @@ module bluefin_foundation::evaluator {
         maxAllowedOIOpen : vector<u128>
     }
 
-    public fun initTradeChecks(
+    //===========================================================//
+    //                      INITIALIZATION                       //
+    //===========================================================//
+
+    public fun initialize(
         minPrice: u128,
         maxPrice: u128,
         tickSize: u128,
@@ -116,12 +124,11 @@ module bluefin_foundation::evaluator {
 
         verify_pre_init_checks(tradeChecks);
 
-
         return tradeChecks
     }
 
     //===========================================================//
-    //                      SETTER METHODS
+    //                         SETTERS                           //
     //===========================================================//
 
 
@@ -241,7 +248,7 @@ module bluefin_foundation::evaluator {
     
 
     //===========================================================//
-    //                      VERIFIER METHODS
+    //                           HELPERS                         //
     //===========================================================//
 
     /**

@@ -3,16 +3,16 @@ module bluefin_foundation::exchange {
 
     use sui::object::{Self, ID, UID};
     use sui::tx_context::{Self, TxContext};
-    use std::string::{Self, String};
-    use sui::transfer;
     use sui::event::{emit};
     use sui::table::{Self, Table};
     use sui::ecdsa_k1;
+    use sui::transfer;
 
     // custom modules
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::price_oracle::{Self, OraclePrice, UpdateOraclePriceCapability};
+    use bluefin_foundation::price_oracle::{Self, UpdateOraclePriceCapability};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
+    use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::order::{Self, Order};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
@@ -22,16 +22,6 @@ module bluefin_foundation::exchange {
     //===========================================================//
     //                           EVENTS                          //
     //===========================================================//
-
-    struct PerpetualCreationEvent has copy, drop {
-        id: ID,
-        name: String,
-        checks:TradeChecks,
-        initialMarginRequired: u128,
-        maintenanceMarginRequired: u128,
-        makerFee: u128,
-        takerFee: u128,
-    }
 
     struct OperatorUpdateEvent has copy, drop {
         account:address,
@@ -43,13 +33,6 @@ module bluefin_foundation::exchange {
         order: Order,
         fill: u128,
         newFilledQty: u128        
-    }
-
-    struct AccountPositionUpdateEvent has copy, drop {
-        perpID: ID,
-        account:address,
-        position:UserPosition,
-        action: u64
     }
 
     struct TradeExecutedEvent has copy, drop {
@@ -70,36 +53,19 @@ module bluefin_foundation::exchange {
         isBuy: bool
     }
 
+    //===========================================================//
+    //                           STORAGE                         //
+    //===========================================================//
+    
+
     struct AdminCap has key {
         id: UID,
     }
      
-
-    struct Perpetual has key, store {
-        id: UID,
-        /// name of perpetual
-        name: String,
-        /// Trade Checks
-        checks: TradeChecks,
-        /// imr: the initial margin collateralization percentage
-        initialMarginRequired: u128,
-        /// mmr: the minimum collateralization percentage
-        maintenanceMarginRequired: u128,
-        /// Default maker order fee for this Perpetual
-        makerFee: u128,
-        /// Default taker order fee for this Perpetual
-        takerFee: u128,
-        /// table containing user positions for this market/perpetual
-        positions: Table<address,UserPosition>,
-        /// PriceOracle
-        oraclePrice: OraclePrice
-    }
-
     struct OrderStatus has store, drop {
         status: bool,
         filledQty: u128
     }
-
 
     struct IMResponse has store, drop {
         fundsFlow: Number,
@@ -185,7 +151,7 @@ module bluefin_foundation::exchange {
 
         let positions = table::new<address, UserPosition>(ctx);
 
-        let checks = evaluator::initTradeChecks(
+        let checks = evaluator::initialize(
             minPrice,
             maxPrice,
             tickSize,
@@ -198,7 +164,8 @@ module bluefin_foundation::exchange {
             maxAllowedOIOpen
             );
 
-        let oraclePrice = price_oracle::initOraclePrice(
+        
+        let oraclePrice = price_oracle::initialize(
             0, 
             maxAllowedPriceDiffInOP,
             0, 
@@ -207,9 +174,10 @@ module bluefin_foundation::exchange {
             ctx
         );
 
-        let perpetual = Perpetual {
-            id: id,
-            name: string::utf8(name),
+        // creates perpetual and shares it
+        perpetual::initialize(
+            id,
+            name,
             checks,
             initialMarginRequired,
             maintenanceMarginRequired,
@@ -217,20 +185,7 @@ module bluefin_foundation::exchange {
             takerFee,
             positions,
             oraclePrice
-        };
-
-        emit(PerpetualCreationEvent {
-            id: perpID,
-            name: perpetual.name,
-            checks,
-            initialMarginRequired,
-            maintenanceMarginRequired,
-            makerFee,
-            takerFee    
-        });
-
-
-        transfer::share_object(perpetual);
+        );
 
     }
 
@@ -238,87 +193,121 @@ module bluefin_foundation::exchange {
      * Updates minimum price of the perpetual 
      * Only Admin can update price
      */
-    public entry fun set_min_price( _: &AdminCap, perpetual: &mut Perpetual, minPrice: u128){
-        evaluator::set_min_price(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, minPrice);
+    public entry fun set_min_price( _: &AdminCap, perp: &mut Perpetual, minPrice: u128){
+        evaluator::set_min_price(
+            object::uid_to_inner(perpetual::id(perp)), 
+            perpetual::mut_checks(perp), 
+            minPrice);
     }   
 
     /** Updates maximum price of the perpetual 
      * Only Admin can update price
      */
-    public entry fun set_max_price( _: &AdminCap, perpetual: &mut Perpetual, maxPrice: u128){
-        evaluator::set_max_price(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxPrice);
+    public entry fun set_max_price( _: &AdminCap, perp: &mut Perpetual, maxPrice: u128){
+        evaluator::set_max_price(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), maxPrice);
     }   
 
     /**
      * Updates step size of the perpetual 
      * Only Admin can update size
      */
-    public entry fun set_step_size( _: &AdminCap, perpetual: &mut Perpetual, stepSize: u128){
-        evaluator::set_step_size(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, stepSize);
+    public entry fun set_step_size( _: &AdminCap, perp: &mut Perpetual, stepSize: u128){
+        evaluator::set_step_size(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), stepSize);
     }   
 
     /**
      * Updates tick size of the perpetual 
      * Only Admin can update size
      */
-    public entry fun set_tick_size( _: &AdminCap, perpetual: &mut Perpetual, tickSize: u128){
-        evaluator::set_tick_size(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, tickSize);
+    public entry fun set_tick_size( _: &AdminCap, perp: &mut Perpetual, tickSize: u128){
+        evaluator::set_tick_size(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), tickSize);
     }   
 
     /**
      * Updates market take bound (long) of the perpetual 
      * Only Admin can update MTB long
      */
-    public entry fun set_mtb_long( _: &AdminCap, perpetual: &mut Perpetual, mtbLong: u128){
-        evaluator::set_mtb_long(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbLong);
+    public entry fun set_mtb_long( _: &AdminCap, perp: &mut Perpetual, mtbLong: u128){
+        evaluator::set_mtb_long(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), mtbLong);
     }  
 
     /**
      * Updates market take bound (short) of the perpetual 
      * Only Admin can update MTB short
      */
-    public entry fun set_mtb_short( _: &AdminCap, perpetual: &mut Perpetual, mtbShort: u128){
-        evaluator::set_mtb_short(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, mtbShort);
+    public entry fun set_mtb_short( _: &AdminCap, perp: &mut Perpetual, mtbShort: u128){
+        evaluator::set_mtb_short(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), mtbShort);
     }   
 
     /**
      * Updates maximum quantity for limit orders of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun set_max_qty_limit( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
-        evaluator::set_max_qty_limit(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    public entry fun set_max_qty_limit( _: &AdminCap, perp: &mut Perpetual, quantity: u128){
+        evaluator::set_max_qty_limit(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), quantity);
     }   
 
     /**
      * Updates maximum quantity for market orders of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun set_max_qty_market( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
-        evaluator::set_max_qty_market(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    public entry fun set_max_qty_market( _: &AdminCap, perp: &mut Perpetual, quantity: u128){
+        evaluator::set_max_qty_market(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), quantity);
     }  
 
     /**
      * Updates minimum quantity of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun set_min_qty( _: &AdminCap, perpetual: &mut Perpetual, quantity: u128){
-        evaluator::set_min_qty(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, quantity);
+    public entry fun set_min_qty( _: &AdminCap, perp: &mut Perpetual, quantity: u128){
+        evaluator::set_min_qty(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), quantity);
     }   
 
     /**
      * updates max allowed oi open for selected mro
      * Only Admin can update max allowed OI open
      */
-    public entry fun set_max_oi_open( _: &AdminCap, perpetual: &mut Perpetual, maxLimit: vector<u128>){
-        evaluator::set_max_oi_open(object::uid_to_inner(&perpetual.id), &mut perpetual.checks, maxLimit);
+    public entry fun set_max_oi_open( _: &AdminCap, perp: &mut Perpetual, maxLimit: vector<u128>){
+        evaluator::set_max_oi_open(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), maxLimit);
     }
 
+    /*
+     * Sets OraclePrice  
+     */
+    public entry fun set_oracle_price(perp: &mut Perpetual, cap: &UpdateOraclePriceCapability, price: u128, ctx: &mut TxContext){
+        price_oracle::set_oracle_price(
+            object::uid_to_inner(perpetual::id(perp)), 
+            cap, 
+            perpetual::mut_oraclePrice(perp),
+            price, 
+            tx_context::sender(ctx));
+    }
+
+    /*
+     * Sets Max difference allowed in percentage between New Oracle Price & Old Oracle Price
+     */
+    public entry fun set_oracle_price_max_allowed_diff(_: &AdminCap, perp: &mut Perpetual, maxAllowedPriceDifference: u128){
+        price_oracle::set_oracle_price_max_allowed_diff(
+            object::uid_to_inner(perpetual::id(perp)),
+            perpetual::mut_oraclePrice(perp),
+            maxAllowedPriceDifference);
+    }
+
+    /*
+     * Sets operator address who is allowed to update oracle price 
+     */
+    public entry fun set_price_oracle_operator(_: &AdminCap, cap: &mut UpdateOraclePriceCapability, perp: &Perpetual, operator: address){
+       price_oracle::set_price_oracle_operator(
+        object::uid_to_inner(perpetual::id(perp)),
+        cap,
+        operator);
+    }
 
     /**
      * Used to perofrm on-chain trade between two orders (maker/taker)
      */ 
     public entry fun trade(
-        perpetual: &mut Perpetual, 
+        perp: &mut Perpetual, 
         operatorTable: &mut Table<address, bool>,
         ordersTable: &mut Table<vector<u8>, OrderStatus>,
 
@@ -353,19 +342,22 @@ module bluefin_foundation::exchange {
         ctx: &mut TxContext        
         ){
 
-            let perpID = object::uid_to_inner(&perpetual.id);
+            let perpID = object::uid_to_inner(perpetual::id(perp));
             let sender = tx_context::sender(ctx);
 
-            let oraclePrice = price_oracle::price(perpetual.oraclePrice);
+            let oraclePrice = price_oracle::price(perpetual::oraclePrice(perp));
 
             // check if caller has permission to trade on taker's behalf
             assert!(has_account_permission(operatorTable, takerAddress, sender), error::sender_has_no_taker_permission());
 
             assert!(makerIsBuy != takerIsBuy, error::order_cannot_be_of_same_side());
 
+            let makerFee = perpetual::makerFee(perp);
+            let takerFee = perpetual::takerFee(perp);
+            
             // if maker/taker positions don't exist create them
-            create_position(perpID, &mut perpetual.positions, makerAddress);
-            create_position(perpID, &mut perpetual.positions, takerAddress);
+            position::create_position(perpID, perpetual::positions(perp), makerAddress);
+            position::create_position(perpID, perpetual::positions(perp), takerAddress);
 
             // TODO check if trading is allowed by guardian for given perpetual or not
 
@@ -373,8 +365,8 @@ module bluefin_foundation::exchange {
 
             // TODO apply funding rate
 
-            let makerOrder = order::pack_object(makerTriggerPrice, makerIsBuy, makerPrice, makerQuantity, makerLeverage, makerReduceOnly, makerAddress, makerExpiration, makerSalt);
-            let takerOrder = order::pack_object(takerTriggerPrice, takerIsBuy, takerPrice, takerQuantity, takerLeverage, takerReduceOnly, takerAddress, takerExpiration, takerSalt);
+            let makerOrder = order::initialize(makerTriggerPrice, makerIsBuy, makerPrice, makerQuantity, makerLeverage, makerReduceOnly, makerAddress, makerExpiration, makerSalt);
+            let takerOrder = order::initialize(takerTriggerPrice, takerIsBuy, takerPrice, takerQuantity, takerLeverage, takerReduceOnly, takerAddress, takerExpiration, takerSalt);
 
             // get order hashes
             let makerHash = order::get_hash(makerOrder, perpID);
@@ -390,50 +382,50 @@ module bluefin_foundation::exchange {
             };
 
             // update orders to have non decimal based leverage
-            order::set_leverage(&mut makerOrder, get_precise_leverage(makerLeverage));
-            order::set_leverage(&mut takerOrder, get_precise_leverage(takerLeverage));
+            order::set_leverage(&mut makerOrder, library::round_down(makerLeverage));
+            order::set_leverage(&mut takerOrder, library::round_down(takerLeverage));
 
             // Validate orders are correct and can be executed for the trade
-            verify_order(perpetual, ordersTable, makerOrder, makerHash, makerSignature, fillQuantity, fillPrice, 0);
-            verify_order(perpetual, ordersTable, takerOrder, takerHash, takerSignature, fillQuantity, fillPrice, 1);
+            verify_order(perp, ordersTable, makerOrder, makerHash, makerSignature, fillQuantity, fillPrice, 0);
+            verify_order(perp, ordersTable, takerOrder, takerHash, takerSignature, fillQuantity, fillPrice, 1);
 
             // verify pre-trade checks
-            evaluator::verify_price_checks(perpetual.checks, fillPrice);
-            evaluator::verify_qty_checks(perpetual.checks, fillQuantity);
-            evaluator::verify_market_take_bound_checks(perpetual.checks, fillPrice, oraclePrice, takerIsBuy);
+            evaluator::verify_price_checks(perpetual::checks(perp), fillPrice);
+            evaluator::verify_qty_checks(perpetual::checks(perp), fillQuantity);
+            evaluator::verify_market_take_bound_checks(perpetual::checks(perp), fillPrice, oraclePrice, takerIsBuy);
 
-            let initMakerPosition = *table::borrow(&mut perpetual.positions, makerAddress);
-            let initTakerPosition = *table::borrow(&mut perpetual.positions, takerAddress);
+            let initMakerPosition = *table::borrow(perpetual::positions(perp), makerAddress);
+            let initTakerPosition = *table::borrow(perpetual::positions(perp), takerAddress);
 
             // apply isolated margin
             let makerResponse = apply_isolated_margin(
-                perpetual.checks,
-                table::borrow_mut(&mut perpetual.positions, makerAddress), 
+                perpetual::checks(perp),
+                table::borrow_mut(perpetual::positions(perp), makerAddress), 
                 makerOrder, 
                 fillQuantity, 
                 fillPrice, 
-                library::base_mul(fillPrice, perpetual.makerFee),
+                library::base_mul(fillPrice, makerFee),
                 0);
 
             let takerResponse = apply_isolated_margin(
-                perpetual.checks,
-                table::borrow_mut(&mut perpetual.positions, takerAddress), 
+                perpetual::checks(perp),
+                table::borrow_mut(perpetual::positions(perp), takerAddress), 
                 takerOrder, 
                 fillQuantity, 
                 fillPrice, 
-                library::base_mul(fillPrice, perpetual.takerFee),
+                library::base_mul(fillPrice, takerFee),
                 1);
 
 
-            let newMakerPosition = *table::borrow(&mut perpetual.positions, makerAddress);
-            let newTakerPosition = *table::borrow(&mut perpetual.positions, takerAddress);
+            let newMakerPosition = *table::borrow(perpetual::positions(perp), makerAddress);
+            let newTakerPosition = *table::borrow(perpetual::positions(perp), takerAddress);
                                    
             // verify collateralization of maker and take
             verify_collat_checks(
                 initMakerPosition, 
                 newMakerPosition, 
-                perpetual.initialMarginRequired, 
-                perpetual.maintenanceMarginRequired, 
+                perpetual::imr(perp), 
+                perpetual::mmr(perp), 
                 oraclePrice, 
                 1, 
                 0);
@@ -441,26 +433,16 @@ module bluefin_foundation::exchange {
             verify_collat_checks(
                 initTakerPosition, 
                 newTakerPosition, 
-                perpetual.initialMarginRequired, 
-                perpetual.maintenanceMarginRequired, 
+                perpetual::imr(perp), 
+                perpetual::mmr(perp), 
                 oraclePrice, 
                 1, 
                 1);
 
-            emit (AccountPositionUpdateEvent{
-                perpID, 
-                account: makerAddress,
-                position: newMakerPosition,
-                action: 0
-            });
+            position::emit_position_update_event(perpID, makerAddress, newMakerPosition, 0);
+            position::emit_position_update_event(perpID, takerAddress, newTakerPosition, 0);
 
-            emit (AccountPositionUpdateEvent{
-                perpID, 
-                account: takerAddress,
-                position: newTakerPosition,
-                action: 0
-            });
-
+    
             emit(TradeExecutedEvent{
                 perpID,
                 tradeType: 1,
@@ -484,13 +466,15 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to add margin to their position
      */
-    public entry fun add_margin(perpetual: &mut Perpetual, amount: u128, ctx: &mut TxContext){
+    public entry fun add_margin(perp: &mut Perpetual, amount: u128, ctx: &mut TxContext){
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
         let user = tx_context::sender(ctx);
 
-        assert!(table::contains(&mut perpetual.positions, user), error::user_has_no_position_in_table());
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table());
 
-        let balance = table::borrow_mut(&mut perpetual.positions, user);
+        let perpID = object::uid_to_inner(perpetual::id(perp));
+
+        let balance = table::borrow_mut(perpetual::positions(perp), user);
 
         let qPos = position::qPos(*balance);
         let margin = position::margin(*balance);
@@ -504,30 +488,27 @@ module bluefin_foundation::exchange {
 
         // TODO: apply funding rate
         // user must add enough margin that can pay for its all settlement dues
+        
+        position::emit_position_update_event(perpID, user, *balance, 1);
 
-        emit (AccountPositionUpdateEvent{
-                perpID: object::uid_to_inner(&perpetual.id), 
-                account: user,
-                // TODO confirm if balance being emitted has updated margin
-                position: *balance,
-                action: 1 // ADD_MARGIN
-            });
 
     }
 
     /**
      * Allows caller to remove margin from their position
      */
-    public entry fun remove_margin(perpetual: &mut Perpetual, amount: u128, ctx: &mut TxContext){
+    public entry fun remove_margin(perp: &mut Perpetual, amount: u128, ctx: &mut TxContext){
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
 
         let user = tx_context::sender(ctx);
-        let oraclePrice = price_oracle::price(perpetual.oraclePrice);
+        let oraclePrice = price_oracle::price(perpetual::oraclePrice(perp));
 
-        assert!(table::contains(&mut perpetual.positions, user), error::user_has_no_position_in_table());
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table());
 
-        let initBalance = *table::borrow(&mut perpetual.positions, user);
-        let balance = table::borrow_mut(&mut perpetual.positions, user);
+        let perpID = object::uid_to_inner(perpetual::id(perp));
+
+        let initBalance = *table::borrow(perpetual::positions(perp), user);
+        let balance = table::borrow_mut(perpetual::positions(perp), user);
 
         let qPos = position::qPos(*balance);
         let margin = position::margin(*balance);
@@ -546,23 +527,18 @@ module bluefin_foundation::exchange {
 
         // TODO: apply funding rate
 
-        let currBalance = *table::borrow(&mut perpetual.positions, user);
+        let currBalance = *table::borrow(perpetual::positions(perp), user);
 
         verify_collat_checks(
             initBalance, 
             currBalance, 
-            perpetual.initialMarginRequired, 
-            perpetual.maintenanceMarginRequired, 
+            perpetual::imr(perp), 
+            perpetual::mmr(perp), 
             oraclePrice, 
             0, 
             0);
-
-        emit (AccountPositionUpdateEvent{
-                perpID: object::uid_to_inner(&perpetual.id), 
-                account: user,
-                position: currBalance,
-                action: 2 // REMOVE_MARGIN
-            });
+            
+        position::emit_position_update_event(perpID, user, currBalance, 2);
 
     }
 
@@ -570,23 +546,25 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to adjust their leverage
      */
-    public entry fun adjust_leverage(perpetual: &mut Perpetual, leverage: u128, ctx: &mut TxContext){
+    public entry fun adjust_leverage(perp: &mut Perpetual, leverage: u128, ctx: &mut TxContext){
 
         // get precise(whole number) leverage 1, 2, 3...n
-        leverage = get_precise_leverage(leverage);
+        leverage = library::round_down(leverage);
 
         assert!(leverage > 0, error::leverage_can_not_be_set_to_zero());
 
         let user = tx_context::sender(ctx);
-        let oraclePrice = price_oracle::price(perpetual.oraclePrice);
+        let oraclePrice = price_oracle::price(perpetual::oraclePrice(perp));
+        let tradeChecks = perpetual::checks(perp);
+        let perpID = object::uid_to_inner(perpetual::id(perp));
 
-        assert!(table::contains(&mut perpetual.positions, user), error::user_has_no_position_in_table());
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table());
 
         // TODO: apply funding rate and get updated position Balance
         // initBalance will be returned by funding rate method
-        let initBalance = *table::borrow(&mut perpetual.positions, user);
+        let initBalance = *table::borrow(perpetual::positions(perp), user);
 
-        let balance = table::borrow_mut(&mut perpetual.positions, user);
+        let balance = table::borrow_mut(perpetual::positions(perp), user);
         let margin = position::margin(*balance);
 
         let targetMargin = margin_math::get_target_margin(*balance, leverage, oraclePrice);
@@ -607,34 +585,29 @@ module bluefin_foundation::exchange {
 
         // verify oi open
         evaluator::verify_oi_open_for_account(
-            perpetual.checks, 
+            tradeChecks, 
             position::mro(*balance), 
             position::oiOpen(*balance), 
             0
         );
 
-        let currBalance = *table::borrow(&mut perpetual.positions, user);
+        let currBalance = *table::borrow(perpetual::positions(perp), user);
 
         verify_collat_checks(
             initBalance,
             currBalance,
-            perpetual.initialMarginRequired, 
-            perpetual.maintenanceMarginRequired, 
+            perpetual::imr(perp), 
+            perpetual::mmr(perp), 
             oraclePrice, 
             0, 
             0);
 
-        emit (AccountPositionUpdateEvent{
-                perpID: object::uid_to_inner(&perpetual.id), 
-                account: user,
-                position: currBalance,
-                action: 3 // ADJUST_LEVERAGE
-            });
+        position::emit_position_update_event(perpID, user, currBalance, 3);
     }
 
-    //===========================================================//
-    //                      HELPER METHODS
-    //===========================================================//
+    // //===========================================================//
+    // //                      HELPER METHODS
+    // //===========================================================//
 
     fun apply_isolated_margin(checks:TradeChecks, balance: &mut UserPosition, order:Order, fillQuantity: u128, fillPrice: u128, feePerUnit: u128, isTaker: u64): IMResponse {
         
@@ -797,7 +770,7 @@ module bluefin_foundation::exchange {
 
     }
 
-    fun verify_order(perpetual: &mut Perpetual, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, signature: vector<u8>, fillQuantity: u128, fillPrice: u128, isTaker: u64){
+    fun verify_order(perp: &mut Perpetual, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, signature: vector<u8>, fillQuantity: u128, fillPrice: u128, isTaker: u64){
 
             verify_order_state(ordersTable, hash, isTaker);
 
@@ -805,22 +778,14 @@ module bluefin_foundation::exchange {
 
             verify_order_expiry(order, isTaker);
 
-            let oraclePrice = price_oracle::price(perpetual.oraclePrice);
+            let oraclePrice = price_oracle::price(perpetual::oraclePrice(perp));
 
-            verify_order_fills(perpetual, order, fillQuantity, fillPrice, oraclePrice, isTaker);
+            verify_order_fills(perp, order, fillQuantity, fillPrice, oraclePrice, isTaker);
 
-            verify_order_leverage(perpetual, order, isTaker);
+            verify_order_leverage(perp, order, isTaker);
 
             verify_and_fill_order_qty(ordersTable, order, hash, fillQuantity, isTaker);
     }
-
-    fun create_position(perpID:ID, positions: &mut Table<address, UserPosition>, addr: address){
-        
-        if(!table::contains(positions, addr)){
-            table::add(positions, addr, position::initPosition(perpID, addr));
-        };
-
-    }   
 
     fun create_order(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash: vector<u8>){
         // if the order does not already exists on-chain
@@ -829,6 +794,7 @@ module bluefin_foundation::exchange {
         };
 
     }
+
 
     fun verify_order_state(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash:vector<u8>, isTaker:u64){
         
@@ -868,7 +834,7 @@ module bluefin_foundation::exchange {
         assert!(order::expiration(order) == 0 || order::expiration(order) > 1, error::order_has_expired(isTaker));
     }
 
-    fun verify_order_fills(perpetual: &mut Perpetual, order:Order, fillQuantity: u128, fillPrice: u128, oraclePrice: u128, isTaker:u64){
+    fun verify_order_fills(perp: &mut Perpetual, order:Order, fillQuantity: u128, fillPrice: u128, oraclePrice: u128, isTaker:u64){
         let isBuyOrder = order::isBuy(order);
         let isReduceOnly = order::reduceOnly(order);
         let price = order::price(order);
@@ -891,7 +857,7 @@ module bluefin_foundation::exchange {
         // For reduce only orders, ensure that the order would result in an
         // open position's size to reduce (fill amount <= open position size)
 
-        let userPosition = *table::borrow(&mut perpetual.positions, order::maker(order));
+        let userPosition = *table::borrow(perpetual::positions(perp), order::maker(order));
 
         if(isReduceOnly){
 
@@ -905,12 +871,12 @@ module bluefin_foundation::exchange {
 
     }
 
-    fun verify_order_leverage(perpetual: &mut Perpetual, order:Order, isTaker:u64){
+    fun verify_order_leverage(perp: &mut Perpetual, order:Order, isTaker:u64){
 
         let leverage = order::leverage(order);
         let maker = order::maker(order);
 
-        let userPosition = *table::borrow(&mut perpetual.positions, maker);
+        let userPosition = *table::borrow(perpetual::positions(perp), maker);
         let mro = position::mro(userPosition);
 
         assert!(leverage > 0, error::leverage_must_be_greater_than_zero(isTaker));
@@ -924,9 +890,6 @@ module bluefin_foundation::exchange {
         return taker == sender || table::contains(operatorTable, sender)
     }
 
-    fun get_precise_leverage(leverage:u128): u128 {
-        return (leverage / library::base_uint()) * library::base_uint()
-    }
 
     fun verify_collat_checks(initialPosition: UserPosition, currentPosition: UserPosition, imr: u128, mmr: u128, oraclePrice:u128, tradeType: u64, isTaker:u64){
 
@@ -975,27 +938,4 @@ module bluefin_foundation::exchange {
                 error::mr_less_than_zero(isTaker)
                 );
     }
-
-
-    /*
-     * Sets OraclePrice  
-     */
-    public entry fun set_oracle_price(perp: &mut Perpetual, cap: &UpdateOraclePriceCapability, price: u128, ctx: &mut TxContext){
-        price_oracle::set_oracle_price(object::uid_to_inner(&perp.id), cap, &mut perp.oraclePrice, price, tx_context::sender(ctx));
-    }
-
-    /*
-     * Sets Max difference allowed in percentage between New Oracle Price & Old Oracle Price
-     */
-    public entry fun set_oracle_price_max_allowed_diff(_: &AdminCap, perp: &mut Perpetual, maxAllowedPriceDifference: u128){
-        price_oracle::set_oracle_price_max_allowed_diff(object::uid_to_inner(&perp.id), &mut perp.oraclePrice, maxAllowedPriceDifference);
-    }
-
-    /*
-     * Sets operator address who is allowed to update oracle price 
-     */
-    public entry fun set_price_oracle_operator(_: &AdminCap, cap: &mut UpdateOraclePriceCapability, perp: &Perpetual, operator: address){
-       price_oracle::set_price_oracle_operator(object::uid_to_inner(&perp.id), cap, operator);
-    }
 }
-

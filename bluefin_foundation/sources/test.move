@@ -6,7 +6,7 @@ module bluefin_foundation::test {
     use sui::ecdsa_k1;
     use sui::event;
     use sui::bcs;
-    use bluefin_foundation::evaluator::{initTradeChecks,verify_qty_checks,verify_price_checks,verify_market_take_bound_checks,verify_oi_open_for_account};
+    use bluefin_foundation::evaluator::{initialize,verify_qty_checks,verify_price_checks,verify_market_take_bound_checks,verify_oi_open_for_account};
 
     struct SignatureVerifiedEvent has copy, drop {
         is_verified: bool,
@@ -172,7 +172,7 @@ module bluefin_foundation::test {
             vector::push_back(&mut maxAllowedOIOpen, 0);
             vector::append(&mut maxAllowedOIOpen, maxOILimit);
         
-            let checks = initTradeChecks(
+            let checks = initialize(
                 minPrice,
                 maxPrice,
                 tickSize,

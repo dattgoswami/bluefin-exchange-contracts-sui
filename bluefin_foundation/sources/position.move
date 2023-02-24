@@ -1,7 +1,26 @@
 module bluefin_foundation::position {
     use sui::object::{ID};
+    use sui::table::{Self, Table};
+    use sui::event::{emit};
+
+    // custom modules
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
+
+    //===========================================================//
+    //                           EVENTS                          //
+    //===========================================================//
+
+    struct AccountPositionUpdateEvent has copy, drop {
+        perpID: ID,
+        account:address,
+        position:UserPosition,
+        action: u8
+    }
+
+    //===========================================================//
+    //                           STORAGE                         //
+    //===========================================================//
 
     struct UserPosition has copy, drop, store {
         user:address,
@@ -13,7 +32,11 @@ module bluefin_foundation::position {
         mro: u128,
     }
 
-    public fun initPosition(perpID: ID, user:address): UserPosition{
+    //===========================================================//
+    //                      INITIALIZATION                       //
+    //===========================================================//
+    
+    public fun initialize(perpID: ID, user:address): UserPosition{
         return UserPosition {
             user,
             perpID,
@@ -24,6 +47,10 @@ module bluefin_foundation::position {
             mro: 0,
         }
     }
+
+    //===========================================================//
+    //                          ACCESSORS                        //
+    //===========================================================//
 
     public fun isPosPositive(position:UserPosition): bool {
         return position.isPosPositive
@@ -48,6 +75,35 @@ module bluefin_foundation::position {
     public fun user(position:UserPosition): address {
         return position.user
     }
+
+    //===========================================================//
+    //                          SETTERS                          //
+    //===========================================================//
+
+    public fun set_mro(position:&mut UserPosition, mro:u128) {
+        position.mro = mro;
+    }
+
+    public fun set_oiOpen(position:&mut UserPosition, oiOpen:u128) {
+        position.oiOpen = oiOpen;
+    }
+
+    public fun set_margin(position:&mut UserPosition, margin:u128) {
+        position.margin = margin;
+    }
+
+
+    public fun set_qPos(position:&mut UserPosition, qPos:u128) {
+        position.qPos = qPos;
+    }
+
+    public fun set_isPosPositive(position:&mut UserPosition, isPosPositive:bool) {
+        position.isPosPositive = isPosPositive;
+    }
+
+    //===========================================================//
+    //                           HELPERS                         //
+    //===========================================================//
 
     public fun margin_ratio(position:UserPosition, price:u128): Number {
         let marginRatio = signed_number::one();
@@ -83,28 +139,20 @@ module bluefin_foundation::position {
             }
     }
 
-    public fun set_mro(position:&mut UserPosition, mro:u128) {
-        position.mro = mro;
+    public fun create_position(perpID:ID, positions: &mut Table<address, UserPosition>, addr: address){
+        
+        if(!table::contains(positions, addr)){
+            table::add(positions, addr, initialize(perpID, addr));
+        };
+
+    }   
+
+    public fun emit_position_update_event(perpID:ID, account:address, position: UserPosition, action:u8){
+        emit (AccountPositionUpdateEvent{
+            perpID, 
+            account,
+            position,
+            action
+        });
     }
-
-    public fun set_oiOpen(position:&mut UserPosition, oiOpen:u128) {
-        position.oiOpen = oiOpen;
-    }
-
-    public fun set_margin(position:&mut UserPosition, margin:u128) {
-        position.margin = margin;
-    }
-
-
-    public fun set_qPos(position:&mut UserPosition, qPos:u128) {
-        position.qPos = qPos;
-    }
-
-    public fun set_isPosPositive(position:&mut UserPosition, isPosPositive:bool) {
-        position.isPosPositive = isPosPositive;
-    }
-
-    
-
-
 }

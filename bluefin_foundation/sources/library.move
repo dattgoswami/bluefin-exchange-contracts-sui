@@ -56,6 +56,11 @@ module bluefin_foundation::library {
         return if (a > b) { a - b } else {0}
     }
 
+    public fun round_down(num:u128): u128 {
+        return (num / base_uint()) * base_uint()
+    }
+
+
     public fun get_public_address(public_key: vector<u8>):address {
         let buff = vector::empty<u8>();
 

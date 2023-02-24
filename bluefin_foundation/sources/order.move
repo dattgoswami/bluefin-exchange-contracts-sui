@@ -4,6 +4,10 @@ module bluefin_foundation::order {
     use sui::bcs;
     use sui::object::{ID};
 
+    //===========================================================//
+    //                           STORAGE                         //
+    //===========================================================//
+
     struct Order has drop, copy {
         isBuy: bool,
         price: u128,
@@ -16,7 +20,11 @@ module bluefin_foundation::order {
         triggerPrice: u128,
     }
 
-    public fun pack_object(
+    //===========================================================//
+    //                      INITIALIZATION                       //
+    //===========================================================//
+
+    public fun initialize(
         triggerPrice: u128,
         isBuy: bool,
         price: u128,
@@ -39,6 +47,10 @@ module bluefin_foundation::order {
                 salt,
         }
     }
+
+    //===========================================================//
+    //                          ACCESSORS                        //
+    //===========================================================//
 
     public fun maker(order:Order):address{
         return order.makerAddress
@@ -76,6 +88,10 @@ module bluefin_foundation::order {
         return order.triggerPrice
     }
 
+    //===========================================================//
+    //                         SETTERS                           //
+    //===========================================================//
+    
     public fun set_price(order: &mut Order, price:u128){
         order.price = price;
     }
@@ -83,6 +99,10 @@ module bluefin_foundation::order {
     public fun set_leverage(order: &mut Order, leverage:u128){
         order.leverage = leverage;
     }
+
+    //===========================================================//
+    //                           HELPERS                         //
+    //===========================================================//
 
     public fun get_hash(order:Order, _perpID: ID): vector<u8>{
         /*
