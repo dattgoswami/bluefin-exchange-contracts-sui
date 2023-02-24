@@ -9,7 +9,7 @@ module bluefin_foundation::perpetual {
 
     // custom modules
     use bluefin_foundation::position::{UserPosition};
-    use bluefin_foundation::price_oracle::{OraclePrice};
+    use bluefin_foundation::price_oracle::{PriceOracle};
     use bluefin_foundation::evaluator::{TradeChecks};
 
     
@@ -47,8 +47,8 @@ module bluefin_foundation::perpetual {
         takerFee: u128,
         /// table containing user positions for this market/perpetual
         positions: Table<address,UserPosition>,
-        /// PriceOracle
-        oraclePrice: OraclePrice
+        /// Price Oracle
+        priceOracle: PriceOracle
     }
 
     //===========================================================//
@@ -64,7 +64,7 @@ module bluefin_foundation::perpetual {
         makerFee: u128,
         takerFee: u128,
         positions: Table<address,UserPosition>,
-        oraclePrice: OraclePrice
+        priceOracle: PriceOracle
         ){
         
         let perpID = object::uid_to_inner(&id);
@@ -78,7 +78,7 @@ module bluefin_foundation::perpetual {
             makerFee,
             takerFee,
             positions,
-            oraclePrice
+            priceOracle
         };
 
         emit(PerpetualCreationEvent {
@@ -126,8 +126,8 @@ module bluefin_foundation::perpetual {
         return perp.takerFee
     }
 
-    public fun oraclePrice(perp:&Perpetual):OraclePrice{
-        return perp.oraclePrice
+    public fun priceOracle(perp:&Perpetual):PriceOracle{
+        return perp.priceOracle
     }
 
     public fun positions(perp:&mut Perpetual):&mut Table<address,UserPosition>{
@@ -138,8 +138,8 @@ module bluefin_foundation::perpetual {
         return &mut perp.checks
     }
 
-    public fun mut_oraclePrice(perp:&mut Perpetual):&mut OraclePrice{
-        return &mut perp.oraclePrice
+    public fun mut_priceOracle(perp:&mut Perpetual):&mut PriceOracle{
+        return &mut perp.priceOracle
     }
 
 }

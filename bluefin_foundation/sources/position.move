@@ -6,6 +6,7 @@ module bluefin_foundation::position {
     // custom modules
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
+    use bluefin_foundation::error::{Self};
 
     //===========================================================//
     //                           EVENTS                          //
@@ -154,5 +155,57 @@ module bluefin_foundation::position {
             position,
             action
         });
+    }
+
+    public fun verify_collat_checks(initialPosition: UserPosition, currentPosition: UserPosition, imr: u128, mmr: u128, price:u128, tradeType: u64, isTaker:u64){
+
+            let initMarginRatio = margin_ratio(initialPosition, price);
+            let currentMarginRatio = margin_ratio(currentPosition, price);
+
+            // Case 0: Current Margin Ratio >= IMR: User can increase and reduce positions.
+            if (signed_number::gte_uint(currentMarginRatio, imr)) {
+                return
+            };
+
+            // Case I: For MR < IMR: If flipping or new trade, current ratio can only be >= IMR
+            assert!(
+                currentPosition.isPosPositive == initialPosition.isPosPositive
+                && 
+                initialPosition.qPos > 0,
+                error::mr_less_than_imr_can_not_open_or_flip_position(isTaker)
+            );
+
+            // Case II: For MR < IMR: require MR to have improved or stayed the same
+            assert!(
+                signed_number::gte(currentMarginRatio, initMarginRatio), 
+                error::mr_less_than_imr_mr_must_improve(isTaker)
+                );
+
+            // Case III: For MR <= MMR require qPos to go down or stay the same
+            assert!(
+                signed_number::gte_uint(currentMarginRatio, mmr)
+                ||
+                (
+                    initialPosition.qPos >= currentPosition.qPos
+                    &&
+                    initialPosition.isPosPositive == currentPosition.isPosPositive
+                ),
+                error::mr_less_than_imr_position_can_only_reduce(isTaker)
+            );
+
+            // Case IV: For MR < 0 require that its a liquidation
+            // @dev A normal trade type is 1
+            // @dev A liquidation trade type is 2
+            // @dev A deleveraging trade type is 3
+            assert!(
+                signed_number::gte_uint(currentMarginRatio, 0)
+                || 
+                tradeType == 2 || tradeType == 3,
+                error::mr_less_than_zero(isTaker)
+                );
+    }
+
+    public fun compute_mro(leverage:u128): u128 {
+        return library::base_div(library::base_uint(), leverage)
     }
 }

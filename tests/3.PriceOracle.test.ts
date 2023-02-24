@@ -70,7 +70,7 @@ describe("Price Oracle", () => {
 
             expect(
                 bigNumber(
-                    (details.data as any)?.fields?.oraclePrice?.fields?.price
+                    (details.data as any)?.fields?.priceOracle?.fields?.price
                 ).toFixed()
             ).to.equal(newPrice.toFixed());
 
@@ -199,7 +199,7 @@ describe("Price Oracle", () => {
             );
 
             expectTxToSucceed(tx);
-            expectTxToEmitEvent(tx, "PriceOracleOperatorUpdatedEvent");
+            expectTxToEmitEvent(tx, "PriceOracleOperatorUpdated");
 
             const newPrice = toBigNumber(3);
 
@@ -273,10 +273,10 @@ describe("Price Oracle", () => {
             );
 
             expectTxToSucceed(tx);
-            expectTxToEmitEvent(tx, "MaxAllowedPriceDiffInOraclePriceUpdated");
+            expectTxToEmitEvent(tx, "PriceOracleMaxAllowedPriceDiffUpdated");
             const event = Transaction.getEvents(
                 tx,
-                "MaxAllowedPriceDiffInOraclePriceUpdated"
+                "PriceOracleMaxAllowedPriceDiffUpdated"
             )[0];
             expect(
                 bigNumber(event?.fields?.maxAllowedPriceDifference).toFixed(0)

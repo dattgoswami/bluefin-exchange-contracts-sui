@@ -36,3 +36,10 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 - Fund testing accounts using `yarn fund:test:accounts`
 - Deploy the package using `yarn deploy`, Every time any change is made to package, it will need to be re-deployed before running tests
 - Run tests using `yarn test`
+
+**Scripts:**
+| Name | Description | Command |
+|--------------------------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------|
+| Package and Market Deployment | Deploys the package and all markets provided in Deployment Config | `yarn deploy` |
+| Package Deployment | Deploys the package | `yarn deploy:package` |
+| Market Deployment | Deploys the market specified in .env | `yarn deploy:market` |

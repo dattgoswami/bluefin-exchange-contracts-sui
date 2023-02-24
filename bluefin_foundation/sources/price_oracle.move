@@ -19,12 +19,12 @@ module bluefin_foundation::price_oracle {
         updatedAt: u128,
     }
 
-    struct PriceOracleOperatorUpdatedEvent has copy, drop {
+    struct PriceOracleOperatorUpdated has copy, drop {
         id: ID, 
         account:address
     }
 
-    struct MaxAllowedPriceDiffInOraclePriceUpdated has copy, drop {
+    struct PriceOracleMaxAllowedPriceDiffUpdated has copy, drop {
         id: ID, 
         maxAllowedPriceDifference: u128
     }
@@ -34,13 +34,13 @@ module bluefin_foundation::price_oracle {
     //                           STORAGE                         //
     //===========================================================//
 
-    struct UpdateOraclePriceCapability has key {
+    struct UpdatePriceOracleCap has key {
         id: UID,
         account: address,
         perpetualID: ID
     }
 
-    struct OraclePrice has copy, drop, store {
+    struct PriceOracle has copy, drop, store {
         
         // timestamp at which price was updated
         updatedAt: u128,
@@ -63,9 +63,9 @@ module bluefin_foundation::price_oracle {
        perp: ID,
        operator: address,
         ctx: &mut TxContext
-    ): OraclePrice {
+    ): PriceOracle {
         
-        let op = OraclePrice {
+        let op = PriceOracle {
             price,
             maxAllowedPriceDifference,
             updatedAt
@@ -77,17 +77,17 @@ module bluefin_foundation::price_oracle {
             updatedAt
         });
 
-        emit(MaxAllowedPriceDiffInOraclePriceUpdated { 
+        emit(PriceOracleMaxAllowedPriceDiffUpdated { 
             id: perp,
             maxAllowedPriceDifference
         });
 
-        emit(PriceOracleOperatorUpdatedEvent{ 
+        emit(PriceOracleOperatorUpdated{ 
             id: perp,
             account: operator 
         });
 
-        let uopCapability = UpdateOraclePriceCapability {
+        let uopCapability = UpdatePriceOracleCap{
             id: object::new(ctx),
             account: operator,
             perpetualID: perp
@@ -101,27 +101,27 @@ module bluefin_foundation::price_oracle {
     //                         SETTERS                           //
     //===========================================================//
 
-    public fun set_price_oracle_operator(perp: ID, cap: &mut UpdateOraclePriceCapability, operator: address){
+    public fun set_price_oracle_operator(perp: ID, cap: &mut UpdatePriceOracleCap, operator: address){
         assert!(cap.account != operator, error::already_price_oracle_operator());
         assert!(cap.perpetualID == perp, error::invalid_price_oracle_capability());
         cap.account = operator;
 
-        emit(PriceOracleOperatorUpdatedEvent{ 
+        emit(PriceOracleOperatorUpdated{ 
             id: perp,
             account: operator 
         });
     }
     
-    public fun set_oracle_price_max_allowed_diff(perp: ID, op: &mut OraclePrice, maxAllowedPriceDifference: u128){
+    public fun set_oracle_price_max_allowed_diff(perp: ID, op: &mut PriceOracle, maxAllowedPriceDifference: u128){
         assert!(maxAllowedPriceDifference != 0, 103);
         op.maxAllowedPriceDifference = maxAllowedPriceDifference;
-        emit(MaxAllowedPriceDiffInOraclePriceUpdated{ 
+        emit(PriceOracleMaxAllowedPriceDiffUpdated{ 
             id: perp,
             maxAllowedPriceDifference
         });
     }
     
-    public fun set_oracle_price(perp: ID, cap: &UpdateOraclePriceCapability, op: &mut OraclePrice, price: u128, sender: address){
+    public fun set_oracle_price(perp: ID, cap: &UpdatePriceOracleCap, op: &mut PriceOracle, price: u128, sender: address){
         assert!(sender == cap.account, error::not_valid_price_oracle_operator());
         assert!(
             verify_oracle_price_update_diff(op.maxAllowedPriceDifference,price, op.price), 
@@ -140,7 +140,7 @@ module bluefin_foundation::price_oracle {
     //                          ACCESSORS                        //
     //===========================================================//
 
-    public fun price(op: OraclePrice): u128 {
+    public fun price(op: PriceOracle): u128 {
         return op.price
     }
 

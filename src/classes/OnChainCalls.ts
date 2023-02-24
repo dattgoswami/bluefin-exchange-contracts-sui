@@ -427,7 +427,7 @@ export class OnChainCalls {
         callArgs.push(
             args.updateOPCapID
                 ? args.updateOPCapID
-                : this.getUpdateOraclePriceCapabilityID()
+                : this.getUpdatePriceOracleCap()
         );
         callArgs.push(args.price);
 
@@ -451,7 +451,7 @@ export class OnChainCalls {
         callArgs.push(
             args.updateOPCapID
                 ? args.updateOPCapID
-                : this.getUpdateOraclePriceCapabilityID()
+                : this.getUpdatePriceOracleCap()
         );
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
 
@@ -544,9 +544,9 @@ export class OnChainCalls {
             .id as string;
     }
 
-    getUpdateOraclePriceCapabilityID(market: number = 0): string {
+    getUpdatePriceOracleCap(market: number = 0): string {
         return this.deployment["markets"][market]["Objects"][
-            "UpdateOraclePriceCapability"
+            "UpdatePriceOracleCap"
         ].id as string;
     }
     getOperatorTableID(): string {
@@ -555,7 +555,7 @@ export class OnChainCalls {
 
     getOrdersTableID(): string {
         return this.deployment["objects"][
-            `Table<vector<u8>, ${this.getPackageID()}::${this.getModuleName()}::OrderStatus>`
+            `Table<vector<u8>, ${this.getPackageID()}::isolated_trade::OrderStatus>`
         ].id as string;
     }
 }
