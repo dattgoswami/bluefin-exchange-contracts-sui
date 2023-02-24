@@ -207,4 +207,20 @@ module bluefin_foundation::error {
     public fun leverage_can_not_be_set_to_zero(): u64 {
         return 504
     }
+
+
+    // Margin Bank errors
+    public fun not_enough_balance_in_margin_bank(offset: u64) : u64 {
+
+        // 600 + 0 = 600 for maker
+        // 600 + 1 = 601 for taker
+        // 600 + 2 = 602 for perpetual
+        // 600 + 3 = 603 for normal withdrawal & deposit
+
+        return 600 + offset
+    }
+
+    public fun withdrawal_is_not_allowed() : u64 {
+        return 604
+    }
 }

@@ -14,7 +14,11 @@ import {
     Ed25519Keypair
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
-import { DeploymentData, DeploymentObjectMap } from "../src/interfaces";
+import {
+    DeploymentData,
+    DeploymentObjectMap,
+    DeploymentObjects
+} from "../src/interfaces";
 import { toBigNumber, bigNumber, ADDRESSES } from "./library";
 import { Order } from "../src/interfaces";
 import { config } from "dotenv";
@@ -150,6 +154,58 @@ export async function getCreatedObjects(
             owner,
             dataType
         };
+    }
+
+    const events = (txResponse as any).effects.events
+        ? ((txResponse as any).effects.events as any[])
+        : [];
+
+    for (const itr in events) {
+        const obj = events[itr];
+
+        let event: DeploymentObjects | undefined;
+
+        if (obj["moveEvent"] !== undefined) {
+            const moveEvent = obj["moveEvent"];
+
+            const type = moveEvent["type"];
+
+            // check if it is a coin creation event
+            if (/^0x2::coin::CurrencyCreated/.test(type)) {
+                const coinType =
+                    /^0x2::coin::CurrencyCreated<(?<type>[\w:]+)>$/.exec(type)
+                        ?.groups?.type;
+
+                if (coinType) {
+                    event = {
+                        id: coinType,
+                        owner: OBJECT_OWNERSHIP_STATUS.IMMUTABLE,
+                        dataType: "Currency"
+                    };
+                }
+            }
+        } else if (obj["newObject"] !== undefined) {
+            const newObject = obj["newObject"];
+
+            const type = newObject["objectType"];
+
+            // check if it is a TreasuryCap object
+            if (/^0x2::coin::TreasuryCap/.test(type)) {
+                event = {
+                    id: newObject["objectId"],
+                    owner: OBJECT_OWNERSHIP_STATUS.IMMUTABLE,
+                    dataType: "TreasuryCap"
+                };
+            }
+        }
+
+        if (event) {
+            map[event.dataType] = {
+                id: event.id,
+                owner: event.owner,
+                dataType: event.dataType
+            };
+        }
     }
 
     return map;

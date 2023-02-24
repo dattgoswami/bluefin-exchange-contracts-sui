@@ -502,6 +502,111 @@ export class OnChainCalls {
         });
     }
 
+    public async getUSDCBalance(
+        signer?: RawSigner,
+        limit?: number,
+        cursor?: string
+    ): Promise<any> {
+        const caller = signer ? signer : this.signer;
+
+        const coins = await caller.provider.getCoins(
+            await caller?.getAddress(),
+            this.getCurrencyID(),
+            cursor ?? null,
+            limit ?? null
+        );
+
+        return coins;
+    }
+
+    public async depositToBank(
+        args: {
+            coinID: string;
+            accountAddress?: string;
+            bankID?: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.bankID ? args.bankID : this.getBankID());
+        callArgs.push(
+            args.accountAddress
+                ? args.accountAddress
+                : (await caller.getAddress()).padStart(42, "0x")
+        );
+        callArgs.push(args.coinID);
+
+        return this.signAndCall(caller, "deposit_to_bank", callArgs);
+    }
+
+    public async setIsWithdrawalAllowed(
+        args: {
+            isAllowed: boolean;
+            bankID?: string;
+            bankAdminCapID?: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(
+            args.bankAdminCapID ? args.bankAdminCapID : this.getBankAdminCapID()
+        );
+        callArgs.push(args.bankID ? args.bankID : this.getBankID());
+        callArgs.push(args.isAllowed);
+
+        return this.signAndCall(caller, "set_is_withdrawal_allowed", callArgs);
+    }
+
+    public async withdrawFromBank(
+        args: {
+            amount: string;
+            accountAddress?: string;
+            bankID?: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.bankID ? args.bankID : this.getBankID());
+        callArgs.push(
+            args.accountAddress
+                ? args.accountAddress
+                : (await caller.getAddress()).padStart(42, "0x")
+        );
+        callArgs.push(args.amount);
+
+        return this.signAndCall(caller, "withdraw_from_bank", callArgs);
+    }
+
+    public async mintUSDC(
+        args: {
+            amount: string;
+            to: string;
+            treasuryCapID?: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(
+            args.treasuryCapID ? args.treasuryCapID : this.getTreasuryCapID()
+        );
+        callArgs.push(args.amount);
+        callArgs.push(args.to);
+
+        return this.signAndCall(caller, "mint", callArgs, "tusdc");
+    }
+
     // ===================================== //
     //          GETTER METHODS
     // ===================================== //
@@ -557,5 +662,21 @@ export class OnChainCalls {
         return this.deployment["objects"][
             `Table<vector<u8>, ${this.getPackageID()}::isolated_trade::OrderStatus>`
         ].id as string;
+    }
+
+    getBankID(): string {
+        return this.deployment["objects"]["Bank"].id as string;
+    }
+
+    getBankAdminCapID(): string {
+        return this.deployment["objects"]["BankAdminCap"].id as string;
+    }
+
+    getCurrencyID(): string {
+        return this.deployment["objects"]["Currency"].id as string;
+    }
+
+    getTreasuryCapID(): string {
+        return this.deployment["objects"]["TreasuryCap"].id as string;
     }
 }
