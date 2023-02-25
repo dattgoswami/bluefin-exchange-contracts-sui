@@ -1,0 +1,21 @@
+on:
+  pull_request:
+    branches: [main]
+    types:
+      - closed
+jobs:
+    build:
+        if: github.event.pull_request.merged == true
+        runs-on: sui-cloud # name of selfhosted EC2
+        steps:
+            - uses: actions/checkout@v3
+              with:
+                  token: ${{ secrets.SUBMODULE_PAT }}
+            - name: install dependencies
+              run: yarn
+            - name: start building
+              run: yarn build
+            # - name: copying env
+            # - run: mv .env.example .env
+            # - name: deploying package
+            # - run: yarn deploy

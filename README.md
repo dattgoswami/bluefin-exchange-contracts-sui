@@ -1,4 +1,11 @@
 # Bluefin Exchange Contracts SUI
+<!-- [<img alt="Firefly logo" src="https://raw.githubusercontent.com/fireflyprotocol/firefly_exchange_client/main/res/banner.png" />](#) -->
+
+<div align="center">
+
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/fireflyprotocol/bluefin-exchange-contracts-sui/sui-cloud-cd.yml)
+
+</div>
 
 Repository containing bluefin core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.
 
