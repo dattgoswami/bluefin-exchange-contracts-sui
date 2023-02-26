@@ -1,6 +1,6 @@
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
-import { MarketConfig } from "./helpers/interfaces";
+import { MarketDetails } from "../src";
 import { postDeployment } from "./helpers/utils";
 
 // all tests are for taker
@@ -828,11 +828,11 @@ const adjustMargin = {
 };
 
 describe("Adjust Margin", () => {
-    const marketConfig: MarketConfig = {
+    const marketConfig: MarketDetails = {
         makerFee: toBigNumberStr(0.05),
         takerFee: toBigNumberStr(0.05),
-        imr: toBigNumberStr(0.0625),
-        mmr: toBigNumberStr(0.05),
+        initialMarginRequired: toBigNumberStr(0.0625),
+        maintenanceMarginRequired: toBigNumberStr(0.05),
         maxAllowedPriceDiffInOP: toBigNumberStr(100)
     };
 

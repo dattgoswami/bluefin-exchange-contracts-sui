@@ -1,6 +1,6 @@
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
-import { MarketConfig } from "./helpers/interfaces";
+import { MarketDetails } from "../src";
 import { postDeployment } from "./helpers/utils";
 
 const mrTests = {
@@ -1025,13 +1025,13 @@ const mrTests = {
 };
 
 describe("Margin Ratio", () => {
-    const marketConfig: MarketConfig = {
+    const marketConfig: MarketDetails = {
         makerFee: toBigNumberStr(0.02),
         takerFee: toBigNumberStr(0.05),
         mtbLong: toBigNumberStr(1),
         mtbShort: toBigNumberStr(0.99),
-        imr: toBigNumberStr(0.0625),
-        mmr: toBigNumberStr(0.05),
+        initialMarginRequired: toBigNumberStr(0.0625),
+        maintenanceMarginRequired: toBigNumberStr(0.05),
         tickSize: toBigNumberStr(0.0000001),
         maxAllowedPriceDiffInOP: toBigNumberStr(100)
     };

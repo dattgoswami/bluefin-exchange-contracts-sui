@@ -61,6 +61,18 @@ module bluefin_foundation::library {
     }
 
 
+    /**
+     * @dev rounds price to conform to tick size
+     * if number is 12.56 and decimals is 0.1, will round up the number to 12.6
+     * if number is 12.53 and decimals is 0.1, will round down the number to 12.5
+     */
+    public fun round(num: u128, decimals: u128): u128 {
+        num = num + (decimals * 5) / 10;
+        return num - (num % decimals)
+    }
+
+
+
     public fun get_public_address(public_key: vector<u8>):address {
         let buff = vector::empty<u8>();
 

@@ -134,8 +134,12 @@ module bluefin_foundation::error {
         return 47
     }
 
+    public fun sender_does_not_have_permission_for_account(isTaker: u64): u64 {
+        return 50 + isTaker
+    }
+
     // Operator errors
-    public fun sender_has_no_taker_permission() : u64 {
+    public fun invalid_settlement_operator() : u64 {
         return 27
     }
 
@@ -192,10 +196,6 @@ module bluefin_foundation::error {
         return 500
     }
 
-    public fun user_has_no_position_in_table(): u64 {
-        return 501
-    }
-
     public fun user_position_size_is_zero(): u64 {
         return 502
     }
@@ -206,6 +206,10 @@ module bluefin_foundation::error {
 
     public fun leverage_can_not_be_set_to_zero(): u64 {
         return 504
+    }
+
+    public fun user_has_no_position_in_table(offset: u64): u64 {
+        return 505 + offset
     }
 
 
@@ -223,4 +227,22 @@ module bluefin_foundation::error {
     public fun withdrawal_is_not_allowed() : u64 {
         return 604
     }
+
+    public fun liquidatee_has_no_position() : u64 {
+        return 700
+    }
+
+    public fun liquidation_all_or_nothing_constraint_not_held() : u64 {
+        return 701
+    }
+
+    public fun invalid_liquidator_leverage() : u64 {
+        return 702
+    }
+
+    public fun liquidatee_above_mmr(): u64 {
+        return 703
+    }
+
+    
 }

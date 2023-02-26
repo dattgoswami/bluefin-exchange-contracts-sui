@@ -148,14 +148,11 @@ module bluefin_foundation::signed_number {
         }
     }
 
-    public fun gte(a:Number, b: Number): bool {
-        // if (a.sign == false && b.sign == true){
-        //         return false
-        // } else if (a.sign == true && b.sign == false){
-        //         return true
-        // };        
-        // return a.value >= b.value
+    public fun lt_uint(a:Number, num: u128): bool {
+        return if (!a.sign) { true } else { a.value < num }
+    }
 
+    public fun gte(a:Number, b: Number): bool {
         if(a.sign && b.sign){
             return a.value >= b.value
         } else if(!a.sign && !b.sign){
@@ -196,6 +193,10 @@ module bluefin_foundation::signed_number {
 
     public fun positive_number(n:Number): Number{
         return if (!n.sign) { Number { value:0, sign: true} } else { n }
+    }
+
+    public fun negative_number(n:Number): Number{
+        return if (!n.sign) { n } else { Number { value:0, sign: true} }
     }
 
 }

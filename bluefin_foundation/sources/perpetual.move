@@ -20,11 +20,15 @@ module bluefin_foundation::perpetual {
     struct PerpetualCreationEvent has copy, drop {
         id: ID,
         name: String,
-        checks:TradeChecks,
-        initialMarginRequired: u128,
-        maintenanceMarginRequired: u128,
+        imr: u128,
+        mmr: u128,
         makerFee: u128,
         takerFee: u128,
+        maxAllowedFR: u128,
+        insurancePoolRatio: u128,
+        insurancePool: address,
+        feePool: address,
+        checks:TradeChecks
     }
 
     //===========================================================//
@@ -35,19 +39,27 @@ module bluefin_foundation::perpetual {
         id: UID,
         /// name of perpetual
         name: String,
-        /// Trade Checks
-        checks: TradeChecks,
         /// imr: the initial margin collateralization percentage
-        initialMarginRequired: u128,
+        imr: u128,
         /// mmr: the minimum collateralization percentage
-        maintenanceMarginRequired: u128,
-        /// Default maker order fee for this Perpetual
+        mmr: u128,
+        /// default maker order fee for this Perpetual
         makerFee: u128,
-        /// Default taker order fee for this Perpetual
+        /// default taker order fee for this Perpetual
         takerFee: u128,
+        /// max allowed funding rate
+        maxAllowedFR: u128,
+        /// percentage of liquidaiton premium goes to insurance pool
+        insurancePoolRatio: u128, 
+        /// address of insurance pool
+        insurancePool: address,
+        /// fee pool address
+        feePool: address,
+        /// trade checks
+        checks: TradeChecks,
         /// table containing user positions for this market/perpetual
         positions: Table<address,UserPosition>,
-        /// Price Oracle
+        /// price oracle
         priceOracle: PriceOracle
     }
 
@@ -58,11 +70,15 @@ module bluefin_foundation::perpetual {
     public fun initialize(
         id: UID,
         name:vector<u8>, 
-        checks: TradeChecks,
-        initialMarginRequired: u128,
-        maintenanceMarginRequired: u128,
+        imr: u128,
+        mmr: u128,
         makerFee: u128,
         takerFee: u128,
+        maxAllowedFR: u128,
+        insurancePoolRatio: u128,
+        insurancePool: address,
+        feePool: address,
+        checks: TradeChecks,
         positions: Table<address,UserPosition>,
         priceOracle: PriceOracle
         ){
@@ -72,11 +88,15 @@ module bluefin_foundation::perpetual {
         let perp = Perpetual {
             id,
             name: string::utf8(name),
-            checks,
-            initialMarginRequired,
-            maintenanceMarginRequired,
+            imr,
+            mmr,
             makerFee,
             takerFee,
+            maxAllowedFR,
+            insurancePoolRatio,
+            insurancePool,
+            feePool,
+            checks,
             positions,
             priceOracle
         };
@@ -84,11 +104,15 @@ module bluefin_foundation::perpetual {
         emit(PerpetualCreationEvent {
             id: perpID,
             name: perp.name,
-            checks,
-            initialMarginRequired,
-            maintenanceMarginRequired,
+            imr,
+            mmr,
             makerFee,
-            takerFee    
+            takerFee,
+            maxAllowedFR, 
+            insurancePoolRatio,
+            insurancePool,
+            feePool,
+            checks,  
         });
         
         transfer::share_object(perp);
@@ -111,11 +135,11 @@ module bluefin_foundation::perpetual {
     }
 
     public fun imr(perp:&Perpetual):u128{
-        return perp.initialMarginRequired
+        return perp.imr
     }
 
     public fun mmr(perp:&Perpetual):u128{
-        return perp.maintenanceMarginRequired
+        return perp.mmr
     }
 
     public fun makerFee(perp:&Perpetual):u128{
@@ -124,6 +148,22 @@ module bluefin_foundation::perpetual {
 
     public fun takerFee(perp:&Perpetual):u128{
         return perp.takerFee
+    }
+
+    public fun maxAllowedFR(perp:&Perpetual):u128{
+        return perp.maxAllowedFR
+    }
+
+    public fun poolPercentage(perp:&Perpetual): u128{
+        return perp.insurancePoolRatio
+    }
+
+    public fun insurancePool(perp:&Perpetual): address{
+        return perp.insurancePool
+    }
+
+    public fun feePool(perp:&Perpetual): address{
+        return perp.feePool
     }
 
     public fun priceOracle(perp:&Perpetual):PriceOracle{

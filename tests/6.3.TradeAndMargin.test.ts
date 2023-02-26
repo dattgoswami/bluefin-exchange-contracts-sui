@@ -1,6 +1,6 @@
+import { MarketDetails } from "../src";
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
-import { MarketConfig } from "./helpers/interfaces";
 import { postDeployment } from "./helpers/utils";
 
 const marginTestsWithoutFee = {
@@ -1300,46 +1300,12 @@ const marginTestsWithoutFee = {
         ]
 };
 
-const singleTest = {
-    "Test # 2 - Long Position + Short Trade (Reducing) + [MR > IMR] + Proceed":
-        [
-            {
-                pOracle: 100,
-                price: 100,
-                size: 10,
-                leverage: 4,
-                expectMaker: {
-                    mro: 0.25,
-                    oiOpen: 1000,
-                    qPos: 10,
-                    margin: 250,
-                    marginRatio: 0.25,
-                    pPos: 100
-                }
-            },
-            {
-                pOracle: 83.333333,
-                price: 100,
-                size: -6,
-                leverage: 4,
-                expectMaker: {
-                    mro: 0.25,
-                    oiOpen: 400,
-                    qPos: 4,
-                    margin: 100,
-                    marginRatio: 0.1,
-                    pPos: 100
-                }
-            }
-        ]
-};
-
 describe("Margin Tests Without Fee", () => {
-    const marketConfig: MarketConfig = {
+    const marketConfig: MarketDetails = {
         makerFee: toBigNumberStr(0),
         takerFee: toBigNumberStr(0),
-        imr: toBigNumberStr(0.0625),
-        mmr: toBigNumberStr(0.05),
+        initialMarginRequired: toBigNumberStr(0.0625),
+        maintenanceMarginRequired: toBigNumberStr(0.05),
         tickSize: toBigNumberStr(0.0000001),
         maxAllowedPriceDiffInOP: toBigNumberStr(1000),
         mtbLong: toBigNumberStr(1),
@@ -3093,7 +3059,6 @@ const marginTestsWithFee = {
                 expectError: 46
             }
         ],
-
     "Test # 67 - Short Position + Long Trade (Flipping w Loss > Margin) + [MR < 0] + Error":
         [
             {
@@ -3111,7 +3076,6 @@ const marginTestsWithFee = {
                 },
                 expectSystem: { fee: 46.9 }
             },
-
             {
                 pOracle: 107,
                 price: 84.5875,
@@ -3123,9 +3087,9 @@ const marginTestsWithFee = {
 };
 
 describe("Margin Tests With Fee", () => {
-    const marketConfig: MarketConfig = {
-        imr: toBigNumberStr(0.0625),
-        mmr: toBigNumberStr(0.05),
+    const marketConfig: MarketDetails = {
+        initialMarginRequired: toBigNumberStr(0.0625),
+        maintenanceMarginRequired: toBigNumberStr(0.05),
         tickSize: toBigNumberStr(0.0000001),
         mtbLong: toBigNumberStr(1),
         mtbShort: toBigNumberStr(0.99),

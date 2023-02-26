@@ -14,7 +14,7 @@ module bluefin_foundation::margin_math {
     public fun get_margin_left(userPos: UserPosition, price: u128, balance: u128) : u128 {
 
         let marginLeft;
-        let pPos = position::average_entry_price(userPos);
+        let pPos = position::compute_average_entry_price(userPos);
         let margin = position::margin(userPos);
         let oiOpen = position::oiOpen(userPos);
 

@@ -33,19 +33,15 @@ export function getExpectedTestPosition(expect: any): TestPositionExpect {
         margin: bigNumber(expect.margin),
         pPos: bigNumber(expect.pPos),
         marginRatio: bigNumber(expect.marginRatio),
-        bankBalance:
-            expect.bankBalance != undefined
-                ? bigNumber(expect.bankBalance)
-                : undefined,
-        fee: expect.fee != undefined ? bigNumber(expect.fee) : undefined
+        bankBalance: bigNumber(expect.bankBalance || 0),
+        pnl: bigNumber(expect.pnl || 0)
     } as TestPositionExpect;
 }
 
 export function toExpectedPositionFormat(
     balance: Balance,
     oraclePrice: BigNumber,
-    bankBalance?: BigNumber,
-    fee?: BigNumber
+    args?: { bankBalance?: BigNumber; pnl?: BigNumber }
 ): TestPositionExpect {
     return {
         isPosPositive: balance.isPosPositive,
@@ -55,10 +51,10 @@ export function toExpectedPositionFormat(
         margin: balance.margin.shiftedBy(-BASE_DECIMALS),
         pPos: balance.pPos().shiftedBy(-BASE_DECIMALS),
         marginRatio: balance.marginRatio(oraclePrice).shiftedBy(-BASE_DECIMALS),
-        bankBalance: bankBalance
-            ? bankBalance.shiftedBy(-BASE_DECIMALS)
-            : undefined,
-        fee: fee ? fee.shiftedBy(-BASE_DECIMALS) : undefined
+        bankBalance: args?.bankBalance
+            ? args?.bankBalance.shiftedBy(-BASE_DECIMALS)
+            : bigNumber(0),
+        pnl: args?.pnl ? args?.pnl.shiftedBy(-BASE_DECIMALS) : bigNumber(0)
     } as TestPositionExpect;
 }
 

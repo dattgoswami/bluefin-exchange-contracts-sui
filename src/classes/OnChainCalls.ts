@@ -5,8 +5,10 @@ import {
     SuiObject
 } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
-import { UserPosition, Order } from "../interfaces";
+import { DEFAULT } from "../defaults";
+import { UserPosition, Order, PerpCreationMarketDetails } from "../interfaces";
 import { hexToBuffer, toBigNumberStr } from "../library";
+import { getAddressFromSigner, getSignerSUIAddress } from "../utils";
 export class OnChainCalls {
     signer: SignerWithProvider;
     deployment: any;
@@ -17,25 +19,7 @@ export class OnChainCalls {
     }
 
     public async createPerpetual(
-        args: {
-            adminID?: string;
-            name?: string;
-            minPrice?: string;
-            maxPrice?: string;
-            tickSize?: string;
-            minQty?: string;
-            maxQtyLimit?: string;
-            maxQtyMarket?: string;
-            stepSize?: string;
-            mtbLong?: string;
-            mtbShort?: string;
-            maxAllowedOIOpen?: string[];
-            imr?: string;
-            mmr?: string;
-            makerFee?: string;
-            takerFee?: string;
-            maxAllowedPriceDiffInOP?: string;
-        },
+        args: PerpCreationMarketDetails,
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
         const callArgs = [];
@@ -44,47 +28,48 @@ export class OnChainCalls {
 
         callArgs.push(args.name ? args.name : "ETH-PERP");
 
-        callArgs.push(args.minPrice ? args.minPrice : toBigNumberStr(0.1));
-        callArgs.push(args.maxPrice ? args.maxPrice : toBigNumberStr(100000));
-        callArgs.push(args.tickSize ? args.tickSize : toBigNumberStr(0.001));
-        callArgs.push(args.minQty ? args.minQty : toBigNumberStr(0.1));
+        callArgs.push(args.minPrice || toBigNumberStr(0.1));
+        callArgs.push(args.maxPrice || toBigNumberStr(100000));
+        callArgs.push(args.tickSize || toBigNumberStr(0.001));
+        callArgs.push(args.minQty || toBigNumberStr(0.1));
+
+        callArgs.push(args.maxQtyLimit || toBigNumberStr(100000));
+        callArgs.push(args.maxQtyMarket || toBigNumberStr(1000));
+        callArgs.push(args.stepSize || toBigNumberStr(0.1));
+        callArgs.push(args.mtbLong || toBigNumberStr(0.2));
+        callArgs.push(args.mtbShort || toBigNumberStr(0.2));
+        callArgs.push(
+            args.maxAllowedOIOpen || [
+                toBigNumberStr(1_000_000), //1x
+                toBigNumberStr(1_000_000), //2x
+                toBigNumberStr(500_000), //3x
+                toBigNumberStr(500_000), //4x
+                toBigNumberStr(250_000), //5x
+                toBigNumberStr(250_000), //6x
+                toBigNumberStr(250_000), //7x
+                toBigNumberStr(250_000), //8x
+                toBigNumberStr(100_000), //9x
+                toBigNumberStr(100_000) //10x
+            ]
+        );
+        callArgs.push(args.initialMarginRequired || toBigNumberStr(0.1));
+        callArgs.push(args.maintenanceMarginRequired || toBigNumberStr(0.05));
+
+        callArgs.push(args.makerFee || toBigNumberStr(0.001));
+        callArgs.push(args.takerFee || toBigNumberStr(0.0045));
+        callArgs.push(args.maxAllowedFR || toBigNumberStr(0.001));
+
+        callArgs.push(args.maxAllowedPriceDiffInOP || toBigNumberStr(1));
+
+        callArgs.push(args.insurancePoolRatio || toBigNumberStr(0.3));
 
         callArgs.push(
-            args.maxQtyLimit ? args.maxQtyLimit : toBigNumberStr(100000)
+            args.insurancePool
+                ? args.insurancePool
+                : DEFAULT.INSURANCE_POOL_ADDRESS
         );
-        callArgs.push(
-            args.maxQtyMarket ? args.maxQtyMarket : toBigNumberStr(1000)
-        );
-        callArgs.push(args.stepSize ? args.stepSize : toBigNumberStr(0.1));
-        callArgs.push(args.mtbLong ? args.mtbLong : toBigNumberStr(0.2));
-        callArgs.push(args.mtbShort ? args.mtbShort : toBigNumberStr(0.2));
-        callArgs.push(
-            args.maxAllowedOIOpen
-                ? args.maxAllowedOIOpen
-                : [
-                      toBigNumberStr(1_000_000), //1x
-                      toBigNumberStr(1_000_000), //2x
-                      toBigNumberStr(500_000), //3x
-                      toBigNumberStr(500_000), //4x
-                      toBigNumberStr(250_000), //5x
-                      toBigNumberStr(250_000), //6x
-                      toBigNumberStr(250_000), //7x
-                      toBigNumberStr(250_000), //8x
-                      toBigNumberStr(100_000), //9x
-                      toBigNumberStr(100_000) //10x
-                  ]
-        );
-        callArgs.push(args.imr ? args.imr : toBigNumberStr(0.1));
-        callArgs.push(args.mmr ? args.mmr : toBigNumberStr(0.05));
 
-        callArgs.push(args.makerFee ? args.makerFee : toBigNumberStr(0.001));
-        callArgs.push(args.takerFee ? args.takerFee : toBigNumberStr(0.0045));
-
-        callArgs.push(
-            args.maxAllowedPriceDiffInOP
-                ? args.maxAllowedPriceDiffInOP
-                : toBigNumberStr(1)
-        );
+        callArgs.push(args.feePool ? args.feePool : DEFAULT.FEE_POOL_ADDRESS);
 
         const caller = signer ? signer : this.signer;
 
@@ -360,6 +345,31 @@ export class OnChainCalls {
         return this.signAndCall(caller, "trade", callArgs);
     }
 
+    public async liquidate(
+        args: {
+            perpID?: string;
+            liquidatee: string;
+            quantity: string;
+            leverage: string;
+            liquidator?: string;
+            allOrNothing?: boolean;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+
+        callArgs.push(args.liquidatee);
+        callArgs.push(args.liquidator || (await getSignerSUIAddress(caller)));
+        callArgs.push(args.quantity);
+        callArgs.push(args.leverage);
+        callArgs.push(args.allOrNothing == true);
+
+        return this.signAndCall(caller, "liquidate", callArgs);
+    }
+
     public async addMargin(
         args: {
             perpID?: string;
@@ -510,7 +520,7 @@ export class OnChainCalls {
         const caller = signer ? signer : this.signer;
 
         const coins = await caller.provider.getCoins(
-            await caller?.getAddress(),
+            await getAddressFromSigner(caller),
             this.getCurrencyID(),
             cursor ?? null,
             limit ?? null
@@ -535,7 +545,7 @@ export class OnChainCalls {
         callArgs.push(
             args.accountAddress
                 ? args.accountAddress
-                : (await caller.getAddress()).padStart(42, "0x")
+                : await getAddressFromSigner(caller)
         );
         callArgs.push(args.coinID);
 
@@ -579,7 +589,7 @@ export class OnChainCalls {
         callArgs.push(
             args.accountAddress
                 ? args.accountAddress
-                : (await caller.getAddress()).padStart(42, "0x")
+                : await getAddressFromSigner(caller)
         );
         callArgs.push(args.amount);
 
@@ -660,7 +670,7 @@ export class OnChainCalls {
 
     getOrdersTableID(): string {
         return this.deployment["objects"][
-            `Table<vector<u8>, ${this.getPackageID()}::isolated_trade::OrderStatus>`
+            `Table<vector<u8>, ${this.getPackageID()}::isolated_trading::OrderStatus>`
         ].id as string;
     }
 

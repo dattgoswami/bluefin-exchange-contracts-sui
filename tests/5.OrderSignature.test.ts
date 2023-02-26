@@ -10,7 +10,7 @@ import {
     readFile
 } from "../src/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
-import { defaultOrder } from "../src/utils";
+import { DEFAULT } from "../src/defaults";
 import {
     base64ToBuffer,
     base64ToHex,
@@ -31,7 +31,7 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Order Signer", () => {
     let deployment = readFile(DeploymentConfigs.filePath);
-    const order: Order = defaultOrder;
+    const order: Order = DEFAULT.ORDER;
     const orderSigner = new OrderSigner(ownerKeyPair);
 
     let onChain: OnChainCalls = new OnChainCalls(ownerSigner, deployment);

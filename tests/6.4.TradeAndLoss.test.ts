@@ -1,6 +1,6 @@
 import { toBigNumberStr } from "../src/library";
+import { MarketDetails } from "../src";
 import { executeTests } from "./helpers/executor";
-import { MarketConfig } from "./helpers/interfaces";
 import { postDeployment } from "./helpers/utils";
 
 const lossTests = {
@@ -359,9 +359,9 @@ const lossTests = {
 };
 
 describe("More Loss Than Margin", () => {
-    const marketConfig: MarketConfig = {
-        imr: toBigNumberStr(0.01),
-        mmr: toBigNumberStr(0.001),
+    const marketConfig: MarketDetails = {
+        initialMarginRequired: toBigNumberStr(0.01),
+        maintenanceMarginRequired: toBigNumberStr(0.001),
         tickSize: toBigNumberStr(0.0000001),
         mtbLong: toBigNumberStr(1),
         mtbShort: toBigNumberStr(0.99),

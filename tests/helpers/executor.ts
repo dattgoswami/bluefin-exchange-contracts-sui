@@ -6,26 +6,19 @@ import {
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
+    getSignerSUIAddress,
     readFile
 } from "../../src/utils";
-import { toBigNumber } from "../../src/library";
-import {
-    OnChainCalls,
-    OrderSigner,
-    Trader,
-    Transaction
-} from "../../src/classes";
+import { toBigNumber, toBigNumberStr } from "../../src/library";
+import { OnChainCalls, OrderSigner, Trader, Transaction } from "../../src";
 import {
     evaluateSystemExpect,
     expect,
-    expectPosition,
     expectTxToFail,
-    expectTxToSucceed
+    expectTxToSucceed,
+    evaluateAccountPositionExpect
 } from "./expect";
-import { MarketConfig } from "./interfaces";
-import { getExpectedTestPosition, toExpectedPositionFormat } from "./utils";
-import { Balance } from "../../src/classes/Balance";
-import { UserPositionExtended } from "../../src/interfaces";
+import { MarketDetails } from "../../src/interfaces";
 import { ERROR_CODES } from "../../src/errors";
 import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
@@ -41,15 +34,17 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const orderSigner = new OrderSigner(ownerKeyPair);
 let deployment = readFile(DeploymentConfigs.filePath);
 let onChain: OnChainCalls;
+let liquidatorAddress: string;
 
 export async function executeTests(
     testCases: Object,
-    marketConfig: MarketConfig,
+    marketConfig: MarketDetails,
     postDeployment: Function
 ) {
     let MakerTakerAccounts: MakerTakerAccounts;
     let tx: SuiExecuteTransactionResponse = undefined as any;
     let lastOraclePrice: BigNumber;
+    let leverage: BigNumber;
 
     Object.keys(testCases).forEach((testName) => {
         describe(testName, () => {
@@ -72,28 +67,39 @@ export async function executeTests(
                     onChain = new OnChainCalls(ownerSigner, deployment);
                     // post deployment steps
                     await postDeployment(onChain, ownerSigner);
+
+                    // deployer will be performing all liquidations
+                    liquidatorAddress = await getSignerSUIAddress(ownerSigner);
                 });
 
-                // The add/remove margin tests are for taker not maker
                 const testCaseName =
-                    // 1. if size specified, its a Normal Trade
-                    testCase.size && testCase.size != 0
+                    testCase.tradeType == "liquidation"
+                        ? `Liquidator liquidates Alice at oracle price: ${
+                              testCase.pOracle
+                          } leverage:${testCase.leverage}x size:${Math.abs(
+                              testCase.size
+                          )}`
+                        : testCase.tradeType == "filler"
+                        ? `Liquidator opens size:${Math.abs(
+                              testCase.size
+                          )} price:${testCase.price} leverage:${
+                              testCase.leverage
+                          }x ${
+                              testCase.size > 0 ? "Long" : "Short"
+                          } against Bob`
+                        : testCase.size && testCase.size != 0
                         ? `Alice opens size:${Math.abs(testCase.size)} price:${
                               testCase.price
                           } leverage:${testCase.leverage}x ${
                               testCase.size > 0 ? "Long" : "Short"
                           } against Bob`
-                        : // 2. Add Margin
-                        testCase.addMargin != undefined
+                        : testCase.addMargin != undefined
                         ? `Bob adds margin: ${testCase.addMargin} to position`
-                        : // 3. Remove Margin
-                        testCase.removeMargin != undefined
+                        : testCase.removeMargin != undefined
                         ? `Bob removes margin: ${testCase.removeMargin} from position`
-                        : // 4. Price oracle update}
-                        testCase.adjustLeverage != undefined
+                        : testCase.adjustLeverage != undefined
                         ? `Bob adjusts leverage: ${testCase.adjustLeverage}`
-                        : // 5. Price oracle update}
-                          `Price oracle updated to ${testCase.pOracle}`;
+                        : `Price oracle updated to ${testCase.pOracle}`;
 
                 it(testCaseName, async () => {
                     const oraclePrice = toBigNumber(testCase.pOracle);
@@ -107,14 +113,18 @@ export async function executeTests(
                         lastOraclePrice = oraclePrice;
                     }
 
-                    // normal trade
-                    if (testCase.size) {
+                    // normal or filler trade
+                    // normal trade is between alice and bob
+                    // filler trade is between liquidator and bob
+                    if (testCase.size && testCase.tradeType != "liquidation") {
+                        const { maker, taker } = getMakerTakerOfTrade(testCase);
+
                         const order = createOrder({
                             price: testCase.price,
                             quantity: Math.abs(testCase.size),
                             leverage: testCase.leverage,
                             isBuy: testCase.size > 0,
-                            makerAddress: MakerTakerAccounts.maker.address,
+                            makerAddress: maker.address,
                             salt: Date.now()
                         });
 
@@ -122,10 +132,39 @@ export async function executeTests(
                             await Trader.setupNormalTrade(
                                 provider,
                                 orderSigner,
-                                MakerTakerAccounts.maker.keyPair,
-                                MakerTakerAccounts.taker.keyPair,
-                                order
+                                maker.keyPair,
+                                taker.keyPair,
+                                order,
+                                // if trade type is filler, specify leverage for taker/bob
+                                // as the leverage used in normal/last trade
+                                {
+                                    takerOrder:
+                                        testCase.tradeType == "filler"
+                                            ? {
+                                                  ...order,
+                                                  leverage,
+                                                  isBuy: !order.isBuy,
+                                                  maker: taker.address
+                                              }
+                                            : undefined
+                                }
                             ),
+                            ownerSigner
+                        );
+
+                        // save leverage, can be used for bob/taker in next filler trade
+                        leverage = order.leverage;
+                    }
+                    // liquidation trade
+                    else if (testCase.tradeType == "liquidation") {
+                        tx = await onChain.liquidate(
+                            {
+                                liquidatee: MakerTakerAccounts.maker.address,
+                                quantity: toBigNumberStr(
+                                    Math.abs(testCase.size)
+                                ),
+                                leverage: toBigNumberStr(testCase.leverage)
+                            },
                             ownerSigner
                         );
                     }
@@ -177,21 +216,22 @@ export async function executeTests(
                                 ? MakerTakerAccounts.taker.address
                                 : MakerTakerAccounts.maker.address;
 
-                        const position =
-                            Transaction.getAccountPositionFromEvent(
-                                tx,
-                                account
-                            ) as UserPositionExtended;
-
-                        const expectedPosition = getExpectedTestPosition(
-                            testCase.expectMaker || testCase.expectTaker
+                        evaluateAccountPositionExpect(
+                            account,
+                            testCase.expectMaker || testCase.expectTaker,
+                            oraclePrice,
+                            tx
                         );
+                    }
 
-                        const onChainPosition = toExpectedPositionFormat(
-                            Balance.fromPosition(position),
-                            oraclePrice
+                    // if an expect for liquidator exists
+                    if (testCase.expectLiquidator) {
+                        evaluateAccountPositionExpect(
+                            liquidatorAddress,
+                            testCase.expectLiquidator,
+                            oraclePrice,
+                            tx
                         );
-                        expectPosition(onChainPosition, expectedPosition);
                     }
 
                     // if asked to evaluate system expects
@@ -202,4 +242,35 @@ export async function executeTests(
             });
         });
     });
+
+    // helper method to extract maker/taker of trade
+    function getMakerTakerOfTrade(testCase: any) {
+        if (testCase.tradeType == "filler") {
+            return {
+                maker: {
+                    address: liquidatorAddress,
+                    keyPair: ownerKeyPair,
+                    signer: ownerSigner
+                },
+                taker: {
+                    address: MakerTakerAccounts.taker.address,
+                    keyPair: MakerTakerAccounts.taker.keyPair,
+                    signer: MakerTakerAccounts.taker.signer
+                }
+            };
+        } else {
+            return {
+                maker: {
+                    address: MakerTakerAccounts.maker.address,
+                    keyPair: MakerTakerAccounts.maker.keyPair,
+                    signer: MakerTakerAccounts.maker.signer
+                },
+                taker: {
+                    address: MakerTakerAccounts.taker.address,
+                    keyPair: MakerTakerAccounts.taker.keyPair,
+                    signer: MakerTakerAccounts.taker.signer
+                }
+            };
+        }
+    }
 }

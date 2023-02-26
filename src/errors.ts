@@ -35,7 +35,7 @@ export const ERROR_CODES = {
     "24": "Trade price is < Market Take Bound for short side",
     "25": "Maker: OI open for selected leverage > max allowed oi open",
     "26": "Maker: OI open for selected leverage > max allowed oi open",
-    "27": "Sender does not have permissions for the taker",
+    "27": "Only settlement operators can trade",
     "28": "Maker: Order was already canceled",
     "29": "Taker: Order was already canceled",
     "30": "Maker: Order has invalid signature",
@@ -57,6 +57,8 @@ export const ERROR_CODES = {
     "46": "Maker: Cannot trade when loss exceeds margin. Please add margin",
     "47": "Taker: Cannot trade when loss exceeds margin. Please add margin",
     "48": "Taker: Order can not be of the same side as Maker",
+    "50": "Sender does not have permission on maker's behalf",
+    "51": "Sender does not have permission on taker's behalf",
     "100": "Sender is not a valid price oracle operator",
     "101": "Address is already price oracle operator",
     "102": "Price is out of max allowed price difference bounds",
@@ -71,10 +73,16 @@ export const ERROR_CODES = {
     "406": "Maker: MR < 0, please add margin to avoid liquidation",
     "407": "Taker: MR < 0, please add margin to avoid liquidation",
     "500": "Margin amount must be > 0",
-    "501": "User has no position object",
     "502": "User has zero sized position",
     "503": "Margin to be removed can not be > max removable margin amount",
     "504": "Leverage can not be set to zero",
+    "505": "User has no position object",
+    "506": "Maker has no position object",
+
     "600": "Maker: Insufficient margin in margin bank",
-    "601": "Taker: Insufficient margin in margin bank"
+    "601": "Taker: Insufficient margin in margin bank",
+    "700": "Liquidation: Maker has no position to liquidate",
+    "701": "Liquidation: allOrNothing is true and liquidation quantity < specified quantity",
+    "702": "Liquidation: Liquidator leverage is invalid",
+    "703": "Liquidation: Cannot liquidate since maker is not undercollateralized"
 };

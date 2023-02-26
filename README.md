@@ -1,5 +1,4 @@
-# Bluefin Exchange Contracts SUI
-<!-- [<img alt="Firefly logo" src="https://raw.githubusercontent.com/fireflyprotocol/firefly_exchange_client/main/res/banner.png" />](#) -->
+# Bluefin Exchange Contracts
 
 Repository containing bluefin core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.
 
@@ -29,18 +28,23 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 **Running Tests:**
 
 - Use following .env:
+
   ```
   DEPLOY_ON = cloud
-  DEPLOYER_SEED = bicycle trim fit ticket penalty basket window tunnel insane orange virtual tennis
+  DEPLOYER_SEED = settle image finger column since happy input rebuild betray float magnet produce surge pipe bag language point cover neglect disorder egg sheriff erosion negative
+
   ```
-- Fund deployer using `yarn faucet --account 0x......`
+
+- Fund deployer using `yarn faucet --account 0x42696a5734546c3acc9019ef93543609cb5c5c89`
 - Fund testing accounts using `yarn fund:test:accounts`
 - Deploy the package using `yarn deploy`, Every time any change is made to package, it will need to be re-deployed before running tests
 - Run tests using `yarn test`
 
-**Scripts:**
-| Name | Description | Command |
-|--------------------------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------|
-| Package and Market Deployment | Deploys the package and all markets provided in Deployment Config | `yarn deploy` |
-| Package Deployment | Deploys the package | `yarn deploy:package` |
-| Market Deployment | Deploys the market specified in .env | `yarn deploy:market` |
+## Scripts
+
+| Name                          | Description                                                       | Command                  |
+| ----------------------------- | ----------------------------------------------------------------- | ------------------------ |
+| Package and Market Deployment | Deploys the package and all markets provided in Deployment Config | `yarn deploy`            |
+| Package Deployment            | Deploys the package                                               | `yarn deploy:package`    |
+| Market Deployment             | Deploys the market specified in .env                              | `yarn deploy:market`     |
+| Faucet                        | Provides address with SUI coin                                    | `yarn faucet -a "0x..."` |

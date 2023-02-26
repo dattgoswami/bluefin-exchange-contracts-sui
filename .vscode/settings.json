@@ -6,12 +6,14 @@
     "collateralization",
     "devnet",
     "keypair",
+    "liquidatee",
     "mysten",
     "nacl",
     "PERP",
     "Secp",
     "Stdlib",
     "subdir",
-    "tweetnacl"
+    "tweetnacl",
+    "undercollateralized"
   ]
 }

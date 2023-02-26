@@ -6,7 +6,8 @@ import {
     getProvider,
     getSignerSUIAddress,
     getSignerFromSeed,
-    createOrder
+    createOrder,
+    createMarket
 } from "../src/utils";
 import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
@@ -20,10 +21,10 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const provider = getProvider(network.rpc, network.faucet);
 
-describe("Trades", () => {
+describe("Regular Trade Method", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
     let deployment = readFile(DeploymentConfigs.filePath);
-    let onChain: OnChainCalls = new OnChainCalls(ownerSigner, deployment);
+    let onChain: OnChainCalls;
     let ownerAddress: string;
 
     const [alice, bob] = getTestAccounts(provider);
@@ -36,6 +37,15 @@ describe("Trades", () => {
     });
 
     before(async () => {
+        // deploy market
+        deployment["markets"] = [
+            {
+                Objects: await createMarket(deployment, ownerSigner, provider)
+            }
+        ];
+
+        onChain = new OnChainCalls(ownerSigner, deployment);
+
         ownerAddress = await getSignerSUIAddress(ownerSigner);
         // make admin operator
         await onChain.setSettlementOperator(
@@ -61,7 +71,7 @@ describe("Trades", () => {
         expectTxToSucceed(tx);
     });
 
-    it("should revert trade as alice is neither taker nor settlement operator", async () => {
+    it("should revert trade as alice is not a settlement operator", async () => {
         const txResponse = await onChain.trade(
             await Trader.setupNormalTrade(
                 provider,
@@ -84,7 +94,7 @@ describe("Trades", () => {
                 alice.keyPair,
                 bob.keyPair,
                 { ...defaultOrder, isBuy: true },
-                { ...defaultOrder, isBuy: true }
+                { takerOrder: { ...defaultOrder, isBuy: true } }
             )
         );
         expectTxToFail(tx);
@@ -99,7 +109,7 @@ describe("Trades", () => {
                 alice.keyPair,
                 bob.keyPair,
                 { ...defaultOrder, isBuy: false },
-                { ...defaultOrder, isBuy: false }
+                { takerOrder: { ...defaultOrder, isBuy: false } }
             )
         );
         expectTxToFail(tx);
@@ -115,9 +125,11 @@ describe("Trades", () => {
                 bob.keyPair,
                 defaultOrder,
                 {
-                    ...defaultOrder,
-                    isBuy: !defaultOrder.isBuy,
-                    expiration: bigNumber(1)
+                    takerOrder: {
+                        ...defaultOrder,
+                        isBuy: !defaultOrder.isBuy,
+                        expiration: bigNumber(1)
+                    }
                 }
             )
         );
@@ -221,6 +233,7 @@ describe("Trades", () => {
             quantity: 20,
             leverage: 1
         });
+
         const takerOrder = createOrder({
             makerAddress: bob.address,
             isBuy: false,
@@ -228,6 +241,7 @@ describe("Trades", () => {
             quantity: 20,
             leverage: 0.9
         });
+
         const tx = await onChain.trade(
             await Trader.setupNormalTrade(
                 provider,
@@ -235,7 +249,7 @@ describe("Trades", () => {
                 alice.keyPair,
                 bob.keyPair,
                 makerOrder,
-                takerOrder
+                { takerOrder: takerOrder }
             )
         );
 

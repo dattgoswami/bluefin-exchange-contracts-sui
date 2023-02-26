@@ -1,6 +1,6 @@
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
-import { MarketConfig } from "./helpers/interfaces";
+import { MarketDetails } from "../src/interfaces";
 import { postDeployment } from "./helpers/utils";
 
 const tradesWithoutFee = {
@@ -328,7 +328,6 @@ const tradesWithoutFee = {
                 }
             }
         ],
-
     "Test # 2: Long + Long (Profit) + Long (Loss)": [
         {
             pOracle: 100,
@@ -376,7 +375,6 @@ const tradesWithoutFee = {
             }
         }
     ],
-
     "Test # 3: Long + Long (Loss) + Long (Loss)": [
         {
             pOracle: 99,
@@ -424,7 +422,6 @@ const tradesWithoutFee = {
             }
         }
     ],
-
     "Test # 4: Long + Long (Loss) + Long (Profit)": [
         {
             pOracle: 99,
@@ -472,7 +469,6 @@ const tradesWithoutFee = {
             }
         }
     ],
-
     "Test # 5: Long + Long (Profit) + Short (Profit)": [
         {
             pOracle: 100,
@@ -520,7 +516,6 @@ const tradesWithoutFee = {
             }
         }
     ],
-
     "Test # 6: Long + Long (Profit) + Short (Loss)": [
         {
             pOracle: 99,
@@ -3365,7 +3360,7 @@ const tradesWithFee = {
 };
 
 describe("Trades Without Fee", () => {
-    const marketConfig: MarketConfig = {
+    const marketConfig: MarketDetails = {
         makerFee: toBigNumberStr(0),
         takerFee: toBigNumberStr(0)
     };
@@ -3373,7 +3368,7 @@ describe("Trades Without Fee", () => {
 });
 
 describe("Trades With Fee", () => {
-    const marketConfig: MarketConfig = {
+    const marketConfig: MarketDetails = {
         makerFee: toBigNumberStr(0.05),
         takerFee: toBigNumberStr(0.15)
     };

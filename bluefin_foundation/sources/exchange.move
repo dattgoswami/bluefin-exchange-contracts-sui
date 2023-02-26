@@ -18,6 +18,7 @@ module bluefin_foundation::exchange {
 
     // traders
     use bluefin_foundation::isolated_trading::{Self, OrderStatus};
+    use bluefin_foundation::isolated_liquidation::{Self};
 
     //===========================================================//
     //                           EVENTS                          //
@@ -36,6 +37,16 @@ module bluefin_foundation::exchange {
     struct AdminCap has key {
         id: UID,
     }
+
+    //===========================================================//
+    //                      CONSTANTS
+    //===========================================================//
+
+    // action types
+    const ACTION_ADD_MARGIN: u8 = 1;
+    const ACTION_REMOVE_MARGIN: u8 = 2;
+    const ACTION_ADJUST_LEVERAGE: u8 = 3;
+    const ACTION_FINAL_WITHDRAWAL: u8 = 4;
      
     //===========================================================//
     //                      INITIALIZATION
@@ -101,11 +112,15 @@ module bluefin_foundation::exchange {
         mtbLong: u128,
         mtbShort: u128,
         maxAllowedOIOpen: vector<u128>,
-        initialMarginRequired: u128,
-        maintenanceMarginRequired: u128,
+        imr: u128,
+        mmr: u128,
         makerFee: u128,
         takerFee: u128,
+        maxAllowedFR: u128,
         maxAllowedPriceDiffInOP: u128,
+        insurancePoolRatio: u128,
+        insurancePool: address,
+        feePool: address,
         ctx: &mut TxContext
         ){
         
@@ -142,11 +157,15 @@ module bluefin_foundation::exchange {
         perpetual::initialize(
             id,
             name,
-            checks,
-            initialMarginRequired,
-            maintenanceMarginRequired,
+            imr,
+            mmr,
             makerFee,
             takerFee,
+            maxAllowedFR,
+            insurancePoolRatio,
+            insurancePool,
+            feePool,
+            checks,
             positions,
             priceOracle
         );
@@ -267,6 +286,11 @@ module bluefin_foundation::exchange {
         operator);
     }
 
+
+    //===========================================================//
+    //                          TRADES                           //
+    //===========================================================//
+
     /**
      * Used to perofrm on-chain trade between two orders (maker/taker)
      */ 
@@ -308,10 +332,16 @@ module bluefin_foundation::exchange {
 
             let sender = tx_context::sender(ctx);
 
-            // check if caller has permission to trade on taker's behalf
+            // check if caller is a valid settlement operator or not
             assert!(
-                has_account_permission(operatorTable, takerAddress, sender),
-                error::sender_has_no_taker_permission());
+                is_valid_settlement_operator(operatorTable, sender),
+                error::invalid_settlement_operator());
+
+            // TODO check if trading is allowed by guardian for given perpetual or not
+
+            // TODO check if trading is started or not
+
+            // TODO apply funding rate
 
             let data = isolated_trading::pack_trade_data(
                  // maker
@@ -345,6 +375,50 @@ module bluefin_foundation::exchange {
             isolated_trading::trade(sender, perp, ordersTable, data);
     }
 
+    public entry fun liquidate(
+        perp: &mut Perpetual, 
+        // address of account to be liquidated
+        liquidatee: address,
+        // address of liquidator
+        liquidator: address,
+        // quantity to be liquidated
+        quantity: u128,
+        //liquidators leverage
+        leverage: u128,
+        // all of nothing
+        allOrNothing: bool,
+
+        ctx: &mut TxContext        
+
+    ){
+
+        let sender = tx_context::sender(ctx);
+
+        // check if caller has permission to trade on taker's behalf
+        // we can have sub accounts feature in future
+        assert!(
+            sender == liquidator,
+            error::sender_does_not_have_permission_for_account(1));
+
+        // TODO check if trading is allowed by guardian for given perpetual or not
+
+        // TODO check if trading is started or not
+
+        // TODO apply funding rate
+
+        let data = isolated_liquidation::pack_trade_data(
+            liquidator,
+            liquidatee,
+            quantity,
+            leverage,
+            allOrNothing);
+
+        isolated_liquidation::trade(sender, perp, data);
+    }
+
+    //===========================================================//
+    //                       MARGIN ADJUSTMENT                   //
+    //===========================================================//
 
     /**
      * Allows caller to add margin to their position
@@ -353,7 +427,7 @@ module bluefin_foundation::exchange {
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
         let user = tx_context::sender(ctx);
 
-        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table());
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(0));
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
 
@@ -372,7 +446,7 @@ module bluefin_foundation::exchange {
         // TODO: apply funding rate
         // user must add enough margin that can pay for its all settlement dues
         
-        position::emit_position_update_event(perpID, user, *balance, 1);
+        position::emit_position_update_event(perpID, user, *balance, ACTION_ADD_MARGIN);
 
 
     }
@@ -386,7 +460,7 @@ module bluefin_foundation::exchange {
         let user = tx_context::sender(ctx);
         let priceOracle = price_oracle::price(perpetual::priceOracle(perp));
 
-        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table());
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(0));
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
 
@@ -421,7 +495,7 @@ module bluefin_foundation::exchange {
             0, 
             0);
             
-        position::emit_position_update_event(perpID, user, currBalance, 2);
+        position::emit_position_update_event(perpID, user, currBalance, ACTION_REMOVE_MARGIN);
 
     }
 
@@ -441,7 +515,7 @@ module bluefin_foundation::exchange {
         let tradeChecks = perpetual::checks(perp);
         let perpID = object::uid_to_inner(perpetual::id(perp));
 
-        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table());
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(0));
 
         // TODO: apply funding rate and get updated position Balance
         // initBalance will be returned by funding rate method
@@ -485,15 +559,15 @@ module bluefin_foundation::exchange {
             0, 
             0);
 
-        position::emit_position_update_event(perpID, user, currBalance, 3);
+        position::emit_position_update_event(perpID, user, currBalance, ACTION_ADJUST_LEVERAGE);
     }
 
     // //===========================================================//
     // //                      HELPER METHODS
     // //===========================================================//
 
-    fun has_account_permission(operatorTable: &mut Table<address, bool>, taker:address, sender:address):bool{
-        return taker == sender || table::contains(operatorTable, sender)
+    fun is_valid_settlement_operator(operatorTable: &mut Table<address, bool>, sender:address):bool{
+        return table::contains(operatorTable, sender)
     }
     
 }

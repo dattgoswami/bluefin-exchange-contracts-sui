@@ -82,7 +82,12 @@ module bluefin_foundation::position {
     //===========================================================//
 
     public fun set_mro(position:&mut UserPosition, mro:u128) {
-        position.mro = mro;
+        //  if position is closed due to reducing trade reset mro to zero
+        if(position.qPos == 0){
+            position.mro = 0;
+        } else {
+            position.mro = mro;
+        }
     }
 
     public fun set_oiOpen(position:&mut UserPosition, oiOpen:u128) {
@@ -96,6 +101,13 @@ module bluefin_foundation::position {
 
     public fun set_qPos(position:&mut UserPosition, qPos:u128) {
         position.qPos = qPos;
+
+        // if new position size is zero we are setting isPosPositive to false
+        // this is what default value for isPosPositive is
+        if(qPos == 0){
+            set_isPosPositive(position, false);
+        };
+
     }
 
     public fun set_isPosPositive(position:&mut UserPosition, isPosPositive:bool) {
@@ -106,7 +118,7 @@ module bluefin_foundation::position {
     //                           HELPERS                         //
     //===========================================================//
 
-    public fun margin_ratio(position:UserPosition, price:u128): Number {
+    public fun compute_margin_ratio(position:UserPosition, price:u128): Number {
         let marginRatio = signed_number::one();
 
         // when user has no position margin ratio is 1
@@ -134,7 +146,7 @@ module bluefin_foundation::position {
         return marginRatio
     }
 
-    public fun average_entry_price(position:UserPosition): u128 {
+    public fun compute_average_entry_price(position:UserPosition): u128 {
         return if (position.oiOpen == 0) { 0 } else { 
             library::base_div(position.oiOpen, position.qPos) 
             }
@@ -157,10 +169,10 @@ module bluefin_foundation::position {
         });
     }
 
-    public fun verify_collat_checks(initialPosition: UserPosition, currentPosition: UserPosition, imr: u128, mmr: u128, price:u128, tradeType: u64, isTaker:u64){
+    public fun verify_collat_checks(initialPosition: UserPosition, currentPosition: UserPosition, imr: u128, mmr: u128, price:u128, tradeType: u8, isTaker:u64){
 
-            let initMarginRatio = margin_ratio(initialPosition, price);
-            let currentMarginRatio = margin_ratio(currentPosition, price);
+            let initMarginRatio = compute_margin_ratio(initialPosition, price);
+            let currentMarginRatio = compute_margin_ratio(currentPosition, price);
 
             // Case 0: Current Margin Ratio >= IMR: User can increase and reduce positions.
             if (signed_number::gte_uint(currentMarginRatio, imr)) {
@@ -207,5 +219,24 @@ module bluefin_foundation::position {
 
     public fun compute_mro(leverage:u128): u128 {
         return library::base_div(library::base_uint(), leverage)
+    }
+
+    public fun compute_pnl_per_unit(position: UserPosition, price: u128): Number{
+        let pPos = compute_average_entry_price(position);
+
+        return if (position.isPosPositive) { 
+                signed_number::from_subtraction(price, pPos) 
+                } else { 
+                signed_number::from_subtraction(pPos, price) 
+                }
+    }
+
+    /**
+     * @dev returns true if account is undercollateralized
+     */
+    public fun is_undercollat(position:UserPosition, oraclePrice:u128, mmr: u128): bool {
+            return signed_number::lt_uint(
+                compute_margin_ratio(position, oraclePrice),
+                mmr)
     }
 }

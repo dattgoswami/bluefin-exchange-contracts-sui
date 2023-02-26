@@ -4,6 +4,12 @@ import {
 } from "@mysten/sui.js";
 import { Object, UserPositionExtended } from "../interfaces";
 import { ERROR_CODES } from "../errors";
+import BigNumber from "bignumber.js";
+import {
+    bigNumber,
+    SignedNumberToBigNumber,
+    SignedNumberToBigNumberStr
+} from "../library";
 
 export class Transaction {
     static getStatus(txResponse: SuiExecuteTransactionResponse) {
@@ -94,5 +100,24 @@ export class Transaction {
         else return undefined;
 
         return userPosition;
+    }
+
+    static getAccountPNL(
+        tx: SuiExecuteTransactionResponse,
+        address: string
+    ): BigNumber | undefined {
+        const events = Transaction.getEvents(tx, "TradeExecuted");
+
+        if (events.length == 0) {
+            return undefined;
+        }
+
+        if (address == events[0].fields.maker) {
+            return SignedNumberToBigNumber(events[0].fields.makerPnl.fields);
+        } else if (address == events[0].fields.taker) {
+            return SignedNumberToBigNumber(events[0].fields.takerPnl.fields);
+        } else {
+            return undefined;
+        }
     }
 }

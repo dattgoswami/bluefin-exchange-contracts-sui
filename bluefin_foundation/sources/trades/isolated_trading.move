@@ -30,7 +30,7 @@ module bluefin_foundation::isolated_trading {
     struct TradeExecuted has copy, drop {
         sender:address,
         perpID: ID,
-        tradeType: u64,
+        tradeType: u8,
         maker: address,
         taker: address,
         makerOrderHash: vector<u8>,
@@ -69,7 +69,6 @@ module bluefin_foundation::isolated_trading {
         filledQty: u128
     }
 
-
     struct TradeData has drop, copy {
         makerOrder: Order,
         takerOrder: Order,
@@ -83,9 +82,19 @@ module bluefin_foundation::isolated_trading {
 
     struct IMResponse has store, drop {
         fundsFlow: Number,
-        pnlPerUnit: Number,
-        feePerUnit: u128
+        pnl: Number,
+        fee: u128
     }
+
+    //===========================================================//
+    //                      CONSTANTS
+    //===========================================================//
+
+    // trade type constants
+    const TRADE_TYPE: u8 = 1;
+
+    // action types
+    const ACTION_TRADE: u8 = 0;
 
 
     //===========================================================//
@@ -97,19 +106,17 @@ module bluefin_foundation::isolated_trading {
             assert!(data.makerOrder.isBuy != data.takerOrder.isBuy, error::order_cannot_be_of_same_side());
 
             let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
+            let tradeChecks = perpetual::checks(perp);
             let makerFee = perpetual::makerFee(perp);
             let takerFee = perpetual::takerFee(perp);
             let perpID = object::uid_to_inner(perpetual::id(perp));
+            let imr = perpetual::imr(perp);
+            let mmr = perpetual::mmr(perp);
+            let positionsTable = perpetual::positions(perp);
 
             // // if maker/taker positions don't exist create them
-            position::create_position(perpID, perpetual::positions(perp), data.makerOrder.makerAddress);
-            position::create_position(perpID, perpetual::positions(perp), data.takerOrder.makerAddress);
-
-            // TODO check if trading is allowed by guardian for given perpetual or not
-
-            // TODO check if trading is started or not
-
-            // TODO apply funding rate
+            position::create_position(perpID, positionsTable, data.makerOrder.makerAddress);
+            position::create_position(perpID, positionsTable, data.takerOrder.makerAddress);
 
             // // get order hashes
             let makerHash = get_hash(data.makerOrder, perpID);
@@ -128,76 +135,77 @@ module bluefin_foundation::isolated_trading {
             data.makerOrder.leverage = library::round_down(data.makerOrder.leverage);
             data.takerOrder.leverage = library::round_down(data.takerOrder.leverage);
 
+            let initMakerPos = *table::borrow(positionsTable, data.makerOrder.makerAddress);
+            let initTakerPos = *table::borrow(positionsTable, data.takerOrder.makerAddress);
+
             // Validate orders are correct and can be executed for the trade
-            verify_order(perp, ordersTable, data.makerOrder, makerHash, data.fill, 0);
-            verify_order(perp, ordersTable, data.takerOrder, takerHash, data.fill, 1);
+            verify_order(initMakerPos, ordersTable, data.makerOrder, makerHash, data.fill, oraclePrice, 0);
+            verify_order(initTakerPos, ordersTable, data.takerOrder, takerHash, data.fill, oraclePrice, 1);
 
             // verify pre-trade checks
-            evaluator::verify_price_checks(perpetual::checks(perp), data.fill.price);
-            evaluator::verify_qty_checks(perpetual::checks(perp), data.fill.quantity);
-            evaluator::verify_market_take_bound_checks(perpetual::checks(perp), data.fill.price, oraclePrice, data.takerOrder.isBuy);
+            evaluator::verify_price_checks(tradeChecks, data.fill.price);
+            evaluator::verify_qty_checks(tradeChecks, data.fill.quantity);
+            evaluator::verify_market_take_bound_checks(tradeChecks, data.fill.price, oraclePrice, data.takerOrder.isBuy);
 
-            let initMakerPosition = *table::borrow(perpetual::positions(perp), data.makerOrder.makerAddress);
-            let initTakerPosition = *table::borrow(perpetual::positions(perp), data.takerOrder.makerAddress);
 
             // apply isolated margin
             let makerResponse = apply_isolated_margin(
-                perpetual::checks(perp),
-                table::borrow_mut(perpetual::positions(perp), data.makerOrder.makerAddress), 
+                tradeChecks,
+                table::borrow_mut(positionsTable, data.makerOrder.makerAddress), 
                 data.makerOrder, 
                 data.fill, 
                 library::base_mul(data.fill.price, makerFee),
                 0);
 
             let takerResponse = apply_isolated_margin(
-                perpetual::checks(perp),
-                table::borrow_mut(perpetual::positions(perp), data.takerOrder.makerAddress), 
+                tradeChecks,
+                table::borrow_mut(positionsTable, data.takerOrder.makerAddress), 
                 data.takerOrder, 
                 data.fill, 
                 library::base_mul(data.fill.price, takerFee),
                 1);
 
 
-            let newMakerPosition = *table::borrow(perpetual::positions(perp), data.makerOrder.makerAddress);
-            let newTakerPosition = *table::borrow(perpetual::positions(perp), data.takerOrder.makerAddress);
+            let newMakerPosition = *table::borrow(positionsTable, data.makerOrder.makerAddress);
+            let newTakerPosition = *table::borrow(positionsTable, data.takerOrder.makerAddress);
                                    
             // verify collateralization of maker and take
             position::verify_collat_checks(
-                initMakerPosition, 
+                initMakerPos, 
                 newMakerPosition, 
-                perpetual::imr(perp), 
-                perpetual::mmr(perp), 
+                imr, 
+                mmr, 
                 oraclePrice, 
-                1, 
+                TRADE_TYPE, 
                 0);
 
             position::verify_collat_checks(
-                initTakerPosition, 
+                initTakerPos, 
                 newTakerPosition, 
-                perpetual::imr(perp), 
-                perpetual::mmr(perp), 
+                imr, 
+                mmr, 
                 oraclePrice, 
-                1, 
+                TRADE_TYPE, 
                 1);
 
-            position::emit_position_update_event(perpID, data.makerOrder.makerAddress, newMakerPosition, 0);
-            position::emit_position_update_event(perpID, data.takerOrder.makerAddress, newTakerPosition, 0);
+            position::emit_position_update_event(perpID, data.makerOrder.makerAddress, newMakerPosition, ACTION_TRADE);
+            position::emit_position_update_event(perpID, data.takerOrder.makerAddress, newTakerPosition, ACTION_TRADE);
 
     
             emit(TradeExecuted{
                 sender,
                 perpID,
-                tradeType: 1,
+                tradeType: TRADE_TYPE,
                 maker: data.makerOrder.makerAddress,
                 taker: data.takerOrder.makerAddress,
                 makerOrderHash: makerHash,
                 takerOrderHash: takerHash,
                 makerMRO: position::mro(newMakerPosition),
                 takerMRO: position::mro(newTakerPosition),
-                makerFee: library::base_mul(makerResponse.feePerUnit, data.fill.quantity),
-                takerFee: library::base_mul(takerResponse.feePerUnit, data.fill.quantity),
-                makerPnl: makerResponse.pnlPerUnit,
-                takerPnl: takerResponse.pnlPerUnit,
+                makerFee: makerResponse.fee,
+                takerFee: takerResponse.fee,
+                makerPnl: makerResponse.pnl,
+                takerPnl: takerResponse.pnl,
                 tradeQuantity: data.fill.quantity,
                 tradePrice: data.fill.price,
                 isBuy: data.takerOrder.isBuy,
@@ -326,7 +334,7 @@ module bluefin_foundation::isolated_trading {
     }
 
 
-    fun verify_order(perp: &mut Perpetual, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, fill:Fill, isTaker: u64){
+    fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, fill:Fill, oraclePrice: u128, isTaker: u64){
 
             verify_order_state(ordersTable, hash, isTaker);
 
@@ -334,9 +342,9 @@ module bluefin_foundation::isolated_trading {
 
             verify_order_expiry(order, isTaker);
 
-            verify_order_fills(perp, order, fill, isTaker);
+            verify_order_fills(position, order, fill, oraclePrice, isTaker);
 
-            verify_order_leverage(perp, order, isTaker);
+            verify_order_leverage(position, order, isTaker);
 
             verify_and_fill_order_qty(ordersTable, order, hash, fill.quantity, isTaker);
     }
@@ -376,9 +384,7 @@ module bluefin_foundation::isolated_trading {
         assert!(order.expiration == 0 || order.expiration > 1, error::order_has_expired(isTaker));
     }
 
-    fun verify_order_fills(perp: &mut Perpetual, order:Order, fill:Fill, isTaker:u64){
-
-        let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
+    fun verify_order_fills(userPosition: UserPosition, order:Order, fill:Fill, oraclePrice: u128, isTaker:u64){
 
         // Ensure order is being filled at the specified or better price
         // For long/buy orders, the fill price must be equal or lower
@@ -396,8 +402,6 @@ module bluefin_foundation::isolated_trading {
 
         // For reduce only orders, ensure that the order would result in an
         // open position's size to reduce (fill amount <= open position size)
-        let userPosition = *table::borrow(perpetual::positions(perp), order.makerAddress);
-
         if(order.reduceOnly){
 
             // Reduce only order must be in the opposite direction as open position 
@@ -413,11 +417,8 @@ module bluefin_foundation::isolated_trading {
 
     }
 
-    fun verify_order_leverage(perp: &mut Perpetual, order:Order, isTaker:u64){
-
-        let userPosition = *table::borrow(perpetual::positions(perp), order.makerAddress);
+    fun verify_order_leverage(userPosition: UserPosition, order:Order, isTaker:u64){
         let mro = position::mro(userPosition);
-
         assert!(order.leverage > 0, error::leverage_must_be_greater_than_zero(isTaker));        
         assert!(
             mro == 0 || position::compute_mro(order.leverage) == mro, 
@@ -427,10 +428,9 @@ module bluefin_foundation::isolated_trading {
 
     fun apply_isolated_margin(checks:TradeChecks, balance: &mut UserPosition, order:Order, fill:Fill, feePerUnit: u128, isTaker: u64): IMResponse {
         
-        let marginPerUnit;
-        let fundsFlow;
-        let pnlPerUnit = signed_number::new();
-        let equityPerUnit;
+        let fundsFlow: Number;
+        let marginPerUnit: Number;
+        let equityPerUnit: Number;
 
         let isBuy = order.isBuy;
         
@@ -439,16 +439,14 @@ module bluefin_foundation::isolated_trading {
         let isPosPositive = position::isPosPositive(*balance);
         let margin = position::margin(*balance);
         let mro = position::compute_mro(order.leverage);
-
-        let pPos = if ( qPos == 0 ) { 0 } else { library::base_div(oiOpen, qPos) }; 
+        let pnlPerUnit = position::compute_pnl_per_unit(*balance, fill.price);
 
         // case 1: Opening position or adding to position size
         if (qPos == 0 || isBuy == isPosPositive) {
             marginPerUnit = signed_number::from(library::base_mul(fill.price, mro), true);
             fundsFlow = signed_number::from(library::base_mul(fill.quantity, signed_number::value(marginPerUnit) + feePerUnit), true);
-            let updatedOiOpen = oiOpen + library::base_mul(fill.quantity, fill.price);
 
-            position::set_oiOpen(balance, updatedOiOpen);
+            position::set_oiOpen(balance, oiOpen + library::base_mul(fill.quantity, fill.price));
             position::set_qPos(balance, qPos + fill.quantity);
             position::set_margin(balance, margin + library::base_mul(library::base_mul(fill.quantity, fill.price), mro));
             position::set_isPosPositive(balance, isBuy);
@@ -457,24 +455,17 @@ module bluefin_foundation::isolated_trading {
             evaluator::verify_oi_open_for_account(
                 checks, 
                 mro,
-                updatedOiOpen,
+                position::oiOpen(*balance),
                 isTaker
             );
 
+        pnlPerUnit = signed_number::new();
         } 
         // case 2: Reduce only order
         else if (order.reduceOnly || ( isBuy != isPosPositive && fill.quantity <= qPos)){
             let newQPos = qPos - fill.quantity;
             marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
-
-            pnlPerUnit = if ( isPosPositive ) { 
-                signed_number::from_subtraction(fill.price, pPos) 
-                } else { 
-                signed_number::from_subtraction(pPos, fill.price) 
-                };
-
-            equityPerUnit = signed_number::add(marginPerUnit, copy pnlPerUnit);
-            
+            equityPerUnit = signed_number::add(marginPerUnit, pnlPerUnit);            
             assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
             
             // Max(0, equityPerUnit);
@@ -491,18 +482,13 @@ module bluefin_foundation::isolated_trading {
                 (margin * fill.quantity) / qPos);
 
 
-            fundsFlow = signed_number::positive_number(fundsFlow);
+            fundsFlow = signed_number::negative_number(fundsFlow);
+            // this pnl is no longer per unit now
             pnlPerUnit = signed_number::mul_uint(pnlPerUnit, fill.quantity);
             
-            position::set_margin(balance, (margin*newQPos) / qPos);
-            position::set_qPos(balance, newQPos);
+            position::set_margin(balance, (margin * newQPos) / qPos);
             position::set_oiOpen(balance, (oiOpen * newQPos) / qPos);
-            // even if new position size is zero we are setting isPosPositive to false
-            // this is what default value for isPosPositive is
-            if(newQPos == 0){
-                position::set_isPosPositive(balance, false);
-            };
-
+            position::set_qPos(balance, newQPos);
 
         } 
         // case 3: flipping position side
@@ -512,15 +498,7 @@ module bluefin_foundation::isolated_trading {
             let updatedOIOpen = library::base_mul(newQPos, fill.price);
 
             marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
-
-            pnlPerUnit = if ( isPosPositive ) { 
-                signed_number::from_subtraction(fill.price, pPos) 
-            } else { 
-                signed_number::from_subtraction(pPos, fill.price) 
-            };
-
-            equityPerUnit = signed_number::add(marginPerUnit, copy pnlPerUnit);
-
+            equityPerUnit = signed_number::add(marginPerUnit, pnlPerUnit);
 
             assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
 
@@ -569,18 +547,12 @@ module bluefin_foundation::isolated_trading {
 
         };
 
-        //  if position is closed due to reducing trade reset mro to zero
-        if (position::qPos(*balance) == 0) {
-            position::set_mro(balance, 0);
-        } else {
-        // update user mro as per order
-            position::set_mro(balance, mro);
-        };
+        position::set_mro(balance, mro);
 
         return IMResponse {
-            fundsFlow,
-            pnlPerUnit,
-            feePerUnit
+            fundsFlow: fundsFlow,
+            pnl: pnlPerUnit,
+            fee: library::base_mul(feePerUnit, fill.quantity)
         }
 
     }

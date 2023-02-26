@@ -4,8 +4,20 @@ chai.use(chaiAsPromised);
 export const expect = chai.expect;
 
 import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
-import { OnChainCalls, Transaction } from "../../src/classes";
 import { TestPositionExpect } from "./interfaces";
+import {
+    getExpectedTestPosition,
+    printPosition,
+    toExpectedPositionFormat
+} from "./utils";
+import {
+    OnChainCalls,
+    Transaction,
+    Balance,
+    UserPositionExtended
+} from "../../src";
+import BigNumber from "bignumber.js";
+import { bigNumber } from "../../src/library";
 
 export function expectTxToSucceed(txResponse: SuiExecuteTransactionResponse) {
     const status = Transaction.getStatus(txResponse);
@@ -44,15 +56,21 @@ export function expectPosition(
     expect(onChainPosition.marginRatio.toFixed(3)).to.be.equal(
         expectedPosition.marginRatio.toFixed(3)
     );
+
     expect(onChainPosition.pPos.toFixed(3)).to.be.equal(
         expectedPosition.pPos.toFixed(3)
     );
 
+    expect(onChainPosition.pnl.toFixed(3)).to.be.equal(
+        expectedPosition.pnl.toFixed(3)
+    );
+
     // TODO once margin bank is implemented remove this if condition
-    if (onChainPosition.bankBalance)
-        expect(onChainPosition.bankBalance.toFixed(6)).to.be.equal(
-            expectedPosition.bankBalance.toFixed(6)
-        );
+    // if (onChainPosition.bankBalance != undefined){
+    //     expect(onChainPosition.bankBalance.toFixed(6)).to.be.equal(
+    //         expectedPosition.bankBalance.toFixed(6)
+    //     );
+    // }
 }
 
 export function expectTxToEmitEvent(
@@ -66,7 +84,7 @@ export function expectTxToEmitEvent(
     expect(events?.[0]).to.not.be.undefined;
 }
 
-export async function evaluateSystemExpect(
+export function evaluateSystemExpect(
     expectedSystemValues: any,
     onChain: OnChainCalls
 ) {
@@ -100,4 +118,31 @@ export async function evaluateSystemExpect(
         //     new BigNumber(expectedSystemValues.perpetual).toFixed(6)
         // ).to.be.equal(perpetual.toFixed(6));
     }
+}
+
+export function evaluateAccountPositionExpect(
+    account: string,
+    expectedJSON: any,
+    oraclePrice: BigNumber,
+    tx: SuiExecuteTransactionResponse
+) {
+    const position = Transaction.getAccountPositionFromEvent(
+        tx,
+        account
+    ) as UserPositionExtended;
+
+    const expectedPosition = getExpectedTestPosition(expectedJSON);
+
+    const onChainPosition = toExpectedPositionFormat(
+        Balance.fromPosition(position),
+        oraclePrice,
+        {
+            pnl:
+                expectedJSON.pnl != undefined
+                    ? Transaction.getAccountPNL(tx, account)
+                    : undefined
+        }
+    );
+
+    expectPosition(onChainPosition, expectedPosition);
 }

@@ -8,9 +8,7 @@ import {
     getCreatedObjects,
     publishPackageUsingClient
 } from "../src/utils";
-import { expectTxToSucceed } from "./helpers/expect";
 import { OnChainCalls, Transaction } from "../src/classes";
-import { ERROR_CODES } from "../src/errors";
 import { fundTestAccounts } from "./helpers/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { toBigNumberStr } from "../src/library";
@@ -26,7 +24,7 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const alice = getSignerFromSeed(TEST_WALLETS[0].phrase, provider);
 const aliceAddress = TEST_WALLETS[0].address;
 
-describe("MarginBank", () => {
+describe("Margin Bank", () => {
     let onChain: OnChainCalls;
     let ownerAddress: string;
 

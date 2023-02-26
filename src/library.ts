@@ -1,6 +1,10 @@
 import BigNumber from "bignumber.js";
 
 export type BigNumberable = BigNumber | number | string;
+export type SignedNumber = {
+    sign: boolean;
+    value: string;
+};
 
 export const BASE_DECIMALS = 9;
 export const BIGNUMBER_BASE = new BigNumber(1).shiftedBy(BASE_DECIMALS);
@@ -53,4 +57,24 @@ export function base64ToBuffer(data: string) {
 }
 export function base64ToHex(data: string) {
     return Buffer.from(data, "base64").toString("hex");
+}
+
+export function SignedNumberToBigNumber(number: SignedNumber) {
+    return new BigNumber(
+        number.sign ? number.value : -1 * Number(number.value)
+    );
+}
+
+export function SignedNumberToBigNumberStr(
+    number: SignedNumber,
+    decimals: number = 2
+) {
+    return SignedNumberToBigNumber(number).toFixed(decimals);
+}
+
+export function SignedNumberToBaseNumber(
+    number: SignedNumber,
+    decimals: number = 3
+) {
+    return toBaseNumber(SignedNumberToBigNumber(number));
 }

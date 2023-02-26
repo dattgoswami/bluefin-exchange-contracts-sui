@@ -11,7 +11,8 @@ import {
     Base64DataBuffer,
     Secp256k1Keypair,
     SignatureScheme,
-    Ed25519Keypair
+    Ed25519Keypair,
+    SignerWithProvider
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
 import {
@@ -19,12 +20,13 @@ import {
     DeploymentObjectMap,
     DeploymentObjects
 } from "../src/interfaces";
-import { toBigNumber, bigNumber, ADDRESSES } from "./library";
+import { toBigNumber, bigNumber } from "./library";
 import { Order } from "../src/interfaces";
+import { DEFAULT } from "./defaults";
 import { config } from "dotenv";
 import { Client, OnChainCalls, Transaction } from "./classes";
 import { network, moduleName, packageName } from "./DeploymentConfig";
-import { MarketConfig } from "../tests/helpers/interfaces";
+import { MarketDetails } from "./interfaces/market";
 
 const { execSync } = require("child_process");
 const fs = require("fs");
@@ -49,7 +51,9 @@ export function getProvider(
     return new JsonRpcProvider(rpcURL, { faucetURL: faucetURL });
 }
 
-export async function getSignerSUIAddress(signer: RawSigner): Promise<string> {
+export async function getSignerSUIAddress(
+    signer: RawSigner | SignerWithProvider
+): Promise<string> {
     const address = await signer.getAddress();
     return `0x${address}`;
 }
@@ -82,7 +86,9 @@ export function getSignerFromSeed(
     return getSignerFromKeyPair(getKeyPairFromSeed(seed), provider);
 }
 
-export async function getAddressFromSigner(signer: RawSigner): Promise<string> {
+export async function getAddressFromSigner(
+    signer: RawSigner | SignerWithProvider
+): Promise<string> {
     return `0x${await signer.getAddress()}`;
 }
 
@@ -237,7 +243,7 @@ export async function createMarket(
     deployment: DeploymentData,
     deployer: RawSigner,
     provider: JsonRpcProvider,
-    marketConfig?: MarketConfig
+    marketConfig?: MarketDetails
 ): Promise<DeploymentObjectMap> {
     const onChain = new OnChainCalls(deployer, deployment);
     const txResult = await onChain.createPerpetual({ ...marketConfig });
@@ -265,18 +271,6 @@ export function getDeploymentData(
     };
 }
 
-export const defaultOrder: Order = {
-    price: toBigNumber(1),
-    quantity: toBigNumber(1),
-    leverage: toBigNumber(1),
-    isBuy: true,
-    reduceOnly: false,
-    triggerPrice: toBigNumber(0),
-    maker: ADDRESSES.ZERO,
-    expiration: bigNumber(3655643731),
-    salt: bigNumber(1668690862116)
-};
-
 export function createOrder(params: {
     triggerPrice?: number;
     isBuy?: boolean;
@@ -292,20 +286,20 @@ export function createOrder(params: {
         triggerPrice: params.triggerPrice
             ? toBigNumber(params.triggerPrice)
             : bigNumber(0),
-        price: params.price ? toBigNumber(params.price) : defaultOrder.price,
+        price: params.price ? toBigNumber(params.price) : DEFAULT.ORDER.price,
         isBuy: params.isBuy == true,
         reduceOnly: params.reduceOnly == true,
         quantity: params.quantity
             ? toBigNumber(params.quantity)
-            : defaultOrder.quantity,
+            : DEFAULT.ORDER.quantity,
         leverage: params.leverage
             ? toBigNumber(params.leverage)
-            : defaultOrder.leverage,
+            : DEFAULT.ORDER.leverage,
         expiration: params.expiration
             ? bigNumber(params.expiration)
-            : defaultOrder.expiration,
+            : DEFAULT.ORDER.expiration,
         salt: params.salt ? bigNumber(params.salt) : bigNumber(Date.now()),
-        maker: params.makerAddress ? params.makerAddress : defaultOrder.maker
+        maker: params.makerAddress ? params.makerAddress : DEFAULT.ORDER.maker
     } as Order;
 }
 
