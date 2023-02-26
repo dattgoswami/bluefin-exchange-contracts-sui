@@ -1,16 +1,17 @@
 on:
   pull_request:
-    branches: [main]
     types:
       - opened
       - reopened
+concurrency:
+  group: sui-build-cd
 jobs:
     build:
-        runs-on: sui-cloud # name of selfhosted EC2
+        runs-on: self-hosted # name of selfhosted EC2
         steps:
             - uses: actions/checkout@v3
               with:
-                  token: ${{ secrets.SUBMODULE_PAT }}
+                  token: ${{ secrets.PAT }}
             - name: install dependencies
               run: yarn
             - name: start building

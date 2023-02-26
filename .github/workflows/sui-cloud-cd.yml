@@ -3,14 +3,17 @@ on:
     branches: [main]
     types:
       - closed
+concurrency:
+  group: sui-build-cd
+  cancel-in-progress: true # in case merged is performed immediately
 jobs:
     build:
         if: github.event.pull_request.merged == true
-        runs-on: sui-cloud # name of selfhosted EC2
+        runs-on: self-hosted # name of selfhosted EC2
         steps:
             - uses: actions/checkout@v3
               with:
-                  token: ${{ secrets.SUBMODULE_PAT }}
+                  token: ${{ secrets.PAT }}
             - name: install dependencies
               run: yarn
             - name: start building
