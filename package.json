@@ -48,7 +48,7 @@
     "test": "ts-mocha --no-timeout tests/*.test.ts",
     "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
     "prepare": "husky install",
-    "eslint:errors": "yarn eslint --fix --cache --max-warnings=-1 ."
+    "eslint:errors": "yarn eslint --fix --max-warnings=-1 ."
   },
   "repository": {
     "type": "git",

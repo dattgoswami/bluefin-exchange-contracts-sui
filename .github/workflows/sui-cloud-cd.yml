@@ -16,8 +16,6 @@ jobs:
           token: ${{ secrets.PAT }}
       - name: install dependencies
         run: yarn
-      - name: running ESLint
-        run: yarn eslint:errors
       - name: start building
         run: yarn build
       # - name: copying env

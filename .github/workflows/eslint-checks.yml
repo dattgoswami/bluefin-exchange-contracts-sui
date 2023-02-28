@@ -6,7 +6,7 @@ on:
 concurrency:
   group: sui-build-cd
 jobs:
-  build:
+  eslint_checks:
     runs-on: self-hosted # name of selfhosted EC2
     steps:
       - uses: actions/checkout@v3
@@ -14,5 +14,5 @@ jobs:
           token: ${{ secrets.PAT }}
       - name: install dependencies
         run: yarn
-      - name: start building
-        run: yarn build
+      - name: running ESLint
+        run: yarn eslint:errors
