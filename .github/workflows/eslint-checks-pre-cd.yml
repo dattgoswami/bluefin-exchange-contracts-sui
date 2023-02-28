@@ -1,13 +1,14 @@
+name: eslint-checks-pre-cd
 on:
-  workflow_run:
-    workflows:
-      - eslint-checks-pre-cd
+  pull_request:
+    branches: [main]
     types:
-      - completed
+      - closed
 concurrency:
   group: sui-build-cd
+  cancel-in-progress: true # in case merged is performed immediately
 jobs:
-  build:
+  pr_check_pre_cd:
     if: github.event.pull_request.merged == true
     runs-on: self-hosted # name of selfhosted EC2
     steps:
@@ -16,9 +17,5 @@ jobs:
           token: ${{ secrets.PAT }}
       - name: install dependencies
         run: yarn
-      - name: start building
-        run: yarn build
-      # - name: copying env
-      # - run: mv .env.example .env
-      # - name: deploying package
-      # - run: yarn deploy
+      - name: running ESLint
+        run: yarn eslint:errors
