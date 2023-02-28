@@ -370,6 +370,29 @@ export class OnChainCalls {
         return this.signAndCall(caller, "liquidate", callArgs);
     }
 
+    public async deleverage(
+        args: {
+            perpID?: string;
+            maker: string;
+            taker: string;
+            quantity: string;
+            allOrNothing?: boolean;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer ? signer : this.signer;
+
+        const callArgs = [];
+        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+
+        callArgs.push(args.maker);
+        callArgs.push(args.taker);
+        callArgs.push(args.quantity);
+        callArgs.push(args.allOrNothing == true);
+
+        return this.signAndCall(caller, "deleverage", callArgs);
+    }
+
     public async addMargin(
         args: {
             perpID?: string;

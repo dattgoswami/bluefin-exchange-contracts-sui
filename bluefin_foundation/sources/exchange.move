@@ -19,6 +19,7 @@ module bluefin_foundation::exchange {
     // traders
     use bluefin_foundation::isolated_trading::{Self, OrderStatus};
     use bluefin_foundation::isolated_liquidation::{Self};
+    use bluefin_foundation::isolated_adl::{Self};
 
     //===========================================================//
     //                           EVENTS                          //
@@ -375,6 +376,10 @@ module bluefin_foundation::exchange {
             isolated_trading::trade(sender, perp, ordersTable, data);
     }
 
+    /**
+     * Used to perofrm liquidation trade between the liquidator and
+     * an under collat account
+     */ 
     public entry fun liquidate(
         perp: &mut Perpetual, 
         // address of account to be liquidated
@@ -416,6 +421,44 @@ module bluefin_foundation::exchange {
         isolated_liquidation::trade(sender, perp, data);
     }
 
+    /**
+     * Used to perofrm adl trade between an under water maker and 
+     * above water taker
+     */
+     public entry fun deleverage(
+        perp: &mut Perpetual, 
+        // below water account to be deleveraged
+        maker: address,
+        // taker in profit
+        taker: address,        
+        // quantity of trade
+        quantity: u128,
+        // if true, will revert if maker's position is less than the amount
+        allOrNothing: bool,
+        // sender's context
+        ctx: &mut TxContext        
+    ){
+
+        let sender = tx_context::sender(ctx);
+
+        // TODO only deleveraging operator can perform deleveraging trades
+
+        // TODO check if trading is allowed by guardian for given perpetual or not
+
+        // TODO check if trading is started or not
+
+        // TODO apply funding rate
+
+        let data = isolated_adl::pack_trade_data(
+            maker,
+            taker,
+            quantity,
+            allOrNothing);
+
+        isolated_adl::trade(sender, perp, data);
+    }
+
+
     //===========================================================//
     //                       MARGIN ADJUSTMENT                   //
     //===========================================================//
@@ -427,7 +470,7 @@ module bluefin_foundation::exchange {
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
         let user = tx_context::sender(ctx);
 
-        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(0));
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
 
@@ -436,7 +479,7 @@ module bluefin_foundation::exchange {
         let qPos = position::qPos(*balance);
         let margin = position::margin(*balance);
 
-        assert!(qPos > 0, error::user_position_size_is_zero());
+        assert!(qPos > 0, error::user_position_size_is_zero(2));
 
         // TODO transfer margin amount from user to perpetual in margin bank
 
@@ -460,7 +503,7 @@ module bluefin_foundation::exchange {
         let user = tx_context::sender(ctx);
         let priceOracle = price_oracle::price(perpetual::priceOracle(perp));
 
-        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(0));
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
 
@@ -470,7 +513,7 @@ module bluefin_foundation::exchange {
         let qPos = position::qPos(*balance);
         let margin = position::margin(*balance);
 
-        assert!(qPos > 0, error::user_position_size_is_zero());
+        assert!(qPos > 0, error::user_position_size_is_zero(2));
 
 
         let maxRemovableAmount = margin_math::get_max_removeable_margin(*balance, priceOracle);
@@ -515,7 +558,7 @@ module bluefin_foundation::exchange {
         let tradeChecks = perpetual::checks(perp);
         let perpID = object::uid_to_inner(perpetual::id(perp));
 
-        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(0));
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
         // TODO: apply funding rate and get updated position Balance
         // initBalance will be returned by funding rate method

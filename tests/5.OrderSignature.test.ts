@@ -94,7 +94,6 @@ describe("Order Signer", () => {
         const hash = orderSigner.getOrderHash(updatedOrder);
 
         const signature = await orderSigner.signOrder(order);
-        const packageId = deployment.objects.package.id;
         const pubkey = await ownerKeyPair.getPublicKey();
 
         const receipt = await onChain.signAndCall(
@@ -152,8 +151,6 @@ describe("Order Signer", () => {
     it("should verify hash (off-chain) to given address secp256k1 by verifyUsingOrder method", async () => {
         const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
         const orderSigner = new OrderSigner(alice);
-
-        const hash = orderSigner.getOrderHash(order);
         const signature = orderSigner.signOrder(order);
 
         expect(
@@ -168,8 +165,6 @@ describe("Order Signer", () => {
     it("should not verify hash (off-chain) to given address secp256k1 by verifyUsingOrder method", async () => {
         const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
         const orderSigner = new OrderSigner(alice);
-
-        const hash = orderSigner.getOrderHash(order);
         const signature = orderSigner.signOrder(order);
 
         expect(

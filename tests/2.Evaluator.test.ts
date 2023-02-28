@@ -53,9 +53,9 @@ describe("Evaluator", () => {
                 const details = await onChain.getPerpDetails(
                     onChain.getPerpetualID()
                 );
-                expect(
-                    (details.checks as any)["fields"]["minPrice"]
-                ).to.be.equal(toBigNumberStr(0.02));
+                expect(details.checks["fields"]["minPrice"]).to.be.equal(
+                    toBigNumberStr(0.02)
+                );
             });
 
             it("should revert as min price can not be set to zero", async () => {
@@ -88,9 +88,9 @@ describe("Evaluator", () => {
                 const details = await onChain.getPerpDetails(
                     onChain.getPerpetualID()
                 );
-                expect(
-                    (details.checks as any)["fields"]["maxPrice"]
-                ).to.be.equal(toBigNumberStr(20000));
+                expect(details.checks["fields"]["maxPrice"]).to.be.equal(
+                    toBigNumberStr(20000)
+                );
             });
 
             it("should revert when setting max price < min price", async () => {

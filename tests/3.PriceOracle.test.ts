@@ -1,6 +1,5 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-
 import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     readFile,

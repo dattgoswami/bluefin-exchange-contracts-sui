@@ -1,5 +1,4 @@
 import { SuiEventEnvelope } from "@mysten/sui.js";
-import { stringify } from "querystring";
 import { EventQueueData } from "../Interfaces";
 import { log } from "./logger";
 

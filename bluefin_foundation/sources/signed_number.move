@@ -137,19 +137,20 @@ module bluefin_foundation::signed_number {
     }
 
     public fun gte_uint(a:Number, num: u128): bool {
-        if (!a.sign){
-            return false
-        }
-        else if (a.value >= num ){
-            return true
-        }
-        else {
-            return false
-        }
+        return if (!a.sign) { false } else { a.value >= num }
     }
 
+    public fun gt_uint(a:Number, num: u128): bool {
+        return if (!a.sign) { false } else { a.value > num }
+    }
+
+    
     public fun lt_uint(a:Number, num: u128): bool {
         return if (!a.sign) { true } else { a.value < num }
+    }
+
+    public fun lte_uint(a:Number, num: u128): bool {
+        return if (!a.sign) { true } else { a.value <= num }
     }
 
     public fun gte(a:Number, b: Number): bool {

@@ -44,7 +44,7 @@ module bluefin_foundation::isolated_liquidation {
         quantity: u128,
         // leverage for taker/liquidator
         leverage: u128,
-        // if true, will only liquidate if specified quantity is available to liquidate, else revert
+        // if true, will revert if maker's position is less than the amount
         allOrNothing: bool
     }
 
@@ -88,7 +88,7 @@ module bluefin_foundation::isolated_liquidation {
         // liquidatee, maker must have a position in table
         assert!(
             table::contains(positionsTable, data.liquidatee), 
-            error::user_has_no_position_in_table(1));
+            error::user_has_no_position_in_table(0));
 
         // verify pre-trade checks
         evaluator::verify_min_max_price(tradeChecks, oraclePrice);
@@ -245,7 +245,7 @@ module bluefin_foundation::isolated_liquidation {
         mmr:u128
     ){
 
-        assert!(position::qPos(makerPos) > 0, error::liquidatee_has_no_position());
+        assert!(position::qPos(makerPos) > 0, error::user_position_size_is_zero(0));
 
         assert!(
             position::is_undercollat(makerPos, price, mmr),

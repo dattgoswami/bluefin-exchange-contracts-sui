@@ -5,11 +5,7 @@ export const expect = chai.expect;
 
 import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
 import { TestPositionExpect } from "./interfaces";
-import {
-    getExpectedTestPosition,
-    printPosition,
-    toExpectedPositionFormat
-} from "./utils";
+import { getExpectedTestPosition, toExpectedPositionFormat } from "./utils";
 import {
     OnChainCalls,
     Transaction,
@@ -17,7 +13,6 @@ import {
     UserPositionExtended
 } from "../../src";
 import BigNumber from "bignumber.js";
-import { bigNumber } from "../../src/library";
 
 export function expectTxToSucceed(txResponse: SuiExecuteTransactionResponse) {
     const status = Transaction.getStatus(txResponse);

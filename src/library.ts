@@ -36,7 +36,9 @@ export function toBigNumberStr(
 }
 
 export function toBaseNumber(val: BigNumberable, decimals = 3): number {
-    return Number(new BigNumber(val).shiftedBy(-BASE_DECIMALS).toFixed(3));
+    return Number(
+        new BigNumber(val).shiftedBy(-BASE_DECIMALS).toFixed(decimals)
+    );
 }
 
 export function bnToHex(bn: BigNumber) {
@@ -70,5 +72,5 @@ export function SignedNumberToBigNumberStr(number: SignedNumber, decimals = 2) {
 }
 
 export function SignedNumberToBaseNumber(number: SignedNumber, decimals = 3) {
-    return toBaseNumber(SignedNumberToBigNumber(number));
+    return toBaseNumber(SignedNumberToBigNumber(number), decimals);
 }

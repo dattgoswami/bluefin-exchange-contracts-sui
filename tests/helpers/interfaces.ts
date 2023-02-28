@@ -11,3 +11,40 @@ export interface TestPositionExpect {
     bankBalance: BigNumber;
     pnl: BigNumber;
 }
+
+export interface expectedPosition {
+    mro: number;
+    oiOpen: number;
+    qPos: number;
+    margin: number;
+    marginRatio: number;
+    pPos: number;
+    bankBalance?: number;
+    pnl?: number;
+}
+
+export interface TestCase {
+    pOracle?: number;
+    tradeType?: string;
+    price?: number;
+    size?: number;
+    leverage?: number;
+    isTaker?: boolean;
+    settlementAmount?: number;
+    addMargin?: number;
+    removeMargin?: number;
+    adjustLeverage?: number;
+    settlementAmtDueByMaker?: number;
+    expectError?: number;
+    expectMaker?: expectedPosition;
+    expectTaker?: expectedPosition;
+    expectLiquidator?: expectedPosition;
+    expectCat?: expectedPosition;
+    expectSystem?: {
+        fee?: number;
+        perpetual?: number;
+        insurancePool?: number;
+    };
+}
+
+export type TestCaseJSON = { [key: string]: TestCase[] };

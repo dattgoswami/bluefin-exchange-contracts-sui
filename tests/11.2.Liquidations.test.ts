@@ -2,9 +2,9 @@ import { DEFAULT } from "../src/defaults";
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
 import { MarketDetails } from "../src";
-import { postDeployment } from "./helpers/utils";
+import { TestCaseJSON } from "./helpers/interfaces";
 
-const liquidationTests = {
+const liquidationTests: TestCaseJSON = {
     "Test #1 Long Position + Full Liquidation": [
         {
             tradeType: "normal",
@@ -439,7 +439,7 @@ const liquidationTests = {
                 }
             },
             {
-                tradeType: "filler",
+                tradeType: "liq_filler",
                 pOracle: 100,
                 price: 100,
                 size: 5,
@@ -509,7 +509,7 @@ const liquidationTests = {
                 }
             },
             {
-                tradeType: "filler",
+                tradeType: "liq_filler",
                 pOracle: 102,
                 price: 100,
                 size: -10,
@@ -578,7 +578,7 @@ const liquidationTests = {
             }
         },
         {
-            tradeType: "filler",
+            tradeType: "liq_filler",
             pOracle: 101,
             price: 100,
             size: -20,
@@ -648,7 +648,7 @@ const liquidationTests = {
                 }
             },
             {
-                tradeType: "filler",
+                tradeType: "liq_filler",
                 pOracle: 100,
                 price: 100,
                 size: 20,
@@ -718,7 +718,7 @@ const liquidationTests = {
                 }
             },
             {
-                tradeType: "filler",
+                tradeType: "liq_filler",
                 pOracle: 101,
                 price: 100,
                 size: -4,
@@ -787,7 +787,7 @@ const liquidationTests = {
             }
         },
         {
-            tradeType: "filler",
+            tradeType: "liq_filler",
             pOracle: 100,
             price: 100,
             size: 4,
@@ -956,5 +956,5 @@ describe("Liquidation Trades", () => {
         feePool: DEFAULT.FEE_POOL_ADDRESS
     };
 
-    executeTests(liquidationTests, marketConfig, postDeployment);
+    executeTests(liquidationTests, marketConfig);
 });

@@ -196,9 +196,6 @@ module bluefin_foundation::error {
         return 500
     }
 
-    public fun user_position_size_is_zero(): u64 {
-        return 502
-    }
 
     public fun margin_must_be_less_than_max_removable_margin(): u64 {
         return 503
@@ -212,6 +209,9 @@ module bluefin_foundation::error {
         return 505 + offset
     }
 
+    public fun user_position_size_is_zero(offset: u64): u64 {
+        return 510 + offset
+    }
 
     // Margin Bank errors
     public fun not_enough_balance_in_margin_bank(offset: u64) : u64 {
@@ -228,10 +228,6 @@ module bluefin_foundation::error {
         return 604
     }
 
-    public fun liquidatee_has_no_position() : u64 {
-        return 700
-    }
-
     public fun liquidation_all_or_nothing_constraint_not_held() : u64 {
         return 701
     }
@@ -243,6 +239,23 @@ module bluefin_foundation::error {
     public fun liquidatee_above_mmr(): u64 {
         return 703
     }
+
+    public fun maker_is_not_underwater(): u64 {
+        return 800
+    }
+
+    public fun taker_is_under_underwater(): u64 {
+        return 801
+    }
+
+    public fun maker_taker_must_have_opposite_side_positions(): u64 {
+        return 802
+    }
+
+    public fun adl_all_or_nothing_constraint_can_not_be_held(isTaker:u64): u64 {
+        return 803 + isTaker
+    }
+
 
     
 }

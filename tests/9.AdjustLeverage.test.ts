@@ -1,10 +1,10 @@
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
 import { MarketDetails } from "../src";
-import { postDeployment } from "./helpers/utils";
+import { TestCaseJSON } from "./helpers/interfaces";
 
 // all tests are for taker
-const adjustLeverage = {
+const adjustLeverage: TestCaseJSON = {
     "Test # 1 - Long Position In Profit + Increase Leverage + Proceed": [
         {
             pOracle: 100,
@@ -280,9 +280,9 @@ const adjustLeverage = {
                 margin: 875,
                 marginRatio: 0.22549,
                 bankBalance: 950,
-                pPos: 100,
-                fee: 350
-            }
+                pPos: 100
+            },
+            expectSystem: { fee: 350 }
         },
         {
             pOracle: 80,
@@ -323,5 +323,5 @@ describe("Adjust Leverage", () => {
         maxAllowedPriceDiffInOP: toBigNumberStr(100)
     };
 
-    executeTests(adjustLeverage, marketConfig, postDeployment);
+    executeTests(adjustLeverage, marketConfig);
 });

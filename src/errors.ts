@@ -8,7 +8,7 @@ export const OWNERSHIP_ERROR = (
     );
 };
 
-export const ERROR_CODES = {
+export const ERROR_CODES: { [key: string]: string } = {
     "1": "Minimum order price must be > 0",
     "2": "Minimum trade price must be < maximum trade price",
     "3": "Maker: Trade price is < min allowed price",
@@ -73,16 +73,23 @@ export const ERROR_CODES = {
     "406": "Maker: MR < 0, please add margin to avoid liquidation",
     "407": "Taker: MR < 0, please add margin to avoid liquidation",
     "500": "Margin amount must be > 0",
-    "502": "User has zero sized position",
     "503": "Margin to be removed can not be > max removable margin amount",
     "504": "Leverage can not be set to zero",
-    "505": "User has no position object",
-    "506": "Maker has no position object",
-
+    "505": "Maker has no position object",
+    "506": "Taker has no position object",
+    "507": "User has no position object",
+    "510": "Maker position size is zero ",
+    "511": "Taker position size is zero ",
+    "512": "User position size is zero",
     "600": "Maker: Insufficient margin in margin bank",
     "601": "Taker: Insufficient margin in margin bank",
     "700": "Liquidation: Maker has no position to liquidate",
     "701": "Liquidation: allOrNothing is true and liquidation quantity < specified quantity",
     "702": "Liquidation: Liquidator leverage is invalid",
-    "703": "Liquidation: Cannot liquidate since maker is not undercollateralized"
+    "703": "Liquidation: Cannot liquidate since maker is not undercollateralized",
+    "800": "IsolatedADL: Cannot deleverage since maker is not underwater",
+    "801": "IsolatedADL: Cannot deleverage since taker is underwater",
+    "802": "IsolatedADL: Taker and maker must have same side positions",
+    "803": "IsolatedADL: allOrNothing is set and maker position is < quantity",
+    "804": "IsolatedADL: allOrNothing is set and taker position is < quantity"
 };

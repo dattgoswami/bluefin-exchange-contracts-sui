@@ -1,9 +1,9 @@
 import { MarketDetails } from "../src";
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
-import { postDeployment } from "./helpers/utils";
+import { TestCaseJSON } from "./helpers/interfaces";
 
-const marginTestsWithoutFee = {
+const marginTestsWithoutFee: TestCaseJSON = {
     "Test # 1 - Long Position + Long Trade (Increasing) + [MR > IMR] + Proceed":
         [
             {
@@ -1311,10 +1311,10 @@ describe("Margin Tests Without Fee", () => {
         mtbLong: toBigNumberStr(1),
         mtbShort: toBigNumberStr(0.99)
     };
-    executeTests(marginTestsWithoutFee, marketConfig, postDeployment);
+    executeTests(marginTestsWithoutFee, marketConfig);
 });
 
-const marginTestsWithFee = {
+const marginTestsWithFee: TestCaseJSON = {
     "Test # 1 - Long Position + Long Trade (Increasing) + [MR > IMR] + Proceed":
         [
             {
@@ -3097,5 +3097,5 @@ describe("Margin Tests With Fee", () => {
         takerFee: toBigNumberStr(0.05),
         maxAllowedPriceDiffInOP: toBigNumberStr(1000)
     };
-    executeTests(marginTestsWithFee, marketConfig, postDeployment);
+    executeTests(marginTestsWithFee, marketConfig);
 });

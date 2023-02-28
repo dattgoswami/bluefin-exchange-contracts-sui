@@ -1,9 +1,9 @@
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
 import { MarketDetails } from "../src/interfaces";
-import { postDeployment } from "./helpers/utils";
+import { TestCaseJSON } from "./helpers/interfaces";
 
-const tradesWithoutFee = {
+const tradesWithoutFee: TestCaseJSON = {
     "Long Position + Long Trade = Long Position": [
         {
             pOracle: 99,
@@ -1411,7 +1411,7 @@ const tradesWithoutFee = {
     ]
 };
 
-const tradesWithFee = {
+const tradesWithFee: TestCaseJSON = {
     "Test # 1 -   Long Position + Long Trade = Long Position": [
         {
             pOracle: 99,
@@ -2089,8 +2089,7 @@ const tradesWithFee = {
                 margin: 305,
                 marginRatio: 0.178451,
                 bankBalance: 1618.75,
-                pPos: 101.666667,
-                fee: 305
+                pPos: 101.666667
             },
             expectSystem: {
                 fee: 305
@@ -2189,8 +2188,7 @@ const tradesWithFee = {
                 margin: 200,
                 marginRatio: 0.191919,
                 bankBalance: 1650,
-                pPos: 100,
-                fee: 200
+                pPos: 100
             },
             expectSystem: {
                 fee: 200
@@ -2485,8 +2483,7 @@ const tradesWithFee = {
                 margin: 200,
                 marginRatio: 0.188119,
                 bankBalance: 1650,
-                pPos: 100,
-                fee: 200
+                pPos: 100
             },
             expectSystem: {
                 fee: 200
@@ -3364,7 +3361,7 @@ describe("Trades Without Fee", () => {
         makerFee: toBigNumberStr(0),
         takerFee: toBigNumberStr(0)
     };
-    executeTests(tradesWithoutFee, marketConfig, postDeployment);
+    executeTests(tradesWithoutFee, marketConfig);
 });
 
 describe("Trades With Fee", () => {
@@ -3372,5 +3369,5 @@ describe("Trades With Fee", () => {
         makerFee: toBigNumberStr(0.05),
         takerFee: toBigNumberStr(0.15)
     };
-    executeTests(tradesWithFee, marketConfig, postDeployment);
+    executeTests(tradesWithFee, marketConfig);
 });

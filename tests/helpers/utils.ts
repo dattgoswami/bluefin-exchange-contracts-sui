@@ -2,8 +2,7 @@ import { RawSigner } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
 import { Balance } from "../../src/classes/Balance";
 import { OnChainCalls } from "../../src/classes/OnChainCalls";
-import { UserPosition, UserPositionExtended } from "../../src/interfaces";
-import { BASE_DECIMALS, bigNumber, toBaseNumber } from "../../src/library";
+import { BASE_DECIMALS, bigNumber } from "../../src/library";
 import { getSignerSUIAddress, requestGas } from "../../src/utils";
 import { TEST_WALLETS } from "./accounts";
 import { TestPositionExpect } from "./interfaces";
@@ -56,13 +55,4 @@ export function toExpectedPositionFormat(
             : bigNumber(0),
         pnl: args?.pnl ? args?.pnl.shiftedBy(-BASE_DECIMALS) : bigNumber(0)
     } as TestPositionExpect;
-}
-
-export function printPosition(position: UserPosition | UserPositionExtended) {
-    console.log("========= User Position =========");
-    console.log("isPosPositive:", position.isPosPositive);
-    console.log("margin:", toBaseNumber(position.margin));
-    console.log("oiOpen:", toBaseNumber(position.oiOpen));
-    console.log("qPos:", toBaseNumber(position.qPos));
-    console.log("mro:", toBaseNumber(position.mro));
 }

@@ -102,10 +102,12 @@ module bluefin_foundation::position {
     public fun set_qPos(position:&mut UserPosition, qPos:u128) {
         position.qPos = qPos;
 
-        // if new position size is zero we are setting isPosPositive to false
-        // this is what default value for isPosPositive is
         if(qPos == 0){
+            // if new position size is zero we are setting isPosPositive to false
+            // this is what default value for isPosPositive is
             set_isPosPositive(position, false);
+            // reset mro to 0
+            set_mro(position, 0);
         };
 
     }

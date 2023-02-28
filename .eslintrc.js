@@ -11,5 +11,6 @@ module.exports = {
     ecmaVersion: "latest",
   },
   plugins: ["@typescript-eslint"],
+  ignorePatterns: ["scripts/debug.ts"],
   rules: {},
 };

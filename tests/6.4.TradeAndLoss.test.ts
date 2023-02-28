@@ -1,9 +1,9 @@
 import { toBigNumberStr } from "../src/library";
 import { MarketDetails } from "../src";
 import { executeTests } from "./helpers/executor";
-import { postDeployment } from "./helpers/utils";
+import { TestCaseJSON } from "./helpers/interfaces";
 
-const lossTests = {
+const lossTests: TestCaseJSON = {
     "Test # 69 - Reducing Long Position, abs.Loss > Margin  + Error": [
         {
             pOracle: 100,
@@ -369,5 +369,5 @@ describe("More Loss Than Margin", () => {
         takerFee: toBigNumberStr(0.05),
         maxAllowedPriceDiffInOP: toBigNumberStr(1000)
     };
-    executeTests(lossTests, marketConfig, postDeployment);
+    executeTests(lossTests, marketConfig);
 });

@@ -2,6 +2,18 @@
   "name": "bluefin-exchange-contracts-sui",
   "description": "Repository containing Bluefin core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.",
   "version": "1.0.0",
+  "scripts": {
+    "build": "sui move build --path bluefin_foundation --skip-fetch-latest-git-deps",
+    "deploy": "ts-node ./scripts/deploy/full.ts",
+    "deploy:package": "ts-node ./scripts/deploy/package.ts",
+    "deploy:market": "ts-node ./scripts/deploy/market.ts",
+    "faucet": "ts-node ./scripts/faucet.ts",
+    "debug": "ts-node ./scripts/debug.ts",
+    "test": "ts-mocha --no-timeout tests/*.test.ts",
+    "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
+    "prepare": "husky install",
+    "eslint:errors": "yarn eslint --fix --cache --max-warnings=-1 ."
+  },
   "directories": {
     "test": "tests"
   },
@@ -37,18 +49,6 @@
     "ts-mocha": "^10.0.0",
     "ts-node": "^10.9.1",
     "typescript": "*"
-  },
-  "scripts": {
-    "build": "sui move build --path bluefin_foundation --skip-fetch-latest-git-deps",
-    "deploy": "ts-node ./scripts/deploy/full.ts",
-    "deploy:package": "ts-node ./scripts/deploy/package.ts",
-    "deploy:market": "ts-node ./scripts/deploy/market.ts",
-    "faucet": "ts-node ./scripts/faucet.ts",
-    "debug": "ts-node ./scripts/debug.ts",
-    "test": "ts-mocha --no-timeout tests/*.test.ts",
-    "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
-    "prepare": "husky install",
-    "eslint:errors": "yarn eslint --fix --max-warnings=-1 ."
   },
   "repository": {
     "type": "git",

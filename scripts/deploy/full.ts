@@ -8,7 +8,7 @@ import {
     getDeploymentData,
     createMarket
 } from "../../src/utils";
-import { Client, OnChainCalls, Transaction } from "../../src/classes";
+import { Client, Transaction } from "../../src/classes";
 import { DeploymentConfigs } from "../../src/DeploymentConfig";
 
 const provider = getProvider(

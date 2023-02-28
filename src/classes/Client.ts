@@ -5,7 +5,7 @@ import { wallet } from "../interfaces";
 export class Client {
     static createWallet(): wallet {
         const phrase = execCommand("sui client new-address secp256k1");
-        const match = phrase.match(/(?<=\[)(.*?)(?=\])/g);
+        const match = phrase.match(/(?<=\[)(.*?)(?=\])/g) as RegExpMatchArray;
         return { address: match[0], phrase: match[1] } as wallet;
     }
 

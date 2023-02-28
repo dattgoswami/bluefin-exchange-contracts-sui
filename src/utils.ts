@@ -36,12 +36,14 @@ export function execCommand(command: string) {
     return execSync(command, { encoding: "utf-8" });
 }
 
-export function writeFile(filePath: string, jsonData: any): any {
+export function writeFile(filePath: string, jsonData: any) {
     fs.writeFileSync(filePath, JSON.stringify(jsonData));
 }
 
 export function readFile(filePath: string): any {
-    return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath)) : {};
+    return fs.existsSync(filePath)
+        ? JSON.parse(fs.readFileSync(filePath).toString())
+        : {};
 }
 
 export function getProvider(

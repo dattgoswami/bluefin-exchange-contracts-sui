@@ -14,19 +14,19 @@ export const TEST_WALLETS: wallet[] = [
     }
 ];
 
-export interface TestAccount {
+export interface Account {
     signer: RawSigner;
     keyPair: Keypair;
     address: string;
 }
 
 export interface MakerTakerAccounts {
-    maker: TestAccount;
-    taker: TestAccount;
+    maker: Account;
+    taker: Account;
 }
 
-export function getTestAccounts(provider: JsonRpcProvider): TestAccount[] {
-    const accounts: TestAccount[] = [];
+export function getTestAccounts(provider: JsonRpcProvider): Account[] {
+    const accounts: Account[] = [];
 
     for (const wallet of TEST_WALLETS) {
         accounts.push({
@@ -43,19 +43,9 @@ export function getMakerTakerAccounts(
     createNew = false
 ): MakerTakerAccounts {
     if (createNew) {
-        const w1 = Client.createWallet();
-        const w2 = Client.createWallet();
         return {
-            maker: {
-                signer: getSignerFromSeed(w1.phrase, provider),
-                keyPair: getKeyPairFromSeed(w1.phrase),
-                address: w1.address
-            },
-            taker: {
-                signer: getSignerFromSeed(w2.phrase, provider),
-                keyPair: getKeyPairFromSeed(w2.phrase),
-                address: w2.address
-            }
+            maker: createAccount(provider),
+            taker: createAccount(provider)
         };
     } else {
         return {
@@ -71,4 +61,13 @@ export function getMakerTakerAccounts(
             }
         };
     }
+}
+
+export function createAccount(provider: JsonRpcProvider): Account {
+    const wallet = Client.createWallet();
+    return {
+        signer: getSignerFromSeed(wallet.phrase, provider),
+        keyPair: getKeyPairFromSeed(wallet.phrase),
+        address: wallet.address
+    };
 }

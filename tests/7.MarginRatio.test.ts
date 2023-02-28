@@ -1,9 +1,9 @@
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
 import { MarketDetails } from "../src";
-import { postDeployment } from "./helpers/utils";
+import { TestCaseJSON } from "./helpers/interfaces";
 
-const mrTests = {
+const mrTests: TestCaseJSON = {
     "Test # 1 - Case I: Long position, Long Order = Error on 3rd order": [
         {
             pOracle: 100,
@@ -1035,5 +1035,5 @@ describe("Margin Ratio", () => {
         tickSize: toBigNumberStr(0.0000001),
         maxAllowedPriceDiffInOP: toBigNumberStr(100)
     };
-    executeTests(mrTests, marketConfig, postDeployment);
+    executeTests(mrTests, marketConfig);
 });

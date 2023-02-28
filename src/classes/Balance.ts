@@ -1,6 +1,6 @@
 import BigNumber from "bignumber.js";
 import { UserPosition, UserPositionExtended } from "../interfaces";
-import { BigNumberable, BIGNUMBER_BASE } from "../library";
+import { BigNumberable, BIGNUMBER_BASE, toBaseNumber } from "../library";
 
 export class Balance {
     public mro: BigNumber;
@@ -51,11 +51,11 @@ export class Balance {
 
         let marginRatio;
         const balance = price.times(this.qPos).dividedBy(BIGNUMBER_BASE);
+
         if (this.isPosPositive) {
             // long position
             const debt = this.oiOpen.minus(this.margin).minus(settlementAmount);
             const debtRatio = debt.times(BIGNUMBER_BASE).dividedBy(balance); // if this ratio exceeds 1 it means that the exchange is underwater.
-
             // It must be below 1 - maintenance ratio
             marginRatio = BIGNUMBER_BASE.minus(debtRatio);
         } else {
@@ -65,5 +65,13 @@ export class Balance {
             marginRatio = debtRatio.minus(BIGNUMBER_BASE);
         }
         return marginRatio;
+    }
+
+    public printPosition() {
+        console.log("isPosPositive:", this.isPosPositive);
+        console.log("margin:", toBaseNumber(this.margin));
+        console.log("oiOpen:", toBaseNumber(this.oiOpen));
+        console.log("qPos:", toBaseNumber(this.qPos));
+        console.log("mro:", toBaseNumber(this.mro));
     }
 }

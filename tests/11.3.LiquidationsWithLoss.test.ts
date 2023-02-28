@@ -2,9 +2,9 @@ import { DEFAULT } from "../src/defaults";
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
 import { MarketDetails } from "../src";
-import { postDeployment } from "./helpers/utils";
+import { TestCaseJSON } from "./helpers/interfaces";
 
-const tests = {
+const tests: TestCaseJSON = {
     "Test #1-Long Liquidation (Full) , Liquidator reduces with Loss > Margin": [
         {
             tradeType: "normal",
@@ -14,7 +14,7 @@ const tests = {
             leverage: 4
         },
         {
-            tradeType: "filler",
+            tradeType: "liq_filler",
             pOracle: 100,
             price: 100,
             size: -14,
@@ -37,7 +37,7 @@ const tests = {
             leverage: 4
         },
         {
-            tradeType: "filler",
+            tradeType: "liq_filler",
             pOracle: 100,
             price: 100,
             size: -10,
@@ -60,7 +60,7 @@ const tests = {
             leverage: 4
         },
         {
-            tradeType: "filler",
+            tradeType: "liq_filler",
             pOracle: 100,
             price: 100,
             size: -6,
@@ -84,7 +84,7 @@ const tests = {
                 leverage: 4
             },
             {
-                tradeType: "filler",
+                tradeType: "liq_filler",
                 pOracle: 700,
                 price: 700,
                 size: 14,
@@ -107,7 +107,7 @@ const tests = {
             leverage: 4
         },
         {
-            tradeType: "filler",
+            tradeType: "liq_filler",
             pOracle: 700,
             price: 700,
             size: 10,
@@ -130,7 +130,7 @@ const tests = {
             leverage: 4
         },
         {
-            tradeType: "filler",
+            tradeType: "liq_filler",
             pOracle: 700,
             price: 700,
             size: 6,
@@ -161,5 +161,5 @@ describe("Liquidation Trades with Loss > Margin", () => {
         feePool: DEFAULT.FEE_POOL_ADDRESS
     };
 
-    executeTests(tests, marketConfig, postDeployment);
+    executeTests(tests, marketConfig);
 });

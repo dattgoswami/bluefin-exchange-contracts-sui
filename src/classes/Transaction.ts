@@ -2,14 +2,10 @@ import {
     SuiExecuteTransactionResponse,
     getExecutionStatusError
 } from "@mysten/sui.js";
-import { Object, UserPositionExtended } from "../interfaces";
+import { UserPositionExtended } from "../interfaces";
 import { ERROR_CODES } from "../errors";
 import BigNumber from "bignumber.js";
-import {
-    bigNumber,
-    SignedNumberToBigNumber,
-    SignedNumberToBigNumberStr
-} from "../library";
+import { SignedNumberToBigNumber } from "../library";
 
 export class Transaction {
     static getStatus(txResponse: SuiExecuteTransactionResponse) {

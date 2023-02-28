@@ -114,7 +114,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[505]);
+        expect(Transaction.getError(txResponse), ERROR_CODES[510]);
     });
 
     it("should revert as quantity to be liquidated < min allowed quantity ", async () => {
@@ -160,6 +160,47 @@ describe("Liquidation Trade Method", () => {
 
         expectTxToFail(txResponse);
         expect(Transaction.getError(txResponse), ERROR_CODES[21]);
+    });
+
+    it("should revert as liquidatee(maker) has zero sized position", async () => {
+        const accounts = getMakerTakerAccounts(provider, true);
+        // TODO fund accounts with USDC over here
+
+        // open a position between the accounts
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            accounts.maker.keyPair,
+            accounts.taker.keyPair,
+            { ...order, maker: accounts.maker.address }
+        );
+        const tx1 = await onChain.trade(trade);
+        expectTxToSucceed(tx1);
+
+        // close position
+        const trade2 = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            accounts.taker.keyPair,
+            accounts.maker.keyPair,
+            { ...order, maker: accounts.taker.address }
+        );
+        const tx2 = await onChain.trade(trade2);
+        expectTxToSucceed(tx2);
+
+        // try to deleverage
+        const txResponse = await onChain.liquidate(
+            {
+                liquidatee: accounts.maker.address, // has zero sized position
+                quantity: toBigNumberStr(1),
+                leverage: toBigNumberStr(1),
+                liquidator: ownerAddress // owner is the liquidator
+            },
+            ownerSigner
+        );
+
+        expectTxToFail(txResponse);
+        expect(Transaction.getError(txResponse), ERROR_CODES[510]);
     });
 
     it("should revert as liquidatee(alice) is above mmr - can not be liquidated", async () => {
@@ -280,7 +321,7 @@ describe("Liquidation Trade Method", () => {
         expect(alicePosition.qPos).to.be.equal(toBigNumberStr(0));
     });
 
-    it("should partially liquidate the liquidatee", async () => {
+    it("should partially liquidate the taker(bob)", async () => {
         // deploy market
         const localDeployment = deployment;
 
@@ -307,7 +348,7 @@ describe("Liquidation Trade Method", () => {
             price: 100,
             isBuy: true,
             leverage: 10,
-            makerAddress: await makerTaker.maker.address
+            makerAddress: makerTaker.maker.address
         });
 
         const trade = await Trader.setupNormalTrade(
@@ -323,7 +364,7 @@ describe("Liquidation Trade Method", () => {
 
         // ==================================================
 
-        // set oracle price to 15, taker becomes liquidate-able
+        // set oracle price to 115, taker becomes liquidate-able
         await onChain.updateOraclePrice({
             price: toBigNumberStr(115)
         });

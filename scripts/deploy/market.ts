@@ -1,13 +1,12 @@
 import {
     getSignerSUIAddress,
     writeFile,
-    getCreatedObjects,
     getSignerFromSeed,
     getProvider,
     getDeploymentData,
     createMarket
 } from "../../src/utils";
-import { Client, OnChainCalls } from "../../src/classes";
+import { Client } from "../../src/classes";
 import { DeploymentConfigs, market } from "../../src/DeploymentConfig";
 
 const provider = getProvider(
@@ -37,8 +36,6 @@ async function main() {
     const { objects } = await import(path);
 
     const deploymentData = await getDeploymentData(deployerAddress, objects);
-
-    const onChain = new OnChainCalls(signer, deploymentData);
 
     // create perpetual
     const marketConfig = DeploymentConfigs.markets.filter((data) => {

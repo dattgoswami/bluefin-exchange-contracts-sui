@@ -47,7 +47,7 @@ describe("Margin Bank", () => {
 
     describe("Deposits and Withdraw", () => {
         it("should deposit 10K USDC to margin bank for alice", async () => {
-            const receipt = await onChain.mintUSDC(
+            await onChain.mintUSDC(
                 {
                     amount: toBigNumberStr("10000", 6),
                     to: aliceAddress
@@ -88,7 +88,7 @@ describe("Margin Bank", () => {
         });
 
         it("should withdraw deposited USDC from margin bank from alice account", async () => {
-            const receipt = await onChain.mintUSDC(
+            await onChain.mintUSDC(
                 {
                     amount: toBigNumberStr("10000", 6),
                     to: aliceAddress
@@ -169,7 +169,7 @@ describe("Margin Bank", () => {
         });
 
         it("should revert when guardian disabled withdraw", async () => {
-            const receipt = await onChain.mintUSDC(
+            await onChain.mintUSDC(
                 {
                     amount: toBigNumberStr("10000", 6),
                     to: aliceAddress

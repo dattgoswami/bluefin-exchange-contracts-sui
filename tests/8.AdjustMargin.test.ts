@@ -1,10 +1,10 @@
 import { toBigNumberStr } from "../src/library";
 import { executeTests } from "./helpers/executor";
 import { MarketDetails } from "../src";
-import { postDeployment } from "./helpers/utils";
+import { TestCaseJSON } from "./helpers/interfaces";
 
 // all tests are for taker
-const adjustMargin = {
+const adjustMargin: TestCaseJSON = {
     "Test # 1 - Long Position Add Margin + [MR > IMR] + Proceed": [
         {
             pOracle: 100,
@@ -836,5 +836,5 @@ describe("Adjust Margin", () => {
         maxAllowedPriceDiffInOP: toBigNumberStr(100)
     };
 
-    executeTests(adjustMargin, marketConfig, postDeployment);
+    executeTests(adjustMargin, marketConfig);
 });
