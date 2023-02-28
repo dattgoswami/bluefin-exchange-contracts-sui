@@ -6,13 +6,15 @@ on:
 concurrency:
   group: sui-build-cd
 jobs:
-    build:
-        runs-on: self-hosted # name of selfhosted EC2
-        steps:
-            - uses: actions/checkout@v3
-              with:
-                  token: ${{ secrets.PAT }}
-            - name: install dependencies
-              run: yarn
-            - name: start building
-              run: yarn build
+  build:
+    runs-on: self-hosted # name of selfhosted EC2
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+      - name: install dependencies
+        run: yarn
+      - name: running ESLint
+        run: yarn eslint:errors
+      - name: start building
+        run: yarn build

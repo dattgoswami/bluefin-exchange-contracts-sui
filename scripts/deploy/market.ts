@@ -33,7 +33,8 @@ async function main() {
     if (!Client.switchAccount(deployerAddress)) {
         process.exit(1);
     }
-    const objects = require("../../deployment.json")["objects"];
+    const path = "../../deployment.json";
+    const { objects } = await import(path);
 
     const deploymentData = await getDeploymentData(deployerAddress, objects);
 

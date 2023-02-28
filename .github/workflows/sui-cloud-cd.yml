@@ -7,18 +7,20 @@ concurrency:
   group: sui-build-cd
   cancel-in-progress: true # in case merged is performed immediately
 jobs:
-    build:
-        if: github.event.pull_request.merged == true
-        runs-on: self-hosted # name of selfhosted EC2
-        steps:
-            - uses: actions/checkout@v3
-              with:
-                  token: ${{ secrets.PAT }}
-            - name: install dependencies
-              run: yarn
-            - name: start building
-              run: yarn build
-            # - name: copying env
-            # - run: mv .env.example .env
-            # - name: deploying package
-            # - run: yarn deploy
+  build:
+    if: github.event.pull_request.merged == true
+    runs-on: self-hosted # name of selfhosted EC2
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+      - name: install dependencies
+        run: yarn
+      - name: running ESLint
+        run: yarn eslint:errors
+      - name: start building
+        run: yarn build
+      # - name: copying env
+      # - run: mv .env.example .env
+      # - name: deploying package
+      # - run: yarn deploy

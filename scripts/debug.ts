@@ -16,7 +16,7 @@ import { OnChainCalls } from "../src/classes/OnChainCalls";
 import { TEST_WALLETS } from "../tests/helpers/accounts";
 import { Transaction } from "../src";
 
-let deployment = readFile(DeploymentConfig.filePath);
+const deployment = readFile(DeploymentConfig.filePath);
 
 const provider = getProvider(
     DeploymentConfig.rpcURL,

@@ -28,8 +28,8 @@ import { Client, OnChainCalls, Transaction } from "./classes";
 import { network, moduleName, packageName } from "./DeploymentConfig";
 import { MarketDetails } from "./interfaces/market";
 
-const { execSync } = require("child_process");
-const fs = require("fs");
+import { execSync } from "child_process";
+import fs from "fs";
 config({ path: ".env" });
 
 export function execCommand(command: string) {

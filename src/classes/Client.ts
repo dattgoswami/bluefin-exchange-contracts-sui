@@ -9,7 +9,7 @@ export class Client {
         return { address: match[0], phrase: match[1] } as wallet;
     }
 
-    static switchEnv(env: String): boolean {
+    static switchEnv(env: string): boolean {
         try {
             // try to switch to env if already exists
             execCommand(`sui client switch --env ${env}`);

@@ -42,7 +42,8 @@
     "debug": "ts-node ./scripts/debug.ts",
     "test": "ts-mocha --no-timeout tests/*.test.ts",
     "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "eslint:errors": "yarn eslint --fix --cache --max-warnings=-1 ."
   },
   "repository": {
     "type": "git",

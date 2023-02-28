@@ -35,7 +35,7 @@ export function toBigNumberStr(
     return toBigNumber(val, base).toFixed(0);
 }
 
-export function toBaseNumber(val: BigNumberable, decimals: number = 3): Number {
+export function toBaseNumber(val: BigNumberable, decimals = 3): number {
     return Number(new BigNumber(val).shiftedBy(-BASE_DECIMALS).toFixed(3));
 }
 
@@ -65,16 +65,10 @@ export function SignedNumberToBigNumber(number: SignedNumber) {
     );
 }
 
-export function SignedNumberToBigNumberStr(
-    number: SignedNumber,
-    decimals: number = 2
-) {
+export function SignedNumberToBigNumberStr(number: SignedNumber, decimals = 2) {
     return SignedNumberToBigNumber(number).toFixed(decimals);
 }
 
-export function SignedNumberToBaseNumber(
-    number: SignedNumber,
-    decimals: number = 3
-) {
+export function SignedNumberToBaseNumber(number: SignedNumber, decimals = 3) {
     return toBaseNumber(SignedNumberToBigNumber(number));
 }

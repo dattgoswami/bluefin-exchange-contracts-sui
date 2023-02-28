@@ -76,7 +76,7 @@ export function expectPosition(
 export function expectTxToEmitEvent(
     txResponse: SuiExecuteTransactionResponse,
     eventName: string,
-    eventsCount: number = 1
+    eventsCount = 1
 ) {
     const events = Transaction.getEvents(txResponse, eventName);
 

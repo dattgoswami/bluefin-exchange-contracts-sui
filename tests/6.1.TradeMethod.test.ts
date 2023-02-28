@@ -23,7 +23,7 @@ const provider = getProvider(network.rpc, network.faucet);
 
 describe("Regular Trade Method", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
-    let deployment = readFile(DeploymentConfigs.filePath);
+    const deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls;
     let ownerAddress: string;
 

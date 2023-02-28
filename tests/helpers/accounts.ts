@@ -40,7 +40,7 @@ export function getTestAccounts(provider: JsonRpcProvider): TestAccount[] {
 
 export function getMakerTakerAccounts(
     provider: JsonRpcProvider,
-    createNew: boolean = false
+    createNew = false
 ): MakerTakerAccounts {
     if (createNew) {
         const w1 = Client.createWallet();

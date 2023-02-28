@@ -22,8 +22,10 @@ import { MarketDetails } from "../../src/interfaces";
 import { ERROR_CODES } from "../../src/errors";
 import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
-
+import { postDeployment } from "../helpers/utils";
 import { config } from "dotenv";
+
+import { RawSigner } from "@mysten/sui.js";
 config({ path: ".env" });
 
 const DEBUG = process.env.DEBUG == "true";
@@ -32,14 +34,17 @@ const provider = getProvider(network.rpc, network.faucet);
 const ownerKeyPair = getKeyPairFromSeed(DeploymentConfigs.deployer);
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const orderSigner = new OrderSigner(ownerKeyPair);
-let deployment = readFile(DeploymentConfigs.filePath);
+const deployment = readFile(DeploymentConfigs.filePath);
 let onChain: OnChainCalls;
 let liquidatorAddress: string;
 
 export async function executeTests(
-    testCases: Object,
+    testCases: object,
     marketConfig: MarketDetails,
-    postDeployment: Function
+    postDeployment: (
+        onChain: OnChainCalls,
+        ownerSigner: RawSigner
+    ) => Promise<void>
 ) {
     let MakerTakerAccounts: MakerTakerAccounts;
     let tx: SuiExecuteTransactionResponse = undefined as any;

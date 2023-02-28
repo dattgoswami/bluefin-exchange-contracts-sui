@@ -654,12 +654,12 @@ export class OnChainCalls {
     }
 
     // by default returns the perpetual id of 1st market
-    getPerpetualID(market: number = 0): string {
+    getPerpetualID(market = 0): string {
         return this.deployment["markets"][market]["Objects"]["Perpetual"]
             .id as string;
     }
 
-    getUpdatePriceOracleCap(market: number = 0): string {
+    getUpdatePriceOracleCap(market = 0): string {
         return this.deployment["markets"][market]["Objects"][
             "UpdatePriceOracleCap"
         ].id as string;

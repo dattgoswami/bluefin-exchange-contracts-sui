@@ -26,8 +26,8 @@ const provider = getProvider(
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Evaluator", () => {
-    let deployment = readFile(DeploymentConfigs.filePath);
-    let args = DeploymentConfigs.markets[0];
+    const deployment = readFile(DeploymentConfigs.filePath);
+    const args = DeploymentConfigs.markets[0];
     let onChain: OnChainCalls;
     let ownerAddress: string;
 
@@ -326,7 +326,7 @@ describe("Evaluator", () => {
 
         describe("OI Open", async () => {
             it("should set max Allowed OI Open values", async () => {
-                let maxLimit = [];
+                const maxLimit = [];
                 maxLimit.push(toBigNumberStr(10000));
                 maxLimit.push(toBigNumberStr(20000));
                 maxLimit.push(toBigNumberStr(30000));
@@ -350,7 +350,7 @@ describe("Evaluator", () => {
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
-                let maxLimit = [];
+                const maxLimit = [];
                 maxLimit.push(toBigNumberStr(10000));
                 maxLimit.push(toBigNumberStr(20000));
                 maxLimit.push(toBigNumberStr(30000));

@@ -30,11 +30,11 @@ const ownerKeyPair = getKeyPairFromSeed(DeploymentConfigs.deployer);
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Order Signer", () => {
-    let deployment = readFile(DeploymentConfigs.filePath);
+    const deployment = readFile(DeploymentConfigs.filePath);
     const order: Order = DEFAULT.ORDER;
     const orderSigner = new OrderSigner(ownerKeyPair);
 
-    let onChain: OnChainCalls = new OnChainCalls(ownerSigner, deployment);
+    const onChain: OnChainCalls = new OnChainCalls(ownerSigner, deployment);
 
     it("should not verify hash to given address secp256k1 when signed with different key", async () => {
         const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);

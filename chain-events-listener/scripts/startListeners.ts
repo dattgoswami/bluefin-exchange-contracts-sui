@@ -9,7 +9,7 @@ import { log } from "../src/utils/logger";
 import EventJson from "../configs/events.json";
 import { SuiEventFilter } from "@mysten/sui.js";
 
-let JSONData: ContractEventsConfig[] = EventJson;
+const JSONData: ContractEventsConfig[] = EventJson;
 
 const rpcURL = process.env.RPC_URL as string;
 

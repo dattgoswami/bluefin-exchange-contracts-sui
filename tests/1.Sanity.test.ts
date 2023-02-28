@@ -22,7 +22,7 @@ const provider = getProvider(
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Sanity Tests", () => {
-    let deployment = readFile(DeploymentConfigs.filePath);
+    const deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls;
     let ownerAddress: string;
 

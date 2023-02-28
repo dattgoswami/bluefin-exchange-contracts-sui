@@ -21,7 +21,7 @@ export class Transaction {
     // if no error returns error code as 0
     static getErrorCode(tx: SuiExecuteTransactionResponse): number {
         if (Transaction.getStatus(tx) == "failure") {
-            let error = getExecutionStatusError(tx) as string;
+            const error = getExecutionStatusError(tx) as string;
             return Number(
                 error.slice(error.lastIndexOf(",") + 1, error.length - 1)
             );
@@ -63,9 +63,9 @@ export class Transaction {
 
     static getCreatedObjects(
         tx: SuiExecuteTransactionResponse,
-        objectType: string = ""
-    ): Object[] {
-        const objects: Object[] = [];
+        objectType = ""
+    ): object[] {
+        const objects: object[] = [];
 
         const events = (tx as any).EffectsCert.effects.effects.events;
         for (const ev of events) {
@@ -78,7 +78,7 @@ export class Transaction {
                     objects.push({
                         id: obj["objectId"],
                         dataType: objType
-                    } as Object);
+                    } as object);
                 }
             }
         }

@@ -33,7 +33,7 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const testSigner = getSignerFromSeed(TEST_WALLETS[0].phrase, provider);
 
 describe("Price Oracle", () => {
-    let deployment = readFile(DeploymentConfigs.filePath);
+    const deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls;
     let ownerAddress: string;
 
