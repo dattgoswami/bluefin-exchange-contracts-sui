@@ -97,62 +97,46 @@ module bluefin_foundation::margin_bank {
     //===========================================================//
 
     /**
-     * @notice Deposits collateral token from caller's address to provided account address in the bank
-     * @dev amount is expected to be in 6 decimal units as the collateral token is USDC
+     * @notice Deposits collateral token from caller's address 
+     * to provided account address in the bank
+     * @dev amount is expected to be in 6 decimal units as 
+     * the collateral token is USDC
      */
-    public entry fun deposit_to_bank(bank: &mut Bank, account: address, coin: Coin<TUSDC>, ctx: &mut TxContext) {
+    public entry fun deposit_to_bank(bank: &mut Bank, destination: address, coin: Coin<TUSDC>, ctx: &mut TxContext) {
         // getting the sender address
         let sender = tx_context::sender(ctx);
 
         // getting the accounts table and coin balance
         let accounts = &mut bank.accounts;
-        let coin_balance = &mut bank.coinBalance;
 
         // getting the amount of the coin
         // * @dev convert 6 decimal unit amount to 9 decimals
         let amount = coin::value(&coin) * (1000 as u64);
                 
         // depositing the coin to the bank
-        coin::put(coin_balance, coin);
+        coin::put(&mut bank.coinBalance, coin);
 
         // initializing the balance of the account address if it doesn't exist
-        initialize_account(accounts, account, ctx);
+        initialize_account(accounts, destination, ctx);
+
         // initializing the balance of the sender address if it doesn't exist
         initialize_account(accounts, sender, ctx);
 
-        {
-            // getting the mut ref of  dest account address
-            let dest_account = table::borrow_mut(accounts, account);
+        // getting the mut ref of balance of the dest account address
+        let destBalance = &mut table::borrow_mut(accounts, destination).balance;
 
-            // getting the mut ref of balance of the dest account address
-            let dest_balance = &mut dest_account.balance;
-
-            // updating the balance
-            *dest_balance = (amount as u128) + *dest_balance;
-        };
-
-        // getting the ref of  dest account address
-        let dest_account = table::borrow(accounts, account);
-
-        // getting the ref of balance of the dest account address
-        let dest_balance = &dest_account.balance;
-
-        // getting the ref of src account address
-        let src_account = table::borrow(accounts, account);
-
-        // getting the ref of balance of the src account address
-        let src_balance = &src_account.balance;
-
+        // updating the balance
+        *destBalance = (amount as u128) + *destBalance;
 
         // emitting the balance balance update event
         emit(
             BankBalanceUpdate {
                 action: ACTION_DEPOSIT,
                 srcAddress: sender,
-                destAddress: account,
+                destAddress: destination,
                 amount: (amount as u128),
-                srcBalance: *src_balance,
-                destBalance: *dest_balance,
+                srcBalance: table::borrow(accounts, sender).balance,
+                destBalance: table::borrow(accounts, destination).balance,
             }
         );
     }
@@ -165,37 +149,29 @@ module bluefin_foundation::margin_bank {
         // getting the sender address
         let sender = tx_context::sender(ctx);
 
-        // getting withdrawal allowance flag from the bank
-        let is_withdrawal_allowed = bank.isWithdrawalAllowed;
-
         // checking if the withdrawal is allowed
-        assert!(is_withdrawal_allowed, error::withdrawal_is_not_allowed());
+        assert!(bank.isWithdrawalAllowed, error::withdrawal_is_not_allowed());
 
         // getting the accounts table and coin balance
         let accounts = &mut bank.accounts;
-        let coin_balance = &mut bank.coinBalance;
 
         // checking if the account exists
         assert!(table::contains(accounts, sender), error::not_enough_balance_in_margin_bank(3));
 
         // @dev convert amount to 9 decimal places
-        let e9_amount = amount * (1000 as u128);
-        {
-            // getting the mut ref of src account
-            let src_account = table::borrow_mut(accounts, sender);
+        let e9Amount = amount * (1000 as u128);
 
-            // getting the mut ref of balance of the src_account
-            let src_balance = &mut src_account.balance;
+        // getting the mut ref of balance of the src_account
+        let srcBalance = &mut table::borrow_mut(accounts, sender).balance;
 
-            // checking if the sender has enough balance
-            assert!(*src_balance >= e9_amount, error::not_enough_balance_in_margin_bank(3));
+        // checking if the sender has enough balance
+        assert!(*srcBalance >= e9Amount, error::not_enough_balance_in_margin_bank(3));
 
-            // updating the balance
-            *src_balance = *src_balance - e9_amount;   
-        };
+        // updating the balance
+        *srcBalance = *srcBalance - e9Amount;   
 
         // withdrawing the coin from the bank
-        let coin = coin::take(coin_balance, (amount as u64), ctx);
+        let coin = coin::take(&mut bank.coinBalance, (amount as u64), ctx);
 
         // transferring the coin to the destination account
         transfer::transfer(
@@ -203,27 +179,15 @@ module bluefin_foundation::margin_bank {
             destination
         );
 
-        // getting the ref of src account
-        let src_account = table::borrow(accounts, sender);
-
-        // getting the ref of balance of the src_account
-        let src_balance = &src_account.balance;
-
-        // getting the ref of dest account
-        let dest_account = table::borrow(accounts, destination);
-
-        // getting the ref of balance of the dest_account
-        let dest_balance = &dest_account.balance;
-
         // emitting the balance balance update event
         emit(
             BankBalanceUpdate {
                 action: ACTION_WITHDRAW,
                 srcAddress: sender,
                 destAddress: destination,
-                amount: e9_amount,
-                srcBalance: *src_balance,
-                destBalance: *dest_balance,
+                amount: e9Amount,
+                srcBalance: table::borrow(accounts, sender).balance,
+                destBalance: table::borrow(accounts, destination).balance,
             }
         );
 
@@ -238,7 +202,14 @@ module bluefin_foundation::margin_bank {
      * @dev bank operators i.e. perpetual and liquidation modules move funds during a trade between accounts
      *  
      */
-    public(friend) fun transfer_margin_to_account(bank: &mut Bank, source: address, destination: address, amount: u128, isTaker: u64, ctx: &mut TxContext){
+    public(friend) fun transfer_margin_to_account(
+        bank: &mut Bank, 
+        source: address, 
+        destination: address, 
+        amount: u128, 
+        isTaker: u64, 
+        ctx: &mut TxContext
+        ){
 
         // getting the accounts table
         let accounts = &mut bank.accounts;
@@ -248,44 +219,19 @@ module bluefin_foundation::margin_bank {
         initialize_account(accounts, destination, ctx);
 
         // getting the mut ref of balance of the source
-        let s_account = table::borrow(accounts, source);
-
-        // getting the ref of balance of the source account
-        let s_balance = &s_account.balance;
+        let sourceBalance = &mut table::borrow_mut(accounts, source).balance;
 
         // checking if the sender has enough balance
-        assert!(*s_balance >= amount, error::not_enough_balance_in_margin_bank(isTaker));
+        assert!(*sourceBalance >= amount, error::not_enough_balance_in_margin_bank(isTaker));
 
-        {
-            // getting the mut ref of balance of the source
-            let s_account = table::borrow_mut(accounts, source);
+        // reduce amount from source
+        *sourceBalance = *sourceBalance - amount;
 
-            // getting the mut ref of balance of the source account
-            let s_balance = &mut s_account.balance;
+        // getting the mut ref of balance of the destination
+        let destBalance = &mut table::borrow_mut(accounts, destination).balance;
 
-            // updating the balance 
-            *s_balance = *s_balance - amount;
-        };
-
-        {
-            // updating the balance of the destination
-            let d_account = table::borrow_mut(accounts, destination);
-
-            // getting the mut ref of balance of the destination account
-            let d_balance = &mut d_account.balance;
-
-            // updating the balance
-            *d_balance = (amount as u128) + *d_balance;
-        };
-
-        let s_account = table::borrow(accounts, source);
-        let d_account = table::borrow(accounts, destination);
-
-        // getting the ref of balance of the source
-        let s_balance = &s_account.balance;
-
-        // getting the ref of balance of the destination
-        let d_balance = &d_account.balance;
+        // increasing balance of desitnation
+        *destBalance = *destBalance + (amount as u128);
 
         // emitting the balance balance update event
         emit(
@@ -294,8 +240,8 @@ module bluefin_foundation::margin_bank {
                 srcAddress: source,
                 destAddress: destination,
                 amount: amount,
-                srcBalance: *s_balance,
-                destBalance: *d_balance,
+                srcBalance: table::borrow(accounts, source).balance,
+                destBalance: table::borrow(accounts, destination).balance
             }
         );
     }

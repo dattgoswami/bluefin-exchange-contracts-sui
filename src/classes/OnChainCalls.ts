@@ -73,7 +73,12 @@ export class OnChainCalls {
 
         const caller = signer ? signer : this.signer;
 
-        return this.signAndCall(caller, "create_perpetual", callArgs);
+        return this.signAndCall(
+            caller,
+            "create_perpetual",
+            callArgs,
+            "exchange"
+        );
     }
 
     public async setMinPrice(
@@ -92,7 +97,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minPrice));
 
-        return this.signAndCall(caller, "set_min_price", callArgs);
+        return this.signAndCall(caller, "set_min_price", callArgs, "exchange");
     }
 
     public async setMaxPrice(
@@ -111,7 +116,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxPrice));
 
-        return this.signAndCall(caller, "set_max_price", callArgs);
+        return this.signAndCall(caller, "set_max_price", callArgs, "exchange");
     }
 
     public async setStepSize(
@@ -130,7 +135,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.stepSize));
 
-        return this.signAndCall(caller, "set_step_size", callArgs);
+        return this.signAndCall(caller, "set_step_size", callArgs, "exchange");
     }
 
     public async setTickSize(
@@ -149,7 +154,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.tickSize));
 
-        return this.signAndCall(caller, "set_tick_size", callArgs);
+        return this.signAndCall(caller, "set_tick_size", callArgs, "exchange");
     }
 
     public async setMTBLong(
@@ -168,7 +173,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbLong));
 
-        return this.signAndCall(caller, "set_mtb_long", callArgs);
+        return this.signAndCall(caller, "set_mtb_long", callArgs, "exchange");
     }
 
     public async setMTBShort(
@@ -187,7 +192,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbShort));
 
-        return this.signAndCall(caller, "set_mtb_short", callArgs);
+        return this.signAndCall(caller, "set_mtb_short", callArgs, "exchange");
     }
 
     public async setMaxQtyLimit(
@@ -206,7 +211,12 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxQtyLimit));
 
-        return this.signAndCall(caller, "set_max_qty_limit", callArgs);
+        return this.signAndCall(
+            caller,
+            "set_max_qty_limit",
+            callArgs,
+            "exchange"
+        );
     }
 
     public async setMaxQtyMarket(
@@ -225,7 +235,12 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxQtyMarket));
 
-        return this.signAndCall(caller, "set_max_qty_market", callArgs);
+        return this.signAndCall(
+            caller,
+            "set_max_qty_market",
+            callArgs,
+            "exchange"
+        );
     }
 
     public async setMinQty(
@@ -244,7 +259,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minQty));
 
-        return this.signAndCall(caller, "set_min_qty", callArgs);
+        return this.signAndCall(caller, "set_min_qty", callArgs, "exchange");
     }
 
     public async setMaxAllowedOIOpen(
@@ -263,7 +278,12 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(args.maxLimit);
 
-        return this.signAndCall(caller, "set_max_oi_open", callArgs);
+        return this.signAndCall(
+            caller,
+            "set_max_oi_open",
+            callArgs,
+            "exchange"
+        );
     }
 
     public async setSettlementOperator(
@@ -283,7 +303,12 @@ export class OnChainCalls {
         callArgs.push(args.operator);
         callArgs.push(args.status);
 
-        return this.signAndCall(caller, "set_settlement_operator", callArgs);
+        return this.signAndCall(
+            caller,
+            "set_settlement_operator",
+            callArgs,
+            "exchange"
+        );
     }
 
     public async trade(
@@ -342,7 +367,7 @@ export class OnChainCalls {
                 : args.makerOrder.price.toFixed(0)
         );
 
-        return this.signAndCall(caller, "trade", callArgs);
+        return this.signAndCall(caller, "trade", callArgs, "exchange");
     }
 
     public async liquidate(
@@ -367,7 +392,7 @@ export class OnChainCalls {
         callArgs.push(args.leverage);
         callArgs.push(args.allOrNothing == true);
 
-        return this.signAndCall(caller, "liquidate", callArgs);
+        return this.signAndCall(caller, "liquidate", callArgs, "exchange");
     }
 
     public async deleverage(
@@ -390,7 +415,7 @@ export class OnChainCalls {
         callArgs.push(args.quantity);
         callArgs.push(args.allOrNothing == true);
 
-        return this.signAndCall(caller, "deleverage", callArgs);
+        return this.signAndCall(caller, "deleverage", callArgs, "exchange");
     }
 
     public async addMargin(
@@ -407,7 +432,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.amount));
 
-        return this.signAndCall(caller, "add_margin", callArgs);
+        return this.signAndCall(caller, "add_margin", callArgs, "exchange");
     }
 
     public async removeMargin(
@@ -424,7 +449,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.amount));
 
-        return this.signAndCall(caller, "remove_margin", callArgs);
+        return this.signAndCall(caller, "remove_margin", callArgs, "exchange");
     }
 
     public async adjustLeverage(
@@ -441,7 +466,12 @@ export class OnChainCalls {
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.leverage));
 
-        return this.signAndCall(caller, "adjust_leverage", callArgs);
+        return this.signAndCall(
+            caller,
+            "adjust_leverage",
+            callArgs,
+            "exchange"
+        );
     }
 
     public async updateOraclePrice(
@@ -464,7 +494,12 @@ export class OnChainCalls {
         );
         callArgs.push(args.price);
 
-        return this.signAndCall(caller, "set_oracle_price", callArgs);
+        return this.signAndCall(
+            caller,
+            "set_oracle_price",
+            callArgs,
+            "exchange"
+        );
     }
 
     public async updatePriceOracleOperator(
@@ -490,7 +525,12 @@ export class OnChainCalls {
 
         callArgs.push(args.operator);
 
-        return this.signAndCall(caller, "set_price_oracle_operator", callArgs);
+        return this.signAndCall(
+            caller,
+            "set_price_oracle_operator",
+            callArgs,
+            "exchange"
+        );
     }
 
     public async updatePriceOracleMaxAllowedPriceDifference(
@@ -512,7 +552,8 @@ export class OnChainCalls {
         return this.signAndCall(
             caller,
             "set_oracle_price_max_allowed_diff",
-            callArgs
+            callArgs,
+            "exchange"
         );
     }
 
@@ -520,13 +561,13 @@ export class OnChainCalls {
         caller: SignerWithProvider,
         method: string,
         callArgs: any[],
-        moduleName?: string
+        moduleName: string
     ): Promise<SuiExecuteTransactionResponse> {
         return caller.signAndExecuteTransaction({
             kind: "moveCall",
             data: {
                 packageObjectId: this.getPackageID(),
-                module: moduleName ? moduleName : this.getModuleName(),
+                module: moduleName,
                 function: method,
                 arguments: callArgs,
                 typeArguments: [],
@@ -572,7 +613,12 @@ export class OnChainCalls {
         );
         callArgs.push(args.coinID);
 
-        return this.signAndCall(caller, "deposit_to_bank", callArgs);
+        return this.signAndCall(
+            caller,
+            "deposit_to_bank",
+            callArgs,
+            "margin_bank"
+        );
     }
 
     public async setIsWithdrawalAllowed(
@@ -593,7 +639,12 @@ export class OnChainCalls {
         callArgs.push(args.bankID ? args.bankID : this.getBankID());
         callArgs.push(args.isAllowed);
 
-        return this.signAndCall(caller, "set_is_withdrawal_allowed", callArgs);
+        return this.signAndCall(
+            caller,
+            "set_is_withdrawal_allowed",
+            callArgs,
+            "margin_bank"
+        );
     }
 
     public async withdrawFromBank(
@@ -616,7 +667,12 @@ export class OnChainCalls {
         );
         callArgs.push(args.amount);
 
-        return this.signAndCall(caller, "withdraw_from_bank", callArgs);
+        return this.signAndCall(
+            caller,
+            "withdraw_from_bank",
+            callArgs,
+            "margin_bank"
+        );
     }
 
     public async mintUSDC(
@@ -662,10 +718,6 @@ export class OnChainCalls {
 
     getSettlementOperatorTable(): string {
         return this.deployment["objects"]["Table<address, bool>"].id as string;
-    }
-
-    getModuleName(): string {
-        return this.deployment["moduleName"] as string;
     }
 
     getPackageID(): string {

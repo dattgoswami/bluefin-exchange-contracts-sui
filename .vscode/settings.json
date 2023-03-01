@@ -13,6 +13,7 @@
     "Secp",
     "Stdlib",
     "subdir",
+    "tusdc",
     "tweetnacl",
     "undercollateralized"
   ]
