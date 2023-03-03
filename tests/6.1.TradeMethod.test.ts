@@ -4,7 +4,7 @@ import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     readFile,
     getProvider,
-    getSignerSUIAddress,
+    getAddressFromSigner,
     getSignerFromSeed,
     createOrder,
     createMarket
@@ -16,6 +16,7 @@ import { bigNumber, toBigNumber, toBigNumberStr } from "../src/library";
 import { getTestAccounts } from "./helpers/accounts";
 import { Trader } from "../src/classes/Trader";
 import { network } from "../src/DeploymentConfig";
+import { mintAndDeposit } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -40,13 +41,14 @@ describe("Regular Trade Method", () => {
         // deploy market
         deployment["markets"] = [
             {
-                Objects: await createMarket(deployment, ownerSigner, provider)
+                Objects: (await createMarket(deployment, ownerSigner, provider))
+                    .marketObjects
             }
         ];
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 
-        ownerAddress = await getSignerSUIAddress(ownerSigner);
+        ownerAddress = await getAddressFromSigner(ownerSigner);
         // make admin operator
         await onChain.setSettlementOperator(
             { operator: ownerAddress, status: true },
@@ -55,9 +57,13 @@ describe("Regular Trade Method", () => {
     });
 
     it("should execute trade call", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+        await mintAndDeposit(onChain, bob.address, 2000);
+
         const priceTx = await onChain.updateOraclePrice({
             price: toBigNumberStr(1)
         });
+
         expectTxToSucceed(priceTx);
 
         const trade = await Trader.setupNormalTrade(
@@ -67,6 +73,7 @@ describe("Regular Trade Method", () => {
             bob.keyPair,
             defaultOrder
         );
+
         const tx = await onChain.trade(trade);
         expectTxToSucceed(tx);
     });

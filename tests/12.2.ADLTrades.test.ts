@@ -23,7 +23,7 @@ const tests: TestCaseJSON = {
             }
         },
         {
-            tradeType: "adl_filler",
+            tradeType: "cat_dog",
             pOracle: 100,
             price: 100,
             size: -10,
@@ -87,7 +87,7 @@ const tests: TestCaseJSON = {
             }
         },
         {
-            tradeType: "adl_filler",
+            tradeType: "cat_dog",
             pOracle: 100,
             price: 100,
             size: 20,
@@ -151,7 +151,7 @@ const tests: TestCaseJSON = {
             }
         },
         {
-            tradeType: "adl_filler",
+            tradeType: "cat_dog",
             pOracle: 100,
             price: 100,
             size: 20,

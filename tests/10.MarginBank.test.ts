@@ -3,15 +3,16 @@ import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     getProvider,
-    getSignerSUIAddress,
+    getAddressFromSigner,
     getSignerFromSeed,
-    getCreatedObjects,
+    getGenesisMap,
     publishPackageUsingClient
 } from "../src/utils";
 import { OnChainCalls, Transaction } from "../src/classes";
 import { fundTestAccounts } from "./helpers/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { toBigNumberStr } from "../src/library";
+import { expectTxToSucceed } from "./helpers/expect";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -30,15 +31,14 @@ describe("Margin Bank", () => {
 
     before(async () => {
         await fundTestAccounts();
-        ownerAddress = await getSignerSUIAddress(ownerSigner);
+        ownerAddress = await getAddressFromSigner(ownerSigner);
     });
 
     beforeEach(async () => {
         const publishTxn = await publishPackageUsingClient();
-        const objects = await getCreatedObjects(provider, publishTxn);
+        const objects = await getGenesisMap(provider, publishTxn);
         const deployment = {
             deployer: ownerAddress,
-            moduleName: "margin_bank",
             objects: objects,
             markets: []
         };
@@ -47,21 +47,22 @@ describe("Margin Bank", () => {
 
     describe("Deposits and Withdraw", () => {
         it("should deposit 10K USDC to margin bank for alice", async () => {
-            await onChain.mintUSDC(
-                {
-                    amount: toBigNumberStr("10000", 6),
+            let coins = { data: [] };
+            while (coins.data.length == 0) {
+                const tx = await onChain.mintUSDC({
+                    amount: toBigNumberStr(20000, 6),
                     to: aliceAddress
-                },
-                ownerSigner
-            );
+                });
+                expectTxToSucceed(tx);
+                coins = await onChain.getUSDCCoins({ address: aliceAddress });
+            }
 
-            const coins = (await onChain.getUSDCBalance(alice)).data;
-
-            const coin = coins.pop();
+            const coin = coins.data.pop();
 
             const txResult = await onChain.depositToBank(
                 {
-                    coinID: coin.coinObjectId
+                    coinID: (coin as any).coinObjectId,
+                    amount: toBigNumberStr("10000", 6)
                 },
                 alice
             );
@@ -88,21 +89,22 @@ describe("Margin Bank", () => {
         });
 
         it("should withdraw deposited USDC from margin bank from alice account", async () => {
-            await onChain.mintUSDC(
-                {
-                    amount: toBigNumberStr("10000", 6),
+            let coins = { data: [] };
+            while (coins.data.length == 0) {
+                const tx = await onChain.mintUSDC({
+                    amount: toBigNumberStr(10000, 6),
                     to: aliceAddress
-                },
-                ownerSigner
-            );
+                });
+                expectTxToSucceed(tx);
+                coins = await onChain.getUSDCCoins({ address: aliceAddress });
+            }
 
-            const coins = (await onChain.getUSDCBalance(alice)).data;
-
-            const coin = coins.pop();
+            const coin = coins.data.pop();
 
             const depositReceipt = await onChain.depositToBank(
                 {
-                    coinID: coin.coinObjectId
+                    coinID: (coin as any).coinObjectId,
+                    amount: toBigNumberStr("10000", 6)
                 },
                 alice
             );
@@ -112,7 +114,7 @@ describe("Margin Bank", () => {
                 "BankBalanceUpdate"
             )[0];
 
-            const coinValue = toBigNumberStr(coin.balance, 3); // converting a 6 decimal coin to 9 decimal value
+            const coinValue = toBigNumberStr((coin as any).balance, 3); // converting a 6 decimal coin to 9 decimal value
             expect(depositBankBalanceUpdateEvent).to.not.be.undefined;
             expect(
                 depositBankBalanceUpdateEvent?.fields?.destAddress
@@ -132,7 +134,7 @@ describe("Margin Bank", () => {
 
             const txResult = await onChain.withdrawFromBank(
                 {
-                    amount: coin.balance.toString()
+                    amount: (coin as any).balance.toString()
                 },
                 alice
             );
@@ -157,9 +159,33 @@ describe("Margin Bank", () => {
         });
 
         it("should revert alice does not have enough funds to withdraw", async () => {
+            // empty alice's account
+            await onChain.withdrawAllMarginFromBank(alice);
+
+            let coins = { data: [] };
+            while (coins.data.length == 0) {
+                // TODO: figure out why coins are not minted in first call?
+                const tx = await onChain.mintUSDC({
+                    amount: toBigNumberStr(20000, 6),
+                    to: aliceAddress
+                });
+                expectTxToSucceed(tx);
+                coins = await onChain.getUSDCCoins({ address: aliceAddress });
+            }
+
+            const coin = (coins.data as any).pop();
+
+            await onChain.depositToBank(
+                {
+                    coinID: coin.coinObjectId,
+                    amount: toBigNumberStr("10000", 6)
+                },
+                alice
+            );
+
             const txResult = await onChain.withdrawFromBank(
                 {
-                    amount: toBigNumberStr("10000", 6)
+                    amount: toBigNumberStr("50000", 6)
                 },
                 alice
             );
@@ -168,22 +194,35 @@ describe("Margin Bank", () => {
             expect(Transaction.getErrorCode(txResult)).to.be.equal(603);
         });
 
-        it("should revert when guardian disabled withdraw", async () => {
-            await onChain.mintUSDC(
+        it("should revert as alice has no bank account", async () => {
+            const txResult = await onChain.withdrawFromBank(
                 {
-                    amount: toBigNumberStr("10000", 6),
-                    to: aliceAddress
+                    amount: toBigNumberStr("10000", 6)
                 },
-                ownerSigner
+                alice
             );
 
-            const coins = (await onChain.getUSDCBalance(alice)).data;
+            expect(Transaction.getStatus(txResult)).to.be.equal("failure");
+            expect(Transaction.getErrorCode(txResult)).to.be.equal(605);
+        });
 
-            const coin = coins.pop();
+        it("should revert when guardian disabled withdraw", async () => {
+            let coins = { data: [] };
+            while (coins.data.length == 0) {
+                const tx = await onChain.mintUSDC({
+                    amount: toBigNumberStr(20000, 6),
+                    to: aliceAddress
+                });
+                expectTxToSucceed(tx);
+                coins = await onChain.getUSDCCoins({ address: aliceAddress });
+            }
+
+            const coin = (coins.data as any).pop();
 
             await onChain.depositToBank(
                 {
-                    coinID: coin.coinObjectId
+                    coinID: coin.coinObjectId,
+                    amount: toBigNumberStr("10000", 6)
                 },
                 alice
             );

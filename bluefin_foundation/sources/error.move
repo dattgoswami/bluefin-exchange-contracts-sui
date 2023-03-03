@@ -228,6 +228,15 @@ module bluefin_foundation::error {
         return 604
     }
 
+    public fun user_has_no_bank_account() : u64 {
+        return 605
+    }
+
+    public fun provided_coin_do_not_have_enough_amount() : u64 {
+        return 606
+    }
+
+
     public fun liquidation_all_or_nothing_constraint_not_held() : u64 {
         return 701
     }

@@ -16,16 +16,18 @@ import {
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
 import {
+    BankAccountMap,
     DeploymentData,
     DeploymentObjectMap,
-    DeploymentObjects
+    DeploymentObjects,
+    MarketDeployment
 } from "../src/interfaces";
 import { toBigNumber, bigNumber } from "./library";
 import { Order } from "../src/interfaces";
 import { DEFAULT } from "./defaults";
 import { config } from "dotenv";
 import { Client, OnChainCalls, Transaction } from "./classes";
-import { network, moduleName, packageName } from "./DeploymentConfig";
+import { network, packageName } from "./DeploymentConfig";
 import { MarketDetails } from "./interfaces/market";
 
 import { execSync } from "child_process";
@@ -51,13 +53,6 @@ export function getProvider(
     faucetURL: string
 ): JsonRpcProvider {
     return new JsonRpcProvider(rpcURL, { faucetURL: faucetURL });
-}
-
-export async function getSignerSUIAddress(
-    signer: RawSigner | SignerWithProvider
-): Promise<string> {
-    const address = await signer.getAddress();
-    return `0x${address}`;
 }
 
 export function getKeyPairFromSeed(
@@ -115,7 +110,7 @@ export async function requestGas(address: string) {
     return false;
 }
 
-export async function getCreatedObjects(
+export async function getGenesisMap(
     provider: JsonRpcProvider,
     txResponse: SuiExecuteTransactionResponse
 ): Promise<DeploymentObjectMap> {
@@ -154,6 +149,10 @@ export async function getCreatedObjects(
                 dataType = type.slice(tableIdx);
             } else {
                 dataType = type.slice(type.lastIndexOf("::") + 2);
+            }
+
+            if (dataType.endsWith(">") && dataType.indexOf("<") == -1) {
+                dataType = dataType.slice(0, dataType.length - 1);
             }
         }
 
@@ -208,6 +207,16 @@ export async function getCreatedObjects(
         }
 
         if (event) {
+            if (
+                event.dataType.endsWith(">") &&
+                event.dataType.indexOf("<") == -1
+            ) {
+                event.dataType = event.dataType.slice(
+                    0,
+                    event.dataType.length - 1
+                );
+            }
+
             map[event.dataType] = {
                 id: event.id,
                 owner: event.owner,
@@ -246,7 +255,7 @@ export async function createMarket(
     deployer: RawSigner,
     provider: JsonRpcProvider,
     marketConfig?: MarketDetails
-): Promise<DeploymentObjectMap> {
+): Promise<MarketDeployment> {
     const onChain = new OnChainCalls(deployer, deployment);
     const txResult = await onChain.createPerpetual({ ...marketConfig });
     const error = Transaction.getError(txResult);
@@ -254,7 +263,21 @@ export async function createMarket(
         console.error(`Error while deploying market: ${error}`);
         process.exit(1);
     }
-    return await getCreatedObjects(provider, txResult);
+    const map = await getGenesisMap(provider, txResult);
+
+    // get account details for insruance pool, perpetual and fee pool
+    const bankAccounts: BankAccountMap = {};
+    const bankAccountIDs = Transaction.getAllBankAccounts(txResult);
+    for (const acctID of bankAccountIDs) {
+        const id = (acctID as any).id as string;
+        const acctDetails = await onChain.getBankAccountDetails(id);
+        bankAccounts[acctDetails.address] = id;
+    }
+
+    return {
+        marketObjects: map,
+        bankAccounts: bankAccounts
+    };
 }
 
 export function getPrivateKey(keypair: Keypair) {
@@ -263,13 +286,15 @@ export function getPrivateKey(keypair: Keypair) {
 
 export function getDeploymentData(
     deployer: string,
-    objects: DeploymentObjectMap
+    objects: DeploymentObjectMap,
+    markets?: Array<any>,
+    bankAccounts?: BankAccountMap
 ): DeploymentData {
     return {
         deployer,
         objects,
-        markets: [],
-        moduleName
+        markets: markets || [],
+        bankAccounts: bankAccounts || {}
     };
 }
 

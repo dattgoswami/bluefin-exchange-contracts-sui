@@ -379,7 +379,7 @@ const adjustMargin: TestCaseJSON = {
             {
                 pOracle: 101,
                 addMargin: 2200,
-                expectError: 600
+                expectError: 603
             }
         ],
     "Test # 14 - Short Position + Add more than Bank + [Cannot add more than bank] + Error":
@@ -403,7 +403,7 @@ const adjustMargin: TestCaseJSON = {
             {
                 pOracle: 101,
                 addMargin: 2200,
-                expectError: 600
+                expectError: 603
             }
         ],
     "Test # 15 - Long Position + Remove more than Margin + [P16] + Error": [

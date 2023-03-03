@@ -11,13 +11,14 @@ module bluefin_foundation::margin_bank {
     use sui::coin::{Self, Coin};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+
+    use bluefin_foundation::signed_number::{Self, Number};
+    use bluefin_foundation::error::{Self};
     use bluefin_foundation::tusdc::{TUSDC};
-    use bluefin_foundation::error;
 
     //================================================================//
     //                      EVENTS
     //================================================================//
-
 
     struct BankBalanceUpdate has drop, copy {
         action: u64,
@@ -96,34 +97,40 @@ module bluefin_foundation::margin_bank {
     //                      PUBLIC METHODS
     //===========================================================//
 
-    /**
+    /*
      * @notice Deposits collateral token from caller's address 
      * to provided account address in the bank
      * @dev amount is expected to be in 6 decimal units as 
      * the collateral token is USDC
      */
-    public entry fun deposit_to_bank(bank: &mut Bank, destination: address, coin: Coin<TUSDC>, ctx: &mut TxContext) {
+    public entry fun deposit_to_bank(bank: &mut Bank, destination: address, amount: u64, coin: &mut Coin<TUSDC>, ctx: &mut TxContext) {
         // getting the sender address
         let sender = tx_context::sender(ctx);
 
         // getting the accounts table and coin balance
         let accounts = &mut bank.accounts;
-
-        // getting the amount of the coin
-        // * @dev convert 6 decimal unit amount to 9 decimals
-        let amount = coin::value(&coin) * (1000 as u64);
                 
-        // depositing the coin to the bank
-        coin::put(&mut bank.coinBalance, coin);
-
         // initializing the balance of the account address if it doesn't exist
         initialize_account(accounts, destination, ctx);
-
         // initializing the balance of the sender address if it doesn't exist
         initialize_account(accounts, sender, ctx);
 
+        // getting the amount of the coin
+        let total_coin_value = coin::value(coin);
+
+        assert!(amount <= total_coin_value, 1);
+        
+        
+        let coinForDeposit = coin::take(coin::balance_mut(coin), amount, ctx);
+
+        // depositing the coin to the bank
+        coin::put(&mut bank.coinBalance, coinForDeposit);
+
         // getting the mut ref of balance of the dest account address
         let destBalance = &mut table::borrow_mut(accounts, destination).balance;
+
+        // convert 6 decimal unit amount to 9 decimals
+        amount = amount * 1000;
 
         // updating the balance
         *destBalance = (amount as u128) + *destBalance;
@@ -156,7 +163,7 @@ module bluefin_foundation::margin_bank {
         let accounts = &mut bank.accounts;
 
         // checking if the account exists
-        assert!(table::contains(accounts, sender), error::not_enough_balance_in_margin_bank(3));
+        assert!(table::contains(accounts, sender), error::user_has_no_bank_account());
 
         // @dev convert amount to 9 decimal places
         let e9Amount = amount * (1000 as u128);
@@ -193,36 +200,155 @@ module bluefin_foundation::margin_bank {
 
     }
 
-    //===========================================================//
-    //                      BANK OPERATOR METHODS
-    //===========================================================//
-
     /**
-     * @notice allows bank operators to transfer margin from an account to another account
-     * @dev bank operators i.e. perpetual and liquidation modules move funds during a trade between accounts
-     *  
+     * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
      */
-    public(friend) fun transfer_margin_to_account(
+    public entry fun withdraw_all_margin_from_bank(bank: &mut Bank, destination: address, ctx: &mut TxContext) {
+        
+        // getting the sender address
+        let sender = tx_context::sender(ctx);
+
+        // checking if the withdrawal is allowed
+        assert!(bank.isWithdrawalAllowed, error::withdrawal_is_not_allowed());
+
+        // getting the accounts table and coin balance
+        let accounts = &mut bank.accounts;
+
+        // checking if the account exists
+        assert!(table::contains(accounts, sender), error::user_has_no_bank_account());
+
+        let balance = &mut table::borrow_mut(accounts, sender).balance;
+
+        // user has no balance? return silently
+        if (*balance == 0) {
+            return
+        };
+
+        // conver to 1e6 base as USDC is in 6 decimal places
+        let amount = *balance / 1000; 
+
+
+        // withdrawing the coin from the bank
+        let coin = coin::take(&mut bank.coinBalance, (amount as u64), ctx);
+
+        // transferring the coin to the destination account
+        transfer::transfer(
+            coin,
+            destination
+        );
+
+        // updating the balance of user in margin bank
+        *balance = 0;   
+
+        // emitting the balance balance update event
+        emit(
+            BankBalanceUpdate {
+                action: ACTION_WITHDRAW,
+                srcAddress: sender,
+                destAddress: destination,
+                amount: amount * 1000,
+                srcBalance: table::borrow(accounts, sender).balance,
+                destBalance: table::borrow(accounts, destination).balance,
+            }
+        );
+
+    }
+
+
+
+    public fun initialize_account(accounts: &mut Table<address, BankAccount>, addr: address, ctx: &mut TxContext){
+
+        // checking if the account exists
+        if(!table::contains(accounts, addr)){
+
+            // initializing the account of the sender
+            table::add(accounts, addr, BankAccount {
+                id: object::new(ctx),
+                balance: 0u128,
+                owner: addr,
+            });
+
+        };
+    }   
+
+    public fun transfer_trade_margin(
+        bank: &mut Bank,
+        perpetual: address, 
+        maker:address, 
+        taker:address, 
+        makerFundsFlow: Number, 
+        takerFundsFlow: Number
+        ){  
+            
+            // maker has no account hence no margin
+            assert!(table::contains(&bank.accounts, maker), error::not_enough_balance_in_margin_bank(0));
+            // taker maker has no account hence no margin
+            assert!(table::contains(&bank.accounts, taker), error::not_enough_balance_in_margin_bank(1));
+
+            if (signed_number::gte_uint(makerFundsFlow, 0)) {
+                // for maker
+                transfer_based_on_fundsflow(bank, perpetual, maker, makerFundsFlow, 0); 
+                // for taker
+                transfer_based_on_fundsflow(bank, perpetual, taker, takerFundsFlow, 1);
+            } else {
+                // for taker
+                transfer_based_on_fundsflow(bank, perpetual, taker, takerFundsFlow, 1);
+                // for maker
+                transfer_based_on_fundsflow(bank, perpetual, maker, makerFundsFlow, 0);
+            };
+    }
+
+    fun transfer_based_on_fundsflow(
+        bank: &mut Bank, 
+        perpetual: address, 
+        account: address, 
+        fundsFlow: Number, 
+        isTaker: u64
+        ){
+
+        if(signed_number::value(fundsFlow) == 0){
+            return
+        };
+
+        let source:address;
+        let destination: address;
+        let offset:u64;
+
+        if (signed_number::gt_uint(fundsFlow, 0)){
+            source = account;
+            destination =  perpetual;
+            offset = isTaker; // if source maker/taker does not have balance emit 600 or 601 code
+        } else {
+            source = perpetual;
+            destination =  account;
+            offset = 2;  // if perp does not have balance emit 602 code
+        };
+
+        transfer_margin_to_account(
+            bank,
+            source, 
+            destination, 
+            signed_number::value(fundsFlow),
+            offset
+        );
+    }
+
+    public fun transfer_margin_to_account(
         bank: &mut Bank, 
         source: address, 
         destination: address, 
         amount: u128, 
-        isTaker: u64, 
-        ctx: &mut TxContext
+        offset: u64, 
         ){
 
         // getting the accounts table
         let accounts = &mut bank.accounts;
 
-        // initializing the balance of the source & destination if it doesn't exist
-        initialize_account(accounts, source, ctx);
-        initialize_account(accounts, destination, ctx);
-
         // getting the mut ref of balance of the source
         let sourceBalance = &mut table::borrow_mut(accounts, source).balance;
 
         // checking if the sender has enough balance
-        assert!(*sourceBalance >= amount, error::not_enough_balance_in_margin_bank(isTaker));
+        assert!(*sourceBalance >= amount, error::not_enough_balance_in_margin_bank(offset));
 
         // reduce amount from source
         *sourceBalance = *sourceBalance - amount;
@@ -260,36 +386,22 @@ module bluefin_foundation::margin_bank {
             return 0u128
         };
 
-        // getting ref of the account
-        let account = table::borrow(accounts, addr);
 
-        // getting the ref of balance of the account
-        let balance = &account.balance;
+        return table::borrow(accounts, addr).balance
 
-        *balance
     }
 
     public fun is_withdrawal_allowed(bank: &Bank) : bool {
         bank.isWithdrawalAllowed
     }
 
+    public fun mut_accounts(bank: &mut Bank): &mut Table<address, BankAccount> {
+        return &mut bank.accounts
+    }
+
     //===========================================================//
     //                      HELPER METHODS
     //===========================================================//
 
-    fun initialize_account(accounts: &mut Table<address, BankAccount>, addr: address, ctx: &mut TxContext){
-
-        // checking if the account exists
-        if(!table::contains(accounts, addr)){
-
-            // initializing the account of the sender
-            table::add(accounts, addr, BankAccount {
-                id: object::new(ctx),
-                balance: 0u128,
-                owner: addr,
-            });
-
-        };
-    }   
-
+    
 }

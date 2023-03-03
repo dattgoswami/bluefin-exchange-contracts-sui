@@ -1,5 +1,5 @@
 import {
-    getSignerSUIAddress,
+    getAddressFromSigner,
     writeFile,
     getSignerFromSeed,
     getProvider,
@@ -21,7 +21,7 @@ async function main() {
     console.log(
         `Deploying market ${market} on : ${DeploymentConfigs.network.rpc}`
     );
-    const deployerAddress = await getSignerSUIAddress(signer);
+    const deployerAddress = await getAddressFromSigner(signer);
 
     console.log(`Deployer SUI address: ${deployerAddress}`);
 
@@ -33,9 +33,15 @@ async function main() {
         process.exit(1);
     }
     const path = "../../deployment.json";
-    const { objects } = await import(path);
+    const data = await import(path);
+    const deployment = getDeploymentData(
+        data.deployer,
+        data.objects,
+        data.markets,
+        data.bankAccounts
+    );
 
-    const deploymentData = await getDeploymentData(deployerAddress, objects);
+    console.log(`Creating perpetual for market: ${market}`);
 
     // create perpetual
     const marketConfig = DeploymentConfigs.markets.filter((data) => {
@@ -44,19 +50,31 @@ async function main() {
         }
     })[0];
 
-    const marketObjectMap = await createMarket(
-        deploymentData,
+    if (marketConfig == undefined) {
+        console.log(
+            `Error: Market details not found for market ${market} in deployment config`
+        );
+        process.exit(1);
+    }
+
+    const marketMap = await createMarket(
+        deployment,
         signer,
         provider,
         marketConfig
     );
 
-    deploymentData["markets"].push({
+    deployment.markets.push({
         Config: marketConfig,
-        Objects: marketObjectMap
+        Objects: marketMap.marketObjects
     });
 
-    await writeFile(DeploymentConfigs.filePath, deploymentData);
+    deployment.bankAccounts = {
+        ...deployment.bankAccounts,
+        ...marketMap.bankAccounts
+    };
+
+    await writeFile(DeploymentConfigs.filePath, deployment);
     console.log(
         `Object details written to file: ${DeploymentConfigs.filePath}`
     );

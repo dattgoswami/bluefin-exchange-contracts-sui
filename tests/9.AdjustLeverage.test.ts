@@ -264,7 +264,7 @@ const adjustLeverage: TestCaseJSON = {
         {
             pOracle: 120,
             adjustLeverage: 1,
-            expectError: 600
+            expectError: 603
         }
     ],
     "Test # 10 - Short Position + Reduce Leverage more than Bank + Error": [
@@ -287,7 +287,7 @@ const adjustLeverage: TestCaseJSON = {
         {
             pOracle: 80,
             adjustLeverage: 1,
-            expectError: 600
+            expectError: 603
         }
     ],
     "Test # 11 - Zero Leverage + Error": [

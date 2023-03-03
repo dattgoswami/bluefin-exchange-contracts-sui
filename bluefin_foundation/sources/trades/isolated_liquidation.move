@@ -6,6 +6,7 @@ module bluefin_foundation::isolated_liquidation {
 
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::position::{Self, UserPosition};
+    use bluefin_foundation::margin_bank::{Self, Bank};
     use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::signed_number::{Self, Number};
@@ -72,9 +73,10 @@ module bluefin_foundation::isolated_liquidation {
     //===========================================================//
     //                      TRADE METHOD                         //
     //===========================================================//
-    public fun trade(sender: address, perp: &mut Perpetual, data:TradeData){
+    public fun trade(sender: address, perp: &mut Perpetual, bank: &mut Bank, data:TradeData){
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpAddress = object::id_to_address(&perpID);
         let imr = perpetual::imr(perp);
         let mmr = perpetual::mmr(perp);
         let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
@@ -192,7 +194,18 @@ module bluefin_foundation::isolated_liquidation {
         takerResponse.pnl = signed_number::add(premium.liquidator, takerResponse.pnl);
 
 
-        // TODO transfer premiums
+        // transfer premium amount between perpetual/liquidator and insurance pool
+        transfer_premium(bank, premium, data.liquidator, perpetual::insurancePool(perp), perpAddress);
+
+        // transfer margins between perp and accounts
+        margin_bank::transfer_trade_margin(
+            bank,
+            perpAddress,
+            data.liquidatee,
+            data.liquidator,
+            makerResponse.fundsFlow,
+            takerResponse.fundsFlow
+        );
 
         // emit position updates
         position::emit_position_update_event(perpID, data.liquidatee, newMakerPos, ACTION_TRADE);
@@ -229,6 +242,44 @@ module bluefin_foundation::isolated_liquidation {
         }
     }
 
+    fun transfer_premium(bank: &mut Bank, premium: Premium, liquidator:address, insurancePool: address, perpetual:address){
+        
+        // if liquidator's portion is positive
+        if(signed_number::gt_uint(premium.liquidator, 0)){
+            // transfer percentage of premium to liquidator
+            margin_bank::transfer_margin_to_account(
+                bank,
+                perpetual,
+                liquidator,
+                signed_number::value(premium.liquidator), 
+                2, 
+            )
+        }
+        // if negative, implies under water/bankrupt liquidation
+        else if(signed_number::lt_uint(premium.liquidator, 0)){
+            // transfer negative liquidation premium from liquidator to perpetual
+            margin_bank::transfer_margin_to_account(
+                bank,
+                liquidator,
+                perpetual,
+                signed_number::value(premium.liquidator), 
+                1, 
+            )
+        };
+
+        // insurance pool portion
+        if(signed_number::gt_uint(premium.pool, 0)){
+            // transfer percentage of premium to insurance pool
+            margin_bank::transfer_margin_to_account(
+                bank,
+                perpetual,
+                insurancePool,
+                signed_number::value(premium.pool), 
+                2, 
+            )
+        };
+
+    }
     /**
      * @dev verifies if the liquidation is possible or not
      * @param  tradeData   the data passed to trade method
@@ -273,8 +324,8 @@ module bluefin_foundation::isolated_liquidation {
     ): IMResponse {
         
         let fundsFlow: Number;
-        let marginPerUnit: Number;
         let equityPerUnit: Number;
+        let marginPerUnit: u128;
 
         let oiOpen = position::oiOpen(*balance);
         let qPos = position::qPos(*balance);
@@ -285,9 +336,8 @@ module bluefin_foundation::isolated_liquidation {
 
         // case 1: Opening position or adding to position size
         if (qPos == 0 || isBuy == isPosPositive) {
-            marginPerUnit = signed_number::from(library::base_mul(oraclePrice, mro), true);
-            fundsFlow = signed_number::from(library::base_mul(quantity, signed_number::value(marginPerUnit)), true);
-
+            marginPerUnit = library::base_mul(oraclePrice, mro);
+            fundsFlow = signed_number::from(library::base_mul(quantity, marginPerUnit), true);
             position::set_oiOpen(balance, oiOpen + library::base_mul(quantity, oraclePrice));
             position::set_qPos(balance, qPos + quantity);
             position::set_margin(balance, margin + library::base_mul(library::base_mul(quantity, oraclePrice), mro));
@@ -306,11 +356,11 @@ module bluefin_foundation::isolated_liquidation {
         // case 2: Reduce only order
         else if (isBuy != isPosPositive && quantity <= qPos){
             let newQPos = qPos - quantity;
-            marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
+            marginPerUnit = library::base_div(margin, qPos);
 
             // if liquidator
             if(isTaker == 1){
-                equityPerUnit = signed_number::add(marginPerUnit, pnlPerUnit);
+                equityPerUnit = signed_number::add_uint(pnlPerUnit, marginPerUnit);
                 assert!(
                     signed_number::gte_uint(equityPerUnit, 0),
                     error::loss_exceeds_margin(isTaker));
@@ -343,8 +393,8 @@ module bluefin_foundation::isolated_liquidation {
         else {
             let newQPos = quantity - qPos;
             let updatedOIOpen = library::base_mul(newQPos, oraclePrice);
-            marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
-            equityPerUnit = signed_number::add(marginPerUnit, pnlPerUnit);
+            marginPerUnit = library::base_div(margin, qPos);
+            equityPerUnit = signed_number::add_uint(pnlPerUnit, marginPerUnit);
             assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
 
             fundsFlow =  signed_number::add_uint(
@@ -353,8 +403,8 @@ module bluefin_foundation::isolated_liquidation {
                             signed_number::negate(pnlPerUnit),
                             qPos),
                         margin),
-                    library::base_mul(library::base_mul(qPos, oraclePrice), mro)
-                    );
+                    library::base_mul(library::base_mul(newQPos, oraclePrice), mro)
+                );
 
             // verify that oi open checks still hold                       
             evaluator::verify_oi_open_for_account(

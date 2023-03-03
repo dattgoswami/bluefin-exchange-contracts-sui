@@ -63,7 +63,10 @@ export class Transaction {
     ): object[] {
         const objects: object[] = [];
 
-        const events = (tx as any).EffectsCert.effects.effects.events;
+        const events = (tx as any).EffectsCert
+            ? (tx as any).EffectsCert.effects.effects.events
+            : (tx as any).effects.effects.events;
+
         for (const ev of events) {
             const obj = ev["newObject"];
             if (obj !== undefined) {
@@ -78,14 +81,41 @@ export class Transaction {
                 }
             }
         }
+        return objects;
+    }
 
+    static getObjects(
+        tx: SuiExecuteTransactionResponse,
+        list: string,
+        objectType: string
+    ): object[] {
+        const objects: object[] = [];
+
+        const events = (tx as any).EffectsCert
+            ? (tx as any).EffectsCert.effects.effects.events
+            : (tx as any).effects.effects.events;
+
+        for (const ev of events) {
+            const obj = ev[list];
+            if (obj !== undefined) {
+                const objType = obj["objectType"]
+                    .slice(obj["objectType"].lastIndexOf("::") + 2)
+                    .replace(/[^a-zA-Z ]/g, "");
+                if (objectType == "" || objType == objectType) {
+                    objects.push({
+                        id: obj["objectId"],
+                        dataType: objType
+                    } as object);
+                }
+            }
+        }
         return objects;
     }
 
     static getAccountPositionFromEvent(
         tx: SuiExecuteTransactionResponse,
         address: string
-    ): undefined | UserPositionExtended {
+    ): UserPositionExtended {
         const events = Transaction.getEvents(tx, "AccountPositionUpdateEvent");
         let userPosition: UserPositionExtended;
 
@@ -93,7 +123,8 @@ export class Transaction {
             userPosition = events[0].fields.position.fields;
         else if (events[1].fields.account == address)
             userPosition = events[1].fields.position.fields;
-        else return undefined;
+        else
+            throw `AccountPositionUpdate event not found for address: ${address}`;
 
         return userPosition;
     }
@@ -101,11 +132,11 @@ export class Transaction {
     static getAccountPNL(
         tx: SuiExecuteTransactionResponse,
         address: string
-    ): BigNumber | undefined {
+    ): BigNumber {
         const events = Transaction.getEvents(tx, "TradeExecuted");
 
         if (events.length == 0) {
-            return undefined;
+            throw "No TradeExecuted event found in tx";
         }
 
         if (address == events[0].fields.maker) {
@@ -113,7 +144,68 @@ export class Transaction {
         } else if (address == events[0].fields.taker) {
             return SignedNumberToBigNumber(events[0].fields.takerPnl.fields);
         } else {
-            return undefined;
+            throw `TradeExecuted event not found for address: ${address}`;
         }
+    }
+
+    static getAccountBankBalanceFromEvent(
+        tx: SuiExecuteTransactionResponse,
+        address: string
+    ): BigNumber {
+        const events = Transaction.getEvents(tx, "BankBalanceUpdate");
+
+        if (!address.startsWith("0x")) {
+            address = "0x" + address;
+        }
+
+        if (events.length == 0) {
+            return BigNumber(0);
+        }
+
+        // assuming the first event will have latest bank balance for account
+        for (const ev of events) {
+            if (ev.fields.destAddress == address) {
+                return BigNumber(ev.fields.destBalance);
+            } else if (ev.fields.srcAddress == address) {
+                return BigNumber(ev.fields.srcBalance);
+            }
+        }
+        return BigNumber(0);
+    }
+
+    static getBankAccountID(tx: SuiExecuteTransactionResponse): string {
+        const newObject = Transaction.getObjects(
+            tx,
+            "newObject",
+            "BankAccount"
+        );
+        const transferObject = Transaction.getObjects(
+            tx,
+            "transferObject",
+            "BankAccount"
+        );
+
+        if (newObject.length > 0) {
+            return (newObject[0] as any).id;
+        }
+
+        if (transferObject.length > 0) {
+            return (transferObject[0] as any).id;
+        }
+        return "";
+    }
+
+    static getAllBankAccounts(tx: SuiExecuteTransactionResponse) {
+        const newObject = Transaction.getObjects(
+            tx,
+            "newObject",
+            "BankAccount"
+        );
+        const transferObject = Transaction.getObjects(
+            tx,
+            "transferObject",
+            "BankAccount"
+        );
+        return [...newObject, ...transferObject];
     }
 }

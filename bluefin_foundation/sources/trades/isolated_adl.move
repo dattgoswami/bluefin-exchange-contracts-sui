@@ -6,6 +6,7 @@ module bluefin_foundation::isolated_adl {
 
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::position::{Self, UserPosition};
+    use bluefin_foundation::margin_bank::{Self, Bank};
     use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::evaluator::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
@@ -64,9 +65,10 @@ module bluefin_foundation::isolated_adl {
     //===========================================================//
     //                      TRADE METHOD                         //
     //===========================================================//
-    public fun trade(sender: address, perp: &mut Perpetual, data:TradeData){
+    public fun trade(sender: address, perp: &mut Perpetual, bank: &mut Bank, data:TradeData){
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpAddress = object::id_to_address(&perpID);
         let imr = perpetual::imr(perp);
         let mmr = perpetual::mmr(perp);
         let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
@@ -168,6 +170,16 @@ module bluefin_foundation::isolated_adl {
             1);
         
         
+        // transfer margins between perp and accounts
+        margin_bank::transfer_trade_margin(
+                bank,
+                perpAddress,
+                data.maker,
+                data.taker,
+                makerResponse.fundsFlow,
+                takerResponse.fundsFlow
+            );
+
         // emit position updates
         position::emit_position_update_event(perpID, data.maker, newMakerPos, ACTION_TRADE);
         position::emit_position_update_event(perpID, data.taker, newTakerPos, ACTION_TRADE);

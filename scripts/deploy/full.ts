@@ -1,7 +1,7 @@
 import {
-    getSignerSUIAddress,
+    getAddressFromSigner,
     writeFile,
-    getCreatedObjects,
+    getGenesisMap,
     getSignerFromSeed,
     getProvider,
     publishPackageUsingClient,
@@ -23,7 +23,7 @@ async function main() {
     console.log(
         `Performing full deployment on: ${DeploymentConfigs.network.rpc}`
     );
-    const deployerAddress = await getSignerSUIAddress(signer);
+    const deployerAddress = await getAddressFromSigner(signer);
 
     console.log(`Deployer SUI address: ${deployerAddress}`);
 
@@ -45,14 +45,14 @@ async function main() {
 
     if (status == "success") {
         // fetch created objects
-        const objects = await getCreatedObjects(provider, publishTxn);
+        const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = getDeploymentData(deployerAddress, objects);
 
         // create perpetual
         console.log("Creating Perpetual Markets");
         for (const marketConfig of DeploymentConfigs.markets) {
             console.log(`-> ${marketConfig.name}`);
-            const marketObjects = await createMarket(
+            const { marketObjects, bankAccounts } = await createMarket(
                 deploymentData,
                 signer,
                 provider,
@@ -62,7 +62,13 @@ async function main() {
                 Config: marketConfig,
                 Objects: marketObjects
             });
+
+            deploymentData.bankAccounts = {
+                ...deploymentData.bankAccounts,
+                ...bankAccounts
+            };
         }
+
         await writeFile(DeploymentConfigs.filePath, deploymentData);
         console.log(
             `Object details written to file: ${DeploymentConfigs.filePath}`

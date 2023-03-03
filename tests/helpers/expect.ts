@@ -7,12 +7,14 @@ import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
 import { TestPositionExpect } from "./interfaces";
 import { getExpectedTestPosition, toExpectedPositionFormat } from "./utils";
 import {
-    OnChainCalls,
     Transaction,
     Balance,
-    UserPositionExtended
+    UserPositionExtended,
+    OnChainCalls
 } from "../../src";
 import BigNumber from "bignumber.js";
+import { bigNumber, bnToBaseStr } from "../../src/library";
+import { Account } from "./accounts";
 
 export function expectTxToSucceed(txResponse: SuiExecuteTransactionResponse) {
     const status = Transaction.getStatus(txResponse);
@@ -60,12 +62,15 @@ export function expectPosition(
         expectedPosition.pnl.toFixed(3)
     );
 
-    // TODO once margin bank is implemented remove this if condition
-    // if (onChainPosition.bankBalance != undefined){
-    //     expect(onChainPosition.bankBalance.toFixed(6)).to.be.equal(
-    //         expectedPosition.bankBalance.toFixed(6)
-    //     );
-    // }
+    // we don't get bank balance from tx events if no funds were transferred from user's margin
+    if (
+        !expectedPosition.bankBalance.eq(0) &&
+        !onChainPosition.bankBalance.eq(0)
+    ) {
+        expect(onChainPosition.bankBalance.toFixed(6)).to.be.equal(
+            expectedPosition.bankBalance.toFixed(6)
+        );
+    }
 }
 
 export function expectTxToEmitEvent(
@@ -79,63 +84,67 @@ export function expectTxToEmitEvent(
     expect(events?.[0]).to.not.be.undefined;
 }
 
-export function evaluateSystemExpect(
+export async function evaluateSystemExpect(
+    onChain: OnChainCalls,
     expectedSystemValues: any,
-    onChain: OnChainCalls
+    feePoolAddress: string,
+    insurancePoolAddress: string,
+    perpetualAddress: string
 ) {
     if (expectedSystemValues.fee) {
-        // const fee = hexToBigNumber(
-        //     await contracts.marginbank.getAccountBankBalance(FEE_POOL_ADDRESS)
-        // ).shiftedBy(-18);
-        // expect(fee.toFixed(6)).to.be.equal(
-        //     new BigNumber(expectedSystemValues.fee).toFixed(6)
-        // );
+        const feePoolBalance = await onChain.getBankAccountDetailsUsingAddress(
+            feePoolAddress
+        );
+        expect(bnToBaseStr(feePoolBalance)).to.be.equal(
+            bigNumber(expectedSystemValues.fee).toFixed(6)
+        );
     }
 
-    if (expectedSystemValues.insuranceFund) {
-        // const insurance = hexToBigNumber(
-        //     await contracts.marginbank.getAccountBankBalance(
-        //         INSURANCE_POOL_ADDRESS
-        //     )
-        // ).shiftedBy(-BASE_DECIMALS);
-        // expect(insurance.toFixed(6)).to.be.equal(
-        //     new BigNumber(expectedSystemValues.IFBalance).toFixed(6)
-        // );
+    if (expectedSystemValues.insurancePool) {
+        const insurancePoolBalance =
+            await onChain.getBankAccountDetailsUsingAddress(
+                insurancePoolAddress
+            );
+        expect(bnToBaseStr(insurancePoolBalance)).to.be.equal(
+            bigNumber(expectedSystemValues.insurancePool).toFixed(6)
+        );
     }
 
-    if (expectedSystemValues.perpetualFunds) {
-        // const perpetual = hexToBigNumber(
-        //     await contracts.marginbank.getAccountBankBalance(
-        //         contracts.perpetual.address
-        //     )
-        // ).shiftedBy(-BASE_DECIMALS);
-        // expect(
-        //     new BigNumber(expectedSystemValues.perpetual).toFixed(6)
-        // ).to.be.equal(perpetual.toFixed(6));
+    if (expectedSystemValues.perpetual) {
+        const perpetualBalance =
+            await onChain.getBankAccountDetailsUsingAddress(perpetualAddress);
+        expect(bnToBaseStr(perpetualBalance)).to.be.equal(
+            bigNumber(expectedSystemValues.perpetual).toFixed(6)
+        );
     }
 }
 
-export function evaluateAccountPositionExpect(
-    account: string,
+export async function evaluateAccountPositionExpect(
+    onChain: OnChainCalls,
+    account: Account,
     expectedJSON: any,
     oraclePrice: BigNumber,
     tx: SuiExecuteTransactionResponse
 ) {
     const position = Transaction.getAccountPositionFromEvent(
         tx,
-        account
+        account.address
     ) as UserPositionExtended;
 
     const expectedPosition = getExpectedTestPosition(expectedJSON);
 
+    const bankAcctDetails = await onChain.getBankAccountDetails(
+        account.bankAccountId as string
+    );
     const onChainPosition = toExpectedPositionFormat(
         Balance.fromPosition(position),
         oraclePrice,
         {
             pnl:
                 expectedJSON.pnl != undefined
-                    ? Transaction.getAccountPNL(tx, account)
-                    : undefined
+                    ? Transaction.getAccountPNL(tx, account.address)
+                    : undefined,
+            bankBalance: bankAcctDetails.balance
         }
     );
 

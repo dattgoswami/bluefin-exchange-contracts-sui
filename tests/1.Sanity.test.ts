@@ -4,7 +4,7 @@ import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     readFile,
     getProvider,
-    getSignerSUIAddress,
+    getAddressFromSigner,
     getSignerFromSeed
 } from "../src/utils";
 import { OnChainCalls, Transaction } from "../src/classes";
@@ -29,7 +29,7 @@ describe("Sanity Tests", () => {
     // deploy package once
     before(async () => {
         await fundTestAccounts();
-        ownerAddress = await getSignerSUIAddress(ownerSigner);
+        ownerAddress = await getAddressFromSigner(ownerSigner);
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
 

@@ -1,10 +1,12 @@
 import { RawSigner } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
+import { Transaction } from "../../src";
 import { Balance } from "../../src/classes/Balance";
 import { OnChainCalls } from "../../src/classes/OnChainCalls";
-import { BASE_DECIMALS, bigNumber } from "../../src/library";
-import { getSignerSUIAddress, requestGas } from "../../src/utils";
-import { TEST_WALLETS } from "./accounts";
+import { BASE_DECIMALS, bigNumber, toBigNumberStr } from "../../src/library";
+import { getAddressFromSigner, requestGas } from "../../src/utils";
+import { Account, TEST_WALLETS } from "./accounts";
+import { expectTxToSucceed } from "./expect";
 import { TestPositionExpect } from "./interfaces";
 
 export async function postDeployment(
@@ -12,11 +14,54 @@ export async function postDeployment(
     ownerSigner: RawSigner
 ) {
     await onChain.setSettlementOperator(
-        { operator: await getSignerSUIAddress(ownerSigner), status: true },
+        { operator: await getAddressFromSigner(ownerSigner), status: true },
         ownerSigner
     );
 }
 
+export async function mintAndDeposit(
+    onChain: OnChainCalls,
+    receiver: string,
+    amount?: number
+): Promise<string> {
+    const amt = amount || 100_000;
+    const ownerAddress = await getAddressFromSigner(onChain.signer);
+
+    // get USDC balance of owner
+    const ownerBalance = await onChain.getUSDCBalance();
+
+    // mint coins for owner
+    if (amt > ownerBalance) {
+        const tx = await onChain.mintUSDC({
+            amount: toBigNumberStr(1_000_000_000, 6)
+        });
+        expectTxToSucceed(tx);
+    }
+
+    // TODO: implement a method to get the coin with balance > amt
+    // assuming 0th index coin will have balance > amount
+    const coin = (
+        await onChain.getUSDCCoins({ address: ownerAddress })
+    ).data.pop();
+
+    // transferring from owners usdc coin to receiver
+    const tx = await onChain.depositToBank({
+        coinID: coin.coinObjectId,
+        amount: toBigNumberStr(amt, 6),
+        accountAddress: receiver
+    });
+
+    expectTxToSucceed(tx);
+
+    return Transaction.getBankAccountID(tx);
+}
+
+export async function removeAllMarginFromBank(
+    onChain: OnChainCalls,
+    account: Account
+) {
+    const balance = await onChain.getUSDCBalance({ address: account.address });
+}
 export async function fundTestAccounts() {
     for (const wallet of TEST_WALLETS) {
         await requestGas(wallet.address);

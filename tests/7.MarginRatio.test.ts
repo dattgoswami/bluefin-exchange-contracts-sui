@@ -1035,5 +1035,5 @@ describe("Margin Ratio", () => {
         tickSize: toBigNumberStr(0.0000001),
         maxAllowedPriceDiffInOP: toBigNumberStr(100)
     };
-    executeTests(mrTests, marketConfig);
+    executeTests(mrTests, marketConfig, { traders: 200_000 });
 });

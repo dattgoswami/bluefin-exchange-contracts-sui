@@ -3,9 +3,9 @@ import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     getProvider,
-    getSignerSUIAddress,
+    getAddressFromSigner,
     getSignerFromSeed,
-    getCreatedObjects,
+    getGenesisMap,
     publishPackageUsingClient,
     getDeploymentData
 } from "../src/utils";
@@ -29,12 +29,12 @@ describe("Operators", () => {
 
     before(async () => {
         await fundTestAccounts();
-        ownerAddress = await getSignerSUIAddress(ownerSigner);
+        ownerAddress = await getAddressFromSigner(ownerSigner);
     });
 
     beforeEach(async () => {
         const publishTxn = await publishPackageUsingClient();
-        const objects = await getCreatedObjects(provider, publishTxn);
+        const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = await getDeploymentData(ownerAddress, objects);
         onChain = new OnChainCalls(ownerSigner, deploymentData);
     });

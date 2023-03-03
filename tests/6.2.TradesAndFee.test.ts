@@ -1411,6 +1411,7 @@ const tradesWithoutFee: TestCaseJSON = {
     ]
 };
 
+// expectMaker is always for Alice ( even if its taker in some trades)
 const tradesWithFee: TestCaseJSON = {
     "Test # 1 -   Long Position + Long Trade = Long Position": [
         {
@@ -1436,7 +1437,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 105,
-            size: 4,
+            size: -4,
             leverage: 4,
             expectMaker: {
                 mro: 0.25,
@@ -1457,7 +1458,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 4,
             expectMaker: {
                 mro: 0.25,
@@ -1498,7 +1499,7 @@ const tradesWithFee: TestCaseJSON = {
                 pOracle: 99,
                 isTaker: true,
                 price: 100,
-                size: 10,
+                size: -10,
                 leverage: 4,
                 expectMaker: {
                     mro: 0.25,
@@ -1580,7 +1581,7 @@ const tradesWithFee: TestCaseJSON = {
                 pOracle: 100,
                 isTaker: true,
                 price: 100,
-                size: -10,
+                size: 10,
                 leverage: 4,
                 expectMaker: {
                     mro: 0.25,
@@ -1621,7 +1622,7 @@ const tradesWithFee: TestCaseJSON = {
                 pOracle: 102,
                 isTaker: true,
                 price: 100,
-                size: -10,
+                size: 10,
                 leverage: 4,
                 expectMaker: {
                     mro: 0.25,
@@ -1640,7 +1641,7 @@ const tradesWithFee: TestCaseJSON = {
                 pOracle: 101,
                 isTaker: true,
                 price: 105,
-                size: 4,
+                size: -4,
                 leverage: 4,
                 expectMaker: {
                     mro: 0.25,
@@ -1722,7 +1723,7 @@ const tradesWithFee: TestCaseJSON = {
                 pOracle: 102,
                 isTaker: true,
                 price: 105,
-                size: -25,
+                size: 25,
                 leverage: 4,
                 expectMaker: {
                     mro: 0.25,
@@ -1744,7 +1745,7 @@ const tradesWithFee: TestCaseJSON = {
                 pOracle: 102,
                 isTaker: true,
                 price: 100,
-                size: -10,
+                size: 10,
                 leverage: 4,
                 expectMaker: {
                     mro: 0.25,
@@ -1785,7 +1786,7 @@ const tradesWithFee: TestCaseJSON = {
                 pOracle: 100,
                 isTaker: true,
                 price: 100,
-                size: -10,
+                size: 10,
                 leverage: 4,
                 expectMaker: {
                     mro: 0.25,
@@ -1825,7 +1826,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 100,
             isTaker: true,
             price: 100,
-            size: 10,
+            size: -10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -1844,7 +1845,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 105,
-            size: 5,
+            size: -5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -1884,7 +1885,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 100,
-            size: 10,
+            size: -10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -1903,7 +1904,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 95,
-            size: 5,
+            size: -5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -1943,7 +1944,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 100,
-            size: 10,
+            size: -10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2002,7 +2003,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 100,
             isTaker: true,
             price: 100,
-            size: 10,
+            size: -10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2099,7 +2100,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 95,
-            size: -8,
+            size: 8,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2139,7 +2140,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 95,
-            size: 5,
+            size: -5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2158,7 +2159,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 90,
-            size: -8,
+            size: 8,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2179,7 +2180,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 100,
-            size: 10,
+            size: -10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2198,7 +2199,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 100,
             isTaker: true,
             price: 95,
-            size: 5,
+            size: -5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2217,7 +2218,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 100,
             isTaker: true,
             price: 110,
-            size: -8,
+            size: 8,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2276,7 +2277,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 110,
-            size: -4,
+            size: 4,
             leverage: 5,
             expectMaker: {
                 mro: 0,
@@ -2316,7 +2317,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 100,
             isTaker: true,
             price: 105,
-            size: -6,
+            size: 6,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2335,7 +2336,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 95,
-            size: -4,
+            size: 4,
             leverage: 5,
             expectMaker: {
                 mro: 0,
@@ -2356,7 +2357,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 100,
-            size: 10,
+            size: -10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2394,7 +2395,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 90,
-            size: -4,
+            size: 4,
             leverage: 5,
             expectMaker: {
                 mro: 0,
@@ -2453,7 +2454,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 110,
-            size: -4,
+            size: 4,
             leverage: 5,
             expectMaker: {
                 mro: 0,
@@ -2474,7 +2475,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2533,7 +2534,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2571,7 +2572,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 105,
-            size: -5,
+            size: 5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2592,7 +2593,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2611,7 +2612,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 105,
-            size: -5,
+            size: 5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2651,7 +2652,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2670,7 +2671,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 105,
-            size: -5,
+            size: 5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2689,7 +2690,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 90,
-            size: -5,
+            size: 5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2710,7 +2711,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2748,7 +2749,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 90,
-            size: 8,
+            size: -8,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2769,7 +2770,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2866,7 +2867,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 110,
-            size: 8,
+            size: -8,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2946,7 +2947,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 100,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -2965,7 +2966,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 95,
-            size: 6,
+            size: -6,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -3005,7 +3006,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 100,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -3024,7 +3025,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 95,
-            size: 6,
+            size: -6,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -3043,7 +3044,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 105,
-            size: 4,
+            size: -4,
             leverage: 5,
             expectMaker: {
                 mro: 0,
@@ -3064,7 +3065,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -3102,7 +3103,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 110,
-            size: 4,
+            size: -4,
             leverage: 5,
             expectMaker: {
                 mro: 0,
@@ -3142,7 +3143,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 100,
             isTaker: true,
             price: 105,
-            size: 6,
+            size: -6,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -3161,7 +3162,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 101,
             isTaker: true,
             price: 90,
-            size: 4,
+            size: -4,
             leverage: 5,
             expectMaker: {
                 mro: 0,
@@ -3220,7 +3221,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 95,
-            size: -25,
+            size: 25,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -3260,7 +3261,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 102,
             isTaker: true,
             price: 95,
-            size: 5,
+            size: -5,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -3279,7 +3280,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 90,
             isTaker: true,
             price: 90,
-            size: -25,
+            size: 25,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,
@@ -3300,7 +3301,7 @@ const tradesWithFee: TestCaseJSON = {
             pOracle: 99,
             isTaker: true,
             price: 100,
-            size: -10,
+            size: 10,
             leverage: 5,
             expectMaker: {
                 mro: 0.2,

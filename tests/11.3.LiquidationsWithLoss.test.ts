@@ -14,7 +14,7 @@ const tests: TestCaseJSON = {
             leverage: 4
         },
         {
-            tradeType: "liq_filler",
+            tradeType: "liquidator_cat",
             pOracle: 100,
             price: 100,
             size: -14,
@@ -37,7 +37,7 @@ const tests: TestCaseJSON = {
             leverage: 4
         },
         {
-            tradeType: "liq_filler",
+            tradeType: "liquidator_cat",
             pOracle: 100,
             price: 100,
             size: -10,
@@ -60,7 +60,7 @@ const tests: TestCaseJSON = {
             leverage: 4
         },
         {
-            tradeType: "liq_filler",
+            tradeType: "liquidator_cat",
             pOracle: 100,
             price: 100,
             size: -6,
@@ -84,7 +84,7 @@ const tests: TestCaseJSON = {
                 leverage: 4
             },
             {
-                tradeType: "liq_filler",
+                tradeType: "liquidator_cat",
                 pOracle: 700,
                 price: 700,
                 size: 14,
@@ -107,7 +107,7 @@ const tests: TestCaseJSON = {
             leverage: 4
         },
         {
-            tradeType: "liq_filler",
+            tradeType: "liquidator_cat",
             pOracle: 700,
             price: 700,
             size: 10,
@@ -130,7 +130,7 @@ const tests: TestCaseJSON = {
             leverage: 4
         },
         {
-            tradeType: "liq_filler",
+            tradeType: "liquidator_cat",
             pOracle: 700,
             price: 700,
             size: 6,
@@ -161,5 +161,8 @@ describe("Liquidation Trades with Loss > Margin", () => {
         feePool: DEFAULT.FEE_POOL_ADDRESS
     };
 
-    executeTests(tests, marketConfig);
+    executeTests(tests, marketConfig, {
+        traders: 200_000,
+        liquidator: 500_000
+    });
 });

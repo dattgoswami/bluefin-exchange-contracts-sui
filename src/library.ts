@@ -35,6 +35,14 @@ export function toBigNumberStr(
     return toBigNumber(val, base).toFixed(0);
 }
 
+export function bnToBaseStr(val: BigNumberable, decimals = 6): string {
+    return bigNumber(val).shiftedBy(-BASE_DECIMALS).toFixed(decimals);
+}
+
+export function usdcToBaseNumber(val: BigNumberable, decimals = 6): number {
+    return Number(new BigNumber(val).shiftedBy(-6).toFixed(decimals));
+}
+
 export function toBaseNumber(val: BigNumberable, decimals = 3): number {
     return Number(
         new BigNumber(val).shiftedBy(-BASE_DECIMALS).toFixed(decimals)

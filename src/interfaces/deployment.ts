@@ -14,11 +14,20 @@ export interface DeploymentObjectMap {
     [dataType: string]: DeploymentObjects;
 }
 
+export interface BankAccountMap {
+    [account: string]: string;
+}
+
+export interface MarketDeployment {
+    marketObjects: DeploymentObjectMap;
+    bankAccounts: BankAccountMap;
+}
+
 export interface DeploymentData {
     deployer: string;
-    moduleName: string;
     objects: DeploymentObjectMap;
     markets: Array<any>;
+    bankAccounts: BankAccountMap;
 }
 
 export interface DeploymentConfig {

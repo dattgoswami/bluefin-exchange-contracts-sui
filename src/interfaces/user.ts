@@ -1,3 +1,5 @@
+import BigNumber from "bignumber.js";
+
 export interface wallet {
     address: string;
     phrase: string;
@@ -14,4 +16,9 @@ export interface UserPosition {
 export interface UserPositionExtended extends UserPosition {
     perpID: string;
     user: string;
+}
+
+export interface BankAccountDetails {
+    address: string;
+    balance: BigNumber;
 }

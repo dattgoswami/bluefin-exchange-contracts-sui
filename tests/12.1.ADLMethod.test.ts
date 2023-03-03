@@ -4,7 +4,7 @@ import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     readFile,
     getProvider,
-    getSignerSUIAddress,
+    getAddressFromSigner,
     getSignerFromSeed,
     createOrder,
     createMarket
@@ -22,6 +22,7 @@ import { Trader } from "../src/classes/Trader";
 import { network } from "../src/DeploymentConfig";
 import { DEFAULT } from "../src/defaults";
 import { UserPositionExtended } from "../src";
+import { mintAndDeposit } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -49,14 +50,15 @@ describe("Deleveraging Trade Method", () => {
         // deploy market
         deployment["markets"] = [
             {
-                Objects: await createMarket(deployment, ownerSigner, provider)
+                Objects: (await createMarket(deployment, ownerSigner, provider))
+                    .marketObjects
             }
         ];
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 
         // will be using owner as liquidator
-        ownerAddress = await getSignerSUIAddress(ownerSigner);
+        ownerAddress = await getAddressFromSigner(ownerSigner);
 
         // make admin operator
         await onChain.setSettlementOperator(
@@ -70,6 +72,9 @@ describe("Deleveraging Trade Method", () => {
         });
 
         expectTxToSucceed(priceTx);
+
+        await mintAndDeposit(onChain, alice.address);
+        await mintAndDeposit(onChain, bob.address);
 
         // open a position at 10x leverage between
         const trade = await Trader.setupNormalTrade(
@@ -124,7 +129,9 @@ describe("Deleveraging Trade Method", () => {
 
     it("should revert as maker of adl trade has zero sized position", async () => {
         const accounts = getMakerTakerAccounts(provider, true);
-        // TODO fund accounts with USDC over here
+
+        await mintAndDeposit(onChain, accounts.maker.address);
+        await mintAndDeposit(onChain, accounts.taker.address);
 
         // open a position between the accounts
         const trade = await Trader.setupNormalTrade(
@@ -164,7 +171,10 @@ describe("Deleveraging Trade Method", () => {
 
     it("should revert as taker of adl trade has zero sized position", async () => {
         const accounts = getMakerTakerAccounts(provider, true);
-        // TODO fund accounts with USDC over here
+        const tempTaker = createAccount(provider);
+        await mintAndDeposit(onChain, accounts.maker.address);
+        await mintAndDeposit(onChain, accounts.taker.address);
+        await mintAndDeposit(onChain, tempTaker.address);
 
         // open a position between the accounts
         const trade = await Trader.setupNormalTrade(
@@ -176,9 +186,6 @@ describe("Deleveraging Trade Method", () => {
         );
         const tx1 = await onChain.trade(trade);
         expectTxToSucceed(tx1);
-
-        const tempTaker = createAccount(provider);
-        // TODO fund temp taker account with USDC over here
 
         // close position for taker
         const trade2 = await Trader.setupNormalTrade(
@@ -223,7 +230,8 @@ describe("Deleveraging Trade Method", () => {
 
     it("should revert as all or nothing flag is set and taker qPos < deleveraging quantity", async () => {
         const accounts = getMakerTakerAccounts(provider, true);
-        // TODO fund accounts with USDC over here
+        await mintAndDeposit(onChain, accounts.maker.address);
+        await mintAndDeposit(onChain, accounts.taker.address);
 
         // open a position between the accounts
         const trade = await Trader.setupNormalTrade(
@@ -331,7 +339,8 @@ describe("Deleveraging Trade Method", () => {
 
     it("should revert as taker(bob) is under water - can not be taker of deleveraging trade", async () => {
         const accounts = getMakerTakerAccounts(provider, true);
-        // TODO fund accounts with USDC over here
+        await mintAndDeposit(onChain, accounts.maker.address);
+        await mintAndDeposit(onChain, accounts.taker.address);
 
         // open a position between the accounts
         const trade = await Trader.setupNormalTrade(
@@ -369,7 +378,8 @@ describe("Deleveraging Trade Method", () => {
 
     it("should revert as maker and taker of an adl trade must have opposite side positions", async () => {
         const accounts = getMakerTakerAccounts(provider, true);
-        // TODO fund accounts with USDC over here
+        await mintAndDeposit(onChain, accounts.maker.address);
+        await mintAndDeposit(onChain, accounts.taker.address);
 
         // open a position between the accounts
         const trade = await Trader.setupNormalTrade(
@@ -408,7 +418,8 @@ describe("Deleveraging Trade Method", () => {
 
     it("should successfully completely deleverage alice against cat", async () => {
         const accounts = getMakerTakerAccounts(provider, true);
-        // TODO fund accounts with USDC over here
+        await mintAndDeposit(onChain, accounts.maker.address);
+        await mintAndDeposit(onChain, accounts.taker.address);
 
         // open a position between the accounts
         const trade = await Trader.setupNormalTrade(
@@ -464,15 +475,16 @@ describe("Deleveraging Trade Method", () => {
 
         localDeployment["markets"] = [
             {
-                Objects: await createMarket(
-                    localDeployment,
-                    ownerSigner,
-                    provider
-                )
+                Objects: (
+                    await createMarket(localDeployment, ownerSigner, provider)
+                ).marketObjects
             }
         ];
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
+
+        await mintAndDeposit(onChain, alice.address);
+        await mintAndDeposit(onChain, bob.address);
 
         await onChain.updateOraclePrice({
             price: toBigNumberStr(100)
@@ -500,7 +512,8 @@ describe("Deleveraging Trade Method", () => {
         expectTxToSucceed(tx1);
 
         const accounts = getMakerTakerAccounts(provider, true);
-        // TODO fund accounts with USDC over here
+        await mintAndDeposit(onChain, accounts.maker.address);
+        await mintAndDeposit(onChain, accounts.taker.address);
 
         // open a position between the accounts
         const trade2 = await Trader.setupNormalTrade(

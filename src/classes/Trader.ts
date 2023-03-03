@@ -1,7 +1,7 @@
 import { JsonRpcProvider, Keypair } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
 import { Order } from "../interfaces";
-import { getSignerFromKeyPair, getSignerSUIAddress } from "../utils";
+import { getSignerFromKeyPair, getAddressFromSigner } from "../utils";
 import { OrderSigner } from "./OrderSigner";
 
 export class Trader {
@@ -13,7 +13,7 @@ export class Trader {
         makerOrder: Order,
         options?: { takerOrder?: Order; quantity?: BigNumber }
     ) {
-        const takerAddress = await getSignerSUIAddress(
+        const takerAddress = await getAddressFromSigner(
             getSignerFromKeyPair(taker, provider)
         );
 

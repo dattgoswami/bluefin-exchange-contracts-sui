@@ -6,9 +6,22 @@ import {
 } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
 import { DEFAULT } from "../defaults";
-import { UserPosition, Order, PerpCreationMarketDetails } from "../interfaces";
-import { hexToBuffer, toBigNumberStr } from "../library";
-import { getAddressFromSigner, getSignerSUIAddress } from "../utils";
+import {
+    UserPosition,
+    Order,
+    PerpCreationMarketDetails,
+    BankAccountDetails
+} from "../interfaces";
+import {
+    bigNumber,
+    BigNumberable,
+    hexToBuffer,
+    toBigNumber,
+    toBigNumberStr,
+    usdcToBaseNumber
+} from "../library";
+import { getAddressFromSigner } from "../utils";
+
 export class OnChainCalls {
     signer: SignerWithProvider;
     deployment: any;
@@ -25,6 +38,7 @@ export class OnChainCalls {
         const callArgs = [];
 
         callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(this.getBankID());
 
         callArgs.push(args.name ? args.name : "ETH-PERP");
 
@@ -71,7 +85,7 @@ export class OnChainCalls {
 
         callArgs.push(args.feePool ? args.feePool : DEFAULT.FEE_POOL_ADDRESS);
 
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         return this.signAndCall(
             caller,
@@ -89,7 +103,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -108,7 +122,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -127,7 +141,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -146,7 +160,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -165,7 +179,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -184,7 +198,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -203,7 +217,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -227,7 +241,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -251,7 +265,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -270,7 +284,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -294,7 +308,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ) {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
         const callArgs = [];
 
         callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
@@ -323,10 +337,11 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(this.getBankID());
 
         callArgs.push(this.getOperatorTableID());
         callArgs.push(this.getOrdersTableID());
@@ -381,13 +396,14 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(this.getBankID());
 
         callArgs.push(args.liquidatee);
-        callArgs.push(args.liquidator || (await getSignerSUIAddress(caller)));
+        callArgs.push(args.liquidator || (await getAddressFromSigner(caller)));
         callArgs.push(args.quantity);
         callArgs.push(args.leverage);
         callArgs.push(args.allOrNothing == true);
@@ -405,10 +421,11 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(this.getBankID());
 
         callArgs.push(args.maker);
         callArgs.push(args.taker);
@@ -425,11 +442,12 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ) {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(this.getBankID());
         callArgs.push(toBigNumberStr(args.amount));
 
         return this.signAndCall(caller, "add_margin", callArgs, "exchange");
@@ -442,11 +460,12 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ) {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(this.getBankID());
         callArgs.push(toBigNumberStr(args.amount));
 
         return this.signAndCall(caller, "remove_margin", callArgs, "exchange");
@@ -459,11 +478,12 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ) {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
         callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(this.getBankID());
         callArgs.push(toBigNumberStr(args.leverage));
 
         return this.signAndCall(
@@ -482,7 +502,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -511,7 +531,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -541,7 +561,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -557,51 +577,16 @@ export class OnChainCalls {
         );
     }
 
-    public signAndCall(
-        caller: SignerWithProvider,
-        method: string,
-        callArgs: any[],
-        moduleName: string
-    ): Promise<SuiExecuteTransactionResponse> {
-        return caller.signAndExecuteTransaction({
-            kind: "moveCall",
-            data: {
-                packageObjectId: this.getPackageID(),
-                module: moduleName,
-                function: method,
-                arguments: callArgs,
-                typeArguments: [],
-                gasBudget: 10000
-            }
-        });
-    }
-
-    public async getUSDCBalance(
-        signer?: RawSigner,
-        limit?: number,
-        cursor?: string
-    ): Promise<any> {
-        const caller = signer ? signer : this.signer;
-
-        const coins = await caller.provider.getCoins(
-            await getAddressFromSigner(caller),
-            this.getCurrencyID(),
-            cursor ?? null,
-            limit ?? null
-        );
-
-        return coins;
-    }
-
     public async depositToBank(
         args: {
             coinID: string;
+            amount: string;
             accountAddress?: string;
             bankID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -611,6 +596,7 @@ export class OnChainCalls {
                 ? args.accountAddress
                 : await getAddressFromSigner(caller)
         );
+        callArgs.push(args.amount);
         callArgs.push(args.coinID);
 
         return this.signAndCall(
@@ -629,7 +615,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -655,7 +641,7 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
@@ -675,25 +661,153 @@ export class OnChainCalls {
         );
     }
 
+    public async withdrawAllMarginFromBank(
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(this.getBankID());
+        callArgs.push(await getAddressFromSigner(caller));
+
+        return this.signAndCall(
+            caller,
+            "withdraw_all_margin_from_bank",
+            callArgs,
+            "margin_bank"
+        );
+    }
+
     public async mintUSDC(
         args: {
             amount: string;
-            to: string;
+            to?: string;
             treasuryCapID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
-        const caller = signer ? signer : this.signer;
+        const caller = signer || this.signer;
 
         const callArgs = [];
 
-        callArgs.push(
-            args.treasuryCapID ? args.treasuryCapID : this.getTreasuryCapID()
-        );
+        callArgs.push(args.treasuryCapID || this.getTreasuryCapID());
+
         callArgs.push(args.amount);
-        callArgs.push(args.to);
+
+        callArgs.push(args?.to || (await getAddressFromSigner(caller)));
 
         return this.signAndCall(caller, "mint", callArgs, "tusdc");
+    }
+
+    public async getUSDCCoins(
+        args?: {
+            address?: string;
+            currencyID?: string;
+            limit?: number;
+            cursor?: string;
+        },
+        signer?: RawSigner
+    ): Promise<any> {
+        const caller = signer || this.signer;
+
+        const coins = await caller.provider.getCoins(
+            args?.address || (await getAddressFromSigner(caller)),
+            args?.currencyID || this.getCurrencyID(),
+            args?.cursor ?? null,
+            args?.limit ?? null
+        );
+
+        return coins;
+    }
+
+    public async getUSDCBalance(
+        args?: {
+            address?: string;
+            currencyID?: string;
+            limit?: number;
+            cursor?: string;
+        },
+        signer?: RawSigner
+    ): Promise<number> {
+        const coins = await this.getUSDCCoins(args, signer);
+        if (coins.data.length == 0) {
+            return 0;
+        } else {
+            const bal = coins.data.reduce(
+                (total: number, coin: any) => total + coin.balance,
+                0
+            );
+            return usdcToBaseNumber(bal);
+        }
+    }
+
+    public async getUSDCoinHavingBalance(
+        args: {
+            amount: BigNumberable;
+            address?: string;
+            currencyID?: string;
+            limit?: number;
+            cursor?: string;
+        },
+        signer?: RawSigner
+    ) {
+        // get all usdc coins
+        const coins = await this.getUSDCCoins(args, signer);
+
+        for (const coin of coins.data) {
+            if (bigNumber(coin.balance).gte(toBigNumber(args.amount, 6))) {
+                return coin;
+            }
+        }
+        return undefined;
+    }
+
+    public async getBankAccountDetails(
+        id: string
+    ): Promise<BankAccountDetails> {
+        const obj = await this.getOnChainObject(id);
+        if (obj) {
+            return this._parseAccountDetails(obj);
+        } else {
+            throw `No object found with id: ${id}`;
+        }
+    }
+
+    public async getBankAccountDetailsUsingAddress(
+        address: string
+    ): Promise<BigNumber> {
+        if (this.deployment.bankAccounts[address] === undefined)
+            throw `Address: ${address} not found in deployment map`;
+
+        const id = this.deployment.bankAccounts[address];
+
+        const obj = await this.getOnChainObject(id);
+
+        if (obj) {
+            return this._parseAccountDetails(obj).balance;
+        } else {
+            throw `No object found with id: ${id}`;
+        }
+    }
+
+    public signAndCall(
+        caller: SignerWithProvider,
+        method: string,
+        callArgs: any[],
+        moduleName: string
+    ): Promise<SuiExecuteTransactionResponse> {
+        return caller.signAndExecuteTransaction({
+            kind: "moveCall",
+            data: {
+                packageObjectId: this.getPackageID(),
+                module: moduleName,
+                function: method,
+                arguments: callArgs,
+                typeArguments: [],
+                gasBudget: 10000
+            }
+        });
     }
 
     // ===================================== //
@@ -763,5 +877,16 @@ export class OnChainCalls {
 
     getTreasuryCapID(): string {
         return this.deployment["objects"]["TreasuryCap"].id as string;
+    }
+
+    // ===================================== //
+    //          HELPER METHODS
+    // ===================================== //
+
+    _parseAccountDetails(obj: any): BankAccountDetails {
+        return {
+            address: obj.data.fields.name,
+            balance: bigNumber(obj.data.fields.value.fields.balance)
+        } as BankAccountDetails;
     }
 }

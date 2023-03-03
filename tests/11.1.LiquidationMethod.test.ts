@@ -4,7 +4,7 @@ import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     readFile,
     getProvider,
-    getSignerSUIAddress,
+    getAddressFromSigner,
     getSignerFromSeed,
     createOrder,
     createMarket,
@@ -19,6 +19,7 @@ import { Trader } from "../src/classes/Trader";
 import { network } from "../src/DeploymentConfig";
 import { DEFAULT } from "../src/defaults";
 import { UserPositionExtended } from "../src";
+import { mintAndDeposit } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -46,14 +47,15 @@ describe("Liquidation Trade Method", () => {
         // deploy market
         deployment["markets"] = [
             {
-                Objects: await createMarket(deployment, ownerSigner, provider)
+                Objects: (await createMarket(deployment, ownerSigner, provider))
+                    .marketObjects
             }
         ];
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 
         // will be using owner as liquidator
-        ownerAddress = await getSignerSUIAddress(ownerSigner);
+        ownerAddress = await getAddressFromSigner(ownerSigner);
 
         // make admin operator
         await onChain.setSettlementOperator(
@@ -67,6 +69,10 @@ describe("Liquidation Trade Method", () => {
         });
 
         expectTxToSucceed(priceTx);
+
+        await mintAndDeposit(onChain, alice.address);
+        await mintAndDeposit(onChain, bob.address);
+        await mintAndDeposit(onChain, ownerAddress);
 
         // open a position at 10x leverage between
         const trade = await Trader.setupNormalTrade(
@@ -164,7 +170,9 @@ describe("Liquidation Trade Method", () => {
 
     it("should revert as liquidatee(maker) has zero sized position", async () => {
         const accounts = getMakerTakerAccounts(provider, true);
-        // TODO fund accounts with USDC over here
+
+        await mintAndDeposit(onChain, accounts.maker.address);
+        await mintAndDeposit(onChain, accounts.taker.address);
 
         // open a position between the accounts
         const trade = await Trader.setupNormalTrade(
@@ -247,6 +255,9 @@ describe("Liquidation Trade Method", () => {
         // maker will be performing liquidation
         await requestGas(makerTaker.maker.address);
 
+        await mintAndDeposit(onChain, makerTaker.maker.address);
+        await mintAndDeposit(onChain, makerTaker.taker.address);
+
         const order = createOrder({
             price: 100,
             isBuy: true,
@@ -327,11 +338,9 @@ describe("Liquidation Trade Method", () => {
 
         localDeployment["markets"] = [
             {
-                Objects: await createMarket(
-                    localDeployment,
-                    ownerSigner,
-                    provider
-                )
+                Objects: (
+                    await createMarket(localDeployment, ownerSigner, provider)
+                ).marketObjects
             }
         ];
 
@@ -342,6 +351,9 @@ describe("Liquidation Trade Method", () => {
         });
 
         const makerTaker = await getMakerTakerAccounts(provider, true);
+
+        await mintAndDeposit(onChain, makerTaker.maker.address);
+        await mintAndDeposit(onChain, makerTaker.taker.address);
 
         const order = createOrder({
             quantity: 2,

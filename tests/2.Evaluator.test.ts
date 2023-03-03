@@ -5,7 +5,7 @@ import { OnChainCalls, Transaction } from "../src/classes";
 import {
     readFile,
     getProvider,
-    getSignerSUIAddress,
+    getAddressFromSigner,
     getSignerFromSeed,
     createMarket
 } from "../src/utils";
@@ -33,14 +33,15 @@ describe("Evaluator", () => {
 
     before(async () => {
         await fundTestAccounts();
-        ownerAddress = await getSignerSUIAddress(ownerSigner);
+        ownerAddress = await getAddressFromSigner(ownerSigner);
     });
 
     // deploy the market again before each test
     beforeEach(async () => {
         deployment["markets"] = [
             {
-                Objects: await createMarket(deployment, ownerSigner, provider)
+                Objects: (await createMarket(deployment, ownerSigner, provider))
+                    .marketObjects
             }
         ];
         onChain = new OnChainCalls(ownerSigner, deployment);

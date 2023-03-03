@@ -10,9 +10,10 @@ module bluefin_foundation::isolated_trading {
 
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::price_oracle::{Self};
+    use bluefin_foundation::margin_bank::{Self, Bank};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::signed_number::{Self, Number};
+    use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
 
@@ -101,7 +102,7 @@ module bluefin_foundation::isolated_trading {
     //                      TRADE METHOD
     //===========================================================//
 
-    public fun trade(sender: address, perp: &mut Perpetual, ordersTable: &mut Table<vector<u8>, OrderStatus>, data: TradeData){
+    public fun trade(sender: address, perp: &mut Perpetual, bank: &mut Bank, ordersTable: &mut Table<vector<u8>, OrderStatus>, data: TradeData){
 
             assert!(data.makerOrder.isBuy != data.takerOrder.isBuy, error::order_cannot_be_of_same_side());
 
@@ -109,7 +110,9 @@ module bluefin_foundation::isolated_trading {
             let tradeChecks = perpetual::checks(perp);
             let makerFee = perpetual::makerFee(perp);
             let takerFee = perpetual::takerFee(perp);
+            let feePool = perpetual::feePool(perp);
             let perpID = object::uid_to_inner(perpetual::id(perp));
+            let perpAddress = object::id_to_address(&perpID);
             let imr = perpetual::imr(perp);
             let mmr = perpetual::mmr(perp);
             let positionsTable = perpetual::positions(perp);
@@ -187,6 +190,27 @@ module bluefin_foundation::isolated_trading {
                 oraclePrice, 
                 TRADE_TYPE, 
                 1);
+
+
+            // transfer margins between perp and accounts
+            margin_bank::transfer_trade_margin(
+                bank,
+                perpAddress,
+                data.makerOrder.makerAddress,
+                data.takerOrder.makerAddress,
+                makerResponse.fundsFlow,
+                takerResponse.fundsFlow
+            );
+
+
+            // transfer fee to fee pool from perpetual
+            margin_bank::transfer_margin_to_account(
+                bank, 
+                perpAddress, 
+                feePool, 
+                makerResponse.fee + takerResponse.fee, 
+                2
+            );
 
             position::emit_position_update_event(perpID, data.makerOrder.makerAddress, newMakerPosition, ACTION_TRADE);
             position::emit_position_update_event(perpID, data.takerOrder.makerAddress, newTakerPosition, ACTION_TRADE);
@@ -429,8 +453,8 @@ module bluefin_foundation::isolated_trading {
     fun apply_isolated_margin(checks:TradeChecks, balance: &mut UserPosition, order:Order, fill:Fill, feePerUnit: u128, isTaker: u64): IMResponse {
         
         let fundsFlow: Number;
-        let marginPerUnit: Number;
         let equityPerUnit: Number;
+        let marginPerUnit: u128;
 
         let isBuy = order.isBuy;
         
@@ -443,8 +467,8 @@ module bluefin_foundation::isolated_trading {
 
         // case 1: Opening position or adding to position size
         if (qPos == 0 || isBuy == isPosPositive) {
-            marginPerUnit = signed_number::from(library::base_mul(fill.price, mro), true);
-            fundsFlow = signed_number::from(library::base_mul(fill.quantity, signed_number::value(marginPerUnit) + feePerUnit), true);
+            marginPerUnit = library::base_mul(fill.price, mro);
+            fundsFlow = signed_number::from(library::base_mul(fill.quantity, marginPerUnit + feePerUnit), true);
 
             position::set_oiOpen(balance, oiOpen + library::base_mul(fill.quantity, fill.price));
             position::set_qPos(balance, qPos + fill.quantity);
@@ -464,13 +488,12 @@ module bluefin_foundation::isolated_trading {
         // case 2: Reduce only order
         else if (order.reduceOnly || ( isBuy != isPosPositive && fill.quantity <= qPos)){
             let newQPos = qPos - fill.quantity;
-            marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
-            equityPerUnit = signed_number::add(marginPerUnit, pnlPerUnit);            
+            marginPerUnit = library::base_div(margin, qPos);
+            equityPerUnit = signed_number::add_uint(pnlPerUnit, marginPerUnit);            
             assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
             
             // Max(0, equityPerUnit);
             let posValue = signed_number::positive_value(equityPerUnit);
-            
             feePerUnit = if ( feePerUnit > posValue ) { posValue } else { feePerUnit };
 
             fundsFlow = signed_number::sub_uint( 
@@ -497,8 +520,8 @@ module bluefin_foundation::isolated_trading {
             let newQPos = fill.quantity - qPos;
             let updatedOIOpen = library::base_mul(newQPos, fill.price);
 
-            marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
-            equityPerUnit = signed_number::add(marginPerUnit, pnlPerUnit);
+            marginPerUnit = library::base_div(margin, qPos);
+            equityPerUnit = signed_number::add_uint(pnlPerUnit, marginPerUnit);            
 
             assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
 
@@ -525,10 +548,11 @@ module bluefin_foundation::isolated_trading {
                                 + feePerUnit)
                         );
 
-            feePerUnit = library::base_mul(qPos, closingFeePerUnit) 
-                         + ((newQPos * feePerUnit) / fill.quantity);
-
-
+            feePerUnit = library::base_div(
+                library::base_mul(qPos, closingFeePerUnit) +
+                library::base_mul(newQPos,feePerUnit),
+                fill.quantity
+            );
 
             pnlPerUnit = signed_number::mul_uint(pnlPerUnit, qPos);
 

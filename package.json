@@ -12,7 +12,7 @@
     "test": "ts-mocha --no-timeout tests/*.test.ts",
     "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
     "prepare": "husky install",
-    "eslint:errors": "yarn eslint --fix --cache --max-warnings=-1 ."
+    "lint": "yarn eslint --fix --cache --max-warnings=-1 ."
   },
   "directories": {
     "test": "tests"
@@ -26,6 +26,7 @@
     "bignumber.js": "^9.1.0",
     "chai-as-promised": "^7.1.1",
     "dotenv": "^16.0.3",
+    "ethereumjs-wallet": "^1.0.2",
     "ts-binary-serializer": "^2.1.3",
     "yargs": "^17.6.2",
     "yarn": "^1.22.19"

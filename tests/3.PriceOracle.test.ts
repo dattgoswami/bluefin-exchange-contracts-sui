@@ -4,7 +4,6 @@ import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     readFile,
     getProvider,
-    getSignerSUIAddress,
     getSignerFromSeed,
     getAddressFromSigner,
     createMarket
@@ -38,14 +37,15 @@ describe("Price Oracle", () => {
 
     before(async () => {
         await fundTestAccounts();
-        ownerAddress = await getSignerSUIAddress(ownerSigner);
+        ownerAddress = await getAddressFromSigner(ownerSigner);
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
 
     beforeEach(async () => {
         deployment["markets"] = [
             {
-                Objects: await createMarket(deployment, ownerSigner, provider)
+                Objects: (await createMarket(deployment, ownerSigner, provider))
+                    .marketObjects
             }
         ];
         onChain = new OnChainCalls(ownerSigner, deployment);

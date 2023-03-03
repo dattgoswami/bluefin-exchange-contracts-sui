@@ -1,7 +1,7 @@
 import {
-    getSignerSUIAddress,
+    getAddressFromSigner,
     writeFile,
-    getCreatedObjects,
+    getGenesisMap,
     getSignerFromSeed,
     getProvider,
     publishPackageUsingClient,
@@ -19,7 +19,7 @@ const signer = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 async function main() {
     // info
     console.log(`Publishing package on: ${DeploymentConfigs.network.rpc}`);
-    const deployerAddress = await getSignerSUIAddress(signer);
+    const deployerAddress = await getAddressFromSigner(signer);
     console.log(`Deployer SUI address: ${deployerAddress}`);
 
     // public package
@@ -32,7 +32,7 @@ async function main() {
 
     if (status == "success") {
         // fetch created objects
-        const objects = await getCreatedObjects(provider, publishTxn);
+        const objects = await getGenesisMap(provider, publishTxn);
 
         const deploymentData = getDeploymentData(deployerAddress, objects);
 

@@ -439,7 +439,7 @@ const liquidationTests: TestCaseJSON = {
                 }
             },
             {
-                tradeType: "liq_filler",
+                tradeType: "liquidator_bob",
                 pOracle: 100,
                 price: 100,
                 size: 5,
@@ -509,7 +509,7 @@ const liquidationTests: TestCaseJSON = {
                 }
             },
             {
-                tradeType: "liq_filler",
+                tradeType: "liquidator_bob",
                 pOracle: 102,
                 price: 100,
                 size: -10,
@@ -578,7 +578,7 @@ const liquidationTests: TestCaseJSON = {
             }
         },
         {
-            tradeType: "liq_filler",
+            tradeType: "liquidator_bob",
             pOracle: 101,
             price: 100,
             size: -20,
@@ -648,7 +648,7 @@ const liquidationTests: TestCaseJSON = {
                 }
             },
             {
-                tradeType: "liq_filler",
+                tradeType: "liquidator_bob",
                 pOracle: 100,
                 price: 100,
                 size: 20,
@@ -718,7 +718,7 @@ const liquidationTests: TestCaseJSON = {
                 }
             },
             {
-                tradeType: "liq_filler",
+                tradeType: "liquidator_bob",
                 pOracle: 101,
                 price: 100,
                 size: -4,
@@ -787,7 +787,7 @@ const liquidationTests: TestCaseJSON = {
             }
         },
         {
-            tradeType: "liq_filler",
+            tradeType: "liquidator_bob",
             pOracle: 100,
             price: 100,
             size: 4,

@@ -10,8 +10,9 @@ module bluefin_foundation::exchange {
     // custom modules
     use bluefin_foundation::position::{Self, UserPosition};
     use bluefin_foundation::price_oracle::{Self, UpdatePriceOracleCap};
-    use bluefin_foundation::evaluator::{Self};
     use bluefin_foundation::perpetual::{Self, Perpetual};
+    use bluefin_foundation::margin_bank::{Self, Bank};
+    use bluefin_foundation::evaluator::{Self};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::margin_math::{Self};
@@ -102,6 +103,8 @@ module bluefin_foundation::exchange {
      */
     public entry fun create_perpetual(
         _: &AdminCap, 
+        bank: &mut Bank,
+
         name: vector<u8>, 
         minPrice: u128,
         maxPrice: u128,
@@ -169,6 +172,29 @@ module bluefin_foundation::exchange {
             checks,
             positions,
             priceOracle
+        );
+
+
+        // create bank account for perpetual
+        margin_bank::initialize_account(
+            margin_bank::mut_accounts(bank), 
+            object::id_to_address(&perpID),
+            ctx
+        );
+
+        // create bank account for insurance pool of perpetual
+        margin_bank::initialize_account(
+            margin_bank::mut_accounts(bank), 
+            insurancePool,
+            ctx
+        );
+
+
+        // create bank account for fee pool of perpetual
+        margin_bank::initialize_account(
+            margin_bank::mut_accounts(bank), 
+            feePool,
+            ctx
         );
 
     }
@@ -297,6 +323,7 @@ module bluefin_foundation::exchange {
      */ 
     public entry fun trade(
         perp: &mut Perpetual, 
+        bank: &mut Bank, 
         operatorTable: &mut Table<address, bool>,
         ordersTable: &mut Table<vector<u8>, OrderStatus>,
 
@@ -373,7 +400,7 @@ module bluefin_foundation::exchange {
                 price
             );
 
-            isolated_trading::trade(sender, perp, ordersTable, data);
+            isolated_trading::trade(sender, perp, bank, ordersTable, data);
     }
 
     /**
@@ -381,7 +408,9 @@ module bluefin_foundation::exchange {
      * an under collat account
      */ 
     public entry fun liquidate(
-        perp: &mut Perpetual, 
+        perp: &mut Perpetual,
+        bank: &mut Bank, 
+
         // address of account to be liquidated
         liquidatee: address,
         // address of liquidator
@@ -418,7 +447,7 @@ module bluefin_foundation::exchange {
             leverage,
             allOrNothing);
 
-        isolated_liquidation::trade(sender, perp, data);
+        isolated_liquidation::trade(sender, perp, bank, data);
     }
 
     /**
@@ -427,6 +456,7 @@ module bluefin_foundation::exchange {
      */
      public entry fun deleverage(
         perp: &mut Perpetual, 
+        bank: &mut Bank, 
         // below water account to be deleveraged
         maker: address,
         // taker in profit
@@ -455,7 +485,7 @@ module bluefin_foundation::exchange {
             quantity,
             allOrNothing);
 
-        isolated_adl::trade(sender, perp, data);
+        isolated_adl::trade(sender, perp, bank, data);
     }
 
 
@@ -466,13 +496,14 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to add margin to their position
      */
-    public entry fun add_margin(perp: &mut Perpetual, amount: u128, ctx: &mut TxContext){
+    public entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, amount: u128, ctx: &mut TxContext){
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
         let user = tx_context::sender(ctx);
 
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpAddres = object::id_to_address(&perpID);
 
         let balance = table::borrow_mut(perpetual::positions(perp), user);
 
@@ -481,7 +512,14 @@ module bluefin_foundation::exchange {
 
         assert!(qPos > 0, error::user_position_size_is_zero(2));
 
-        // TODO transfer margin amount from user to perpetual in margin bank
+        // Transfer margin amount from user to perpetual in margin bank
+        margin_bank::transfer_margin_to_account(
+            bank,
+            user, 
+            perpAddres, 
+            amount,
+            3
+        );
 
         // update margin of user in storage
         position::set_margin(balance, margin + amount);
@@ -497,7 +535,7 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to remove margin from their position
      */
-    public entry fun remove_margin(perp: &mut Perpetual, amount: u128, ctx: &mut TxContext){
+    public entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, amount: u128, ctx: &mut TxContext){
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
 
         let user = tx_context::sender(ctx);
@@ -506,6 +544,7 @@ module bluefin_foundation::exchange {
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpAddres = object::id_to_address(&perpID);
 
         let initBalance = *table::borrow(perpetual::positions(perp), user);
         let balance = table::borrow_mut(perpetual::positions(perp), user);
@@ -520,7 +559,15 @@ module bluefin_foundation::exchange {
 
         assert!(amount <= maxRemovableAmount, error::margin_must_be_less_than_max_removable_margin());
         
-        // TODO transfer margin amount from perpetual to user address in margin bank
+        // transfer margin amount from perpetual to user address in margin bank
+        margin_bank::transfer_margin_to_account(
+            bank,
+            perpAddres, 
+            user, 
+            amount,
+            2
+        );
+
 
         // update margin of user in storage
         position::set_margin(balance, margin - amount);
@@ -546,7 +593,7 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to adjust their leverage
      */
-    public entry fun adjust_leverage(perp: &mut Perpetual, leverage: u128, ctx: &mut TxContext){
+    public entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, leverage: u128, ctx: &mut TxContext){
 
         // get precise(whole number) leverage 1, 2, 3...n
         leverage = library::round_down(leverage);
@@ -557,6 +604,7 @@ module bluefin_foundation::exchange {
         let priceOracle = price_oracle::price(perpetual::priceOracle(perp));
         let tradeChecks = perpetual::checks(perp);
         let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpAddres = object::id_to_address(&perpID);
 
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
@@ -570,11 +618,26 @@ module bluefin_foundation::exchange {
         let targetMargin = margin_math::get_target_margin(*balance, leverage, priceOracle);
 
         if(margin > targetMargin){
-            // TODO: if user position has more margin than required for leverage, 
+            // if user position has more margin than required for leverage, 
             // move extra margin back to bank
+            margin_bank::transfer_margin_to_account(
+                bank,
+                perpAddres, 
+                user, 
+                margin - targetMargin,
+                2
+            );
+
         } else if (margin < targetMargin) {
-            // TODO: if user position has < margin than required target margin, 
+            // if user position has < margin than required target margin, 
             // move required margin from bank to perpetual
+            margin_bank::transfer_margin_to_account(
+                bank,
+                user, 
+                perpAddres, 
+                targetMargin - margin,
+                3
+            );
         };
 
         // update mro to target leverage

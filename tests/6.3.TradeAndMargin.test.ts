@@ -1378,7 +1378,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 0.1,
                     pPos: 100
                 },
-                expectSystem: { fee: 154 }
+                expectSystem: { fee: 112 }
             }
         ],
     "Test # 3 - Long Position + Short Trade (Closing) + [MR > IMR] + Proceed": [
@@ -1410,7 +1410,7 @@ const marginTestsWithFee: TestCaseJSON = {
                 marginRatio: 1,
                 pPos: 0
             },
-            expectSystem: { fee: 210 }
+            expectSystem: { fee: 140 }
         }
     ],
     "Test # 4 - Long Position + Short Trade (Flipping) + [MR > IMR] + Proceed":
@@ -1509,7 +1509,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 0.1,
                     pPos: 100
                 },
-                expectSystem: { fee: 154 }
+                expectSystem: { fee: 112 }
             }
         ],
     "Test # 7 - Short Position + Long Trade (Closing) + [MR > IMR] + Proceed": [
@@ -1541,7 +1541,7 @@ const marginTestsWithFee: TestCaseJSON = {
                 marginRatio: 1,
                 pPos: 0
             },
-            expectSystem: { fee: 210 }
+            expectSystem: { fee: 140 }
         }
     ],
     "Test # 8 - Short Position + Long Trade (Flipping) + [MR > IMR] + Proceed":
@@ -1635,7 +1635,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 224 }
+                expectSystem: { fee: 154 }
             }
         ],
     "Test # 12 - Long Position + Short Trade (Flipping) + [MR < MMR (MR Improves)] + Error":
@@ -1721,7 +1721,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 197.4 }
+                expectSystem: { fee: 127.4 }
             }
         ],
     "Test # 16 - Short Position + Long Trade (Flipping) + [MR < MMR (MR Improves)] + Error":
@@ -1807,7 +1807,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 0.04,
                     pPos: 100
                 },
-                expectSystem: { fee: 154 }
+                expectSystem: { fee: 112 }
             }
         ],
     "Test # 19 - Long Position + Short Trade (Closing) + [Closing (MR = 100%)] + Proceed":
@@ -1841,7 +1841,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 228.2 }
+                expectSystem: { fee: 158.2 }
             }
         ],
     "Test # 20 - Long Position + Short Trade (Flipping) + [MR < MMR (MR doesnt change)] + Error":
@@ -1927,7 +1927,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 0.04,
                     pPos: 100
                 },
-                expectSystem: { fee: 154 }
+                expectSystem: { fee: 112 }
             }
         ],
     "Test # 23 - Short Position + Long Trade (Closing) + [Closing (MR = 100%)] + Proceed":
@@ -1961,7 +1961,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 198.24 }
+                expectSystem: { fee: 128.24 }
             }
         ],
     "Test # 24 - Short Position + Long Trade (Flipping) + [MR < MMR (MR doesnt change)] + Error":
@@ -2047,7 +2047,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 229.6 }
+                expectSystem: { fee: 159.6 }
             }
         ],
     "Test # 28 - Long Position + Short Trade (Flipping) + [MR < MMR (MR falls)] + Error - 400":
@@ -2133,7 +2133,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 198.45 }
+                expectSystem: { fee: 128.45 }
             }
         ],
     "Test # 32 - Short Position + Long Trade (Flipping) + [MR < MMR (MR falls)] + Error - 400":
@@ -2227,7 +2227,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 227.57 }
+                expectSystem: { fee: 157.57 }
             }
         ],
     "Test # 36 - Long Position + Short Trade (Flipping) + [IMR > MR ≥ MMR (MR Improves)] + Error":
@@ -2321,7 +2321,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 198.8 }
+                expectSystem: { fee: 128.8 }
             }
         ],
     "Test # 40 - Short Position + Long Trade (Flipping) + [IMR > MR ≥ MMR (MR Improves)] + Error":
@@ -2414,7 +2414,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 0.054,
                     pPos: 100
                 },
-                expectSystem: { fee: 154 }
+                expectSystem: { fee: 112 }
             }
         ],
     "Test # 43 - Long Position + Short Trade (Closing) + [Closing (MR = 100%)] + Proceed":
@@ -2448,7 +2448,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 227.57 }
+                expectSystem: { fee: 157.57 }
             }
         ],
     "Test # 44 - Long Position + Short Trade (Flipping) + [IMR > MR ≥ MMR (MR doesnt Change)] + Error":
@@ -2466,7 +2466,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 0.25,
                     pPos: 149.588868
                 },
-                expectSystem: { fee: 104.712207 }
+                expectSystem: { fee: 104.712208 }
             },
 
             {
@@ -2542,7 +2542,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 0.054,
                     pPos: 87
                 },
-                expectSystem: { fee: 144.9 }
+                expectSystem: { fee: 102.9 }
             }
         ],
     "Test # 47 - Short Position + Long Trade (Closing) + [Closing (MR = 100%)] + Proceed":
@@ -2576,7 +2576,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 198.8 }
+                expectSystem: { fee: 128.8 }
             }
         ],
     "Test # 48 - Short Position + Long Trade (Flipping) + [IMR > MR ≥ MMR (MR doesnt Change)] + Error":
@@ -2662,7 +2662,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 227.57 }
+                expectSystem: { fee: 157.57 }
             }
         ],
     "Test # 52 - Long Position + Short Trade (Flipping) + [IMR > MR ≥ MMR (MR Falls)] + Error - 400":
@@ -2748,7 +2748,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 198.8 }
+                expectSystem: { fee: 128.8 }
             }
         ],
     "Test # 56 - Short Position + Long Trade (Flipping) + [IMR > MR ≥ MMR (MR Falls)] + Error - 400":
@@ -2859,7 +2859,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 203.6628 }
+                expectSystem: { fee: 137.766375 }
             }
         ],
     "Test # 60 - Long Position + Short Trade (Closing w Loss > Margin) + [MR < 0] + Error":
@@ -3030,7 +3030,7 @@ const marginTestsWithFee: TestCaseJSON = {
                     marginRatio: 1,
                     pPos: 0
                 },
-                expectSystem: { fee: 186.648 }
+                expectSystem: { fee: 113.295 }
             }
         ],
     "Test # 66 - Short Position + Long Trade (Closing w Loss > Margin) + [MR < 0] + Error":

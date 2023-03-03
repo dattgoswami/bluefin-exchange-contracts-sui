@@ -1,4 +1,5 @@
-import { getMakerTakerAccounts, MakerTakerAccounts } from "./accounts";
+import Wallet from "ethereumjs-wallet";
+import { getTestAccounts } from "./accounts";
 import { network, DeploymentConfigs } from "../../src/DeploymentConfig";
 import {
     createMarket,
@@ -6,7 +7,6 @@ import {
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
-    getSignerSUIAddress,
     readFile
 } from "../../src/utils";
 import { toBigNumber, toBigNumberStr } from "../../src/library";
@@ -23,7 +23,7 @@ import { ERROR_CODES } from "../../src/errors";
 import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
 import { config } from "dotenv";
-import { postDeployment } from "./utils";
+import { mintAndDeposit, postDeployment } from "./utils";
 import { TestCaseJSON } from "./interfaces";
 config({ path: ".env" });
 
@@ -33,52 +33,96 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const orderSigner = new OrderSigner(ownerKeyPair);
 const deployment = readFile(DeploymentConfigs.filePath);
 let onChain: OnChainCalls;
-let liquidatorAddress: string;
 
 export async function executeTests(
     testCases: TestCaseJSON,
-    marketConfig: MarketDetails
+    marketConfig: MarketDetails,
+    initialBalances?: { traders?: number; liquidator?: number }
 ) {
-    // used to perform normal trades
-    let MakerTakerAccounts: MakerTakerAccounts;
-    // accounts are used to perform filler trades during adl tests
-    let ADLFillerTradeMakerTakerAccounts: MakerTakerAccounts;
+    const alice = getTestAccounts(provider)[0];
+    const bob = getTestAccounts(provider)[1];
+    const cat = getTestAccounts(provider)[2];
+    const dog = getTestAccounts(provider)[3];
+    const liquidator = getTestAccounts(provider)[4];
 
     let tx: SuiExecuteTransactionResponse;
     let lastOraclePrice: BigNumber;
-    let leverage: BigNumber;
+    let feePoolAddress: string;
+    let insurancePoolAddress: string;
 
     Object.keys(testCases).forEach((testName) => {
         describe(testName, () => {
             testCases[testName].forEach((testCase) => {
                 before(async () => {
-                    MakerTakerAccounts = getMakerTakerAccounts(provider);
-                    ADLFillerTradeMakerTakerAccounts = getMakerTakerAccounts(
+                    lastOraclePrice = new BigNumber(0);
+                    feePoolAddress = Wallet.generate().getAddressString();
+                    insurancePoolAddress = Wallet.generate().getAddressString();
+
+                    const marketData = await createMarket(
+                        deployment,
+                        ownerSigner,
                         provider,
-                        true
+                        {
+                            ...marketConfig,
+                            feePool: feePoolAddress,
+                            insurancePool: insurancePoolAddress
+                        }
                     );
 
-                    // TODO fund accounts with usdc
-
-                    lastOraclePrice = new BigNumber(0);
                     // init state
                     deployment["markets"] = [
                         {
-                            Objects: await createMarket(
-                                deployment,
-                                ownerSigner,
-                                provider,
-                                marketConfig
-                            )
+                            Objects: marketData.marketObjects
                         }
                     ];
 
+                    deployment.bankAccounts = {
+                        ...deployment.bankAccounts,
+                        ...marketData.bankAccounts
+                    };
+
                     onChain = new OnChainCalls(ownerSigner, deployment);
+
                     // post deployment steps
                     await postDeployment(onChain, ownerSigner);
 
-                    // deployer will be performing all liquidations
-                    liquidatorAddress = await getSignerSUIAddress(ownerSigner);
+                    // empty all accounts
+                    await onChain.withdrawAllMarginFromBank(alice.signer);
+                    await onChain.withdrawAllMarginFromBank(bob.signer);
+                    await onChain.withdrawAllMarginFromBank(cat.signer);
+                    await onChain.withdrawAllMarginFromBank(dog.signer);
+                    await onChain.withdrawAllMarginFromBank(liquidator.signer);
+
+                    // provide maker/taker starting margin in maring bank
+                    alice.bankAccountId = await mintAndDeposit(
+                        onChain,
+                        alice.address,
+                        initialBalances?.traders || 2_000
+                    );
+
+                    bob.bankAccountId = await mintAndDeposit(
+                        onChain,
+                        bob.address,
+                        initialBalances?.traders || 2_000
+                    );
+
+                    cat.bankAccountId = await mintAndDeposit(
+                        onChain,
+                        cat.address,
+                        5_000
+                    );
+
+                    dog.bankAccountId = await mintAndDeposit(
+                        onChain,
+                        dog.address,
+                        5_000
+                    );
+
+                    liquidator.bankAccountId = await mintAndDeposit(
+                        onChain,
+                        liquidator.address,
+                        initialBalances?.liquidator || 5_000
+                    );
                 });
 
                 testCase.size = testCase.size as any as number;
@@ -90,7 +134,7 @@ export async function executeTests(
                           } leverage:${testCase.leverage}x size:${Math.abs(
                               testCase.size
                           )}`
-                        : testCase.tradeType == "liq_filler"
+                        : testCase.tradeType == "liquidator_bob"
                         ? `Liquidator opens size:${Math.abs(
                               testCase.size
                           )} price:${testCase.price} leverage:${
@@ -98,7 +142,15 @@ export async function executeTests(
                           }x ${
                               testCase.size > 0 ? "Long" : "Short"
                           } against Bob`
-                        : testCase.tradeType == "adl_filler"
+                        : testCase.tradeType == "liquidator_cat"
+                        ? `Liquidator opens size:${Math.abs(
+                              testCase.size
+                          )} price:${testCase.price} leverage:${
+                              testCase.leverage
+                          }x ${
+                              testCase.size > 0 ? "Long" : "Short"
+                          } against Bob`
+                        : testCase.tradeType == "cat_dog"
                         ? `Cat opens size:${Math.abs(testCase.size)} price:${
                               testCase.price
                           } leverage:${testCase.leverage}x ${
@@ -108,6 +160,12 @@ export async function executeTests(
                         ? `Deleveraging Alice against Cat at oracle price: ${
                               testCase.pOracle
                           } size:${Math.abs(testCase.size)}`
+                        : testCase.isTaker == true
+                        ? `Bob opens size:${Math.abs(testCase.size)} price:${
+                              testCase.price
+                          } leverage:${testCase.leverage}x ${
+                              testCase.size > 0 ? "Long" : "Short"
+                          } against Alice`
                         : testCase.size && testCase.size != 0
                         ? `Alice opens size:${Math.abs(testCase.size)} price:${
                               testCase.price
@@ -137,10 +195,11 @@ export async function executeTests(
                         lastOraclePrice = oraclePrice;
                     }
 
-                    // normal, liq_filler or adl_filler trade
+                    // normal, liquidator_bob or cat_dog trade
                     // normal trade is between alice and bob
-                    // liq_filler trade is between liquidator and bob
-                    // adl_filler trade is between cat and dog
+                    // liquidator_bob trade is between liquidator and bob
+                    // liquidator_bob trade is between liquidator and cat
+                    // cat_dog trade is between cat and dog
                     if (
                         testCase.size &&
                         testCase.tradeType != "liquidation" &&
@@ -157,38 +216,31 @@ export async function executeTests(
                             salt: Date.now()
                         });
 
+                        if (testCase.tradeType == "liquidator_bob") {
+                            await onChain.adjustLeverage(
+                                {
+                                    leverage: testCase.leverage as number
+                                },
+                                taker.signer
+                            );
+                        }
+
                         tx = await onChain.trade(
                             await Trader.setupNormalTrade(
                                 provider,
                                 orderSigner,
                                 maker.keyPair,
                                 taker.keyPair,
-                                order,
-                                // if trade type is liq_filler, specify leverage for taker/bob
-                                // as the leverage used in normal/last trade
-                                {
-                                    takerOrder:
-                                        testCase.tradeType == "liq_filler"
-                                            ? {
-                                                  ...order,
-                                                  leverage,
-                                                  isBuy: !order.isBuy,
-                                                  maker: taker.address
-                                              }
-                                            : undefined
-                                }
+                                order
                             ),
                             ownerSigner
                         );
-
-                        // save leverage, can be used for bob/taker in next filler trade
-                        leverage = order.leverage;
                     }
                     // liquidation trade
                     else if (testCase.tradeType == "liquidation") {
                         tx = await onChain.liquidate(
                             {
-                                liquidatee: MakerTakerAccounts.maker.address,
+                                liquidatee: alice.address,
                                 quantity: toBigNumberStr(
                                     Math.abs(testCase.size)
                                 ),
@@ -196,16 +248,15 @@ export async function executeTests(
                                     testCase.leverage as any as number
                                 )
                             },
-                            ownerSigner
+                            liquidator.signer
                         );
                     }
                     // deleveraging trade
                     else if (testCase.tradeType == "deleveraging") {
                         tx = await onChain.deleverage(
                             {
-                                maker: MakerTakerAccounts.maker.address,
-                                taker: ADLFillerTradeMakerTakerAccounts.maker
-                                    .address,
+                                maker: alice.address,
+                                taker: cat.address,
                                 quantity: toBigNumberStr(
                                     Math.abs(testCase.size)
                                 )
@@ -217,31 +268,27 @@ export async function executeTests(
                     else if (testCase.addMargin != undefined) {
                         tx = await onChain.addMargin(
                             { amount: testCase.addMargin },
-                            MakerTakerAccounts.taker.signer
+                            bob.signer
                         );
                     }
                     // remove margin
                     else if (testCase.removeMargin != undefined) {
                         tx = await onChain.removeMargin(
                             { amount: testCase.removeMargin },
-                            MakerTakerAccounts.taker.signer
+                            bob.signer
                         );
                     }
                     // adjust leverage
                     else if (testCase.adjustLeverage != undefined) {
                         tx = await onChain.adjustLeverage(
                             { leverage: testCase.adjustLeverage },
-                            MakerTakerAccounts.taker.signer
+                            bob.signer
                         );
                     }
 
                     // if error is expected
                     if (testCase.expectError) {
-                        // TODO: Remove this once margin bank is implemented
-                        if (testCase.expectError == 600) return;
-
                         expectTxToFail(tx);
-
                         expect(Transaction.getError(tx)).to.be.equal(
                             ERROR_CODES[testCase.expectError]
                         );
@@ -253,14 +300,13 @@ export async function executeTests(
 
                     // if an expect for maker or taker exists
                     if (testCase.expectMaker || testCase.expectTaker) {
+                        // if expect maker does not exists,
+                        // there will be expect taker
                         const account =
-                            // if expect maker does not exists,
-                            // there will be expect taker
-                            testCase.expectMaker == undefined
-                                ? MakerTakerAccounts.taker.address
-                                : MakerTakerAccounts.maker.address;
+                            testCase.expectMaker == undefined ? bob : alice;
 
-                        evaluateAccountPositionExpect(
+                        await evaluateAccountPositionExpect(
+                            onChain,
                             account,
                             testCase.expectMaker || testCase.expectTaker,
                             oraclePrice,
@@ -270,19 +316,21 @@ export async function executeTests(
 
                     // if an expect for liquidator exists
                     if (testCase.expectLiquidator) {
-                        evaluateAccountPositionExpect(
-                            liquidatorAddress,
+                        await evaluateAccountPositionExpect(
+                            onChain,
+                            liquidator,
                             testCase.expectLiquidator,
                             oraclePrice,
                             tx
                         );
                     }
 
-                    // if an expect for cat exists. either adl_filler trade
+                    // if an expect for cat exists. either cat_dog trade
                     //  or adl deleveraging trade has happened
                     if (testCase.expectCat) {
-                        evaluateAccountPositionExpect(
-                            ADLFillerTradeMakerTakerAccounts.maker.address,
+                        await evaluateAccountPositionExpect(
+                            onChain,
+                            cat,
                             testCase.expectCat,
                             oraclePrice,
                             tx
@@ -291,7 +339,13 @@ export async function executeTests(
 
                     // if asked to evaluate system expects
                     if (testCase.expectSystem) {
-                        evaluateSystemExpect(testCase.expectSystem, onChain);
+                        await evaluateSystemExpect(
+                            onChain,
+                            testCase.expectSystem,
+                            feePoolAddress,
+                            insurancePoolAddress,
+                            onChain.getPerpetualID()
+                        );
                     }
                 });
             });
@@ -300,33 +354,33 @@ export async function executeTests(
 
     // helper method to extract maker/taker of trade
     function getMakerTakerOfTrade(testCase: any) {
-        if (testCase.tradeType == "liq_filler") {
+        if (testCase.tradeType == "liquidator_bob") {
             return {
-                maker: {
-                    address: liquidatorAddress,
-                    keyPair: ownerKeyPair,
-                    signer: ownerSigner
-                },
-                taker: MakerTakerAccounts.taker
+                maker: liquidator,
+                taker: bob
             };
-        } else if (testCase.tradeType == "adl_filler") {
+        } else if (testCase.tradeType == "liquidator_cat") {
             return {
-                maker: ADLFillerTradeMakerTakerAccounts.maker,
-                taker: ADLFillerTradeMakerTakerAccounts.taker
+                maker: liquidator,
+                taker: cat
+            };
+        } else if (testCase.tradeType == "cat_dog") {
+            return {
+                maker: cat,
+                taker: dog
             };
         } else {
-            return {
-                maker: {
-                    address: MakerTakerAccounts.maker.address,
-                    keyPair: MakerTakerAccounts.maker.keyPair,
-                    signer: MakerTakerAccounts.maker.signer
-                },
-                taker: {
-                    address: MakerTakerAccounts.taker.address,
-                    keyPair: MakerTakerAccounts.taker.keyPair,
-                    signer: MakerTakerAccounts.taker.signer
-                }
-            };
+            if (testCase.isTaker) {
+                return {
+                    taker: alice,
+                    maker: bob
+                };
+            } else {
+                return {
+                    maker: alice,
+                    taker: bob
+                };
+            }
         }
     }
 }
