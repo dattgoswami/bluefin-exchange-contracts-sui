@@ -53,16 +53,15 @@ module bluefin_foundation::isolated_trading {
     //===========================================================//
 
     struct Order has drop, copy {
+        market:address,
+        maker: address,
         isBuy: bool,
+        reduceOnly: bool,
         price: u128,
         quantity: u128,
         leverage: u128,
-        reduceOnly: bool,
-        makerAddress: address,
         expiration: u128,
-        salt: u128,
-        triggerPrice: u128,
-        signature: vector<u8>
+        salt: u128
     }
 
     struct OrderStatus has store, drop {
@@ -71,6 +70,8 @@ module bluefin_foundation::isolated_trading {
     }
 
     struct TradeData has drop, copy {
+        makerSignature:vector<u8>,
+        takerSignature:vector<u8>,
         makerOrder: Order,
         takerOrder: Order,
         fill:Fill
@@ -118,12 +119,12 @@ module bluefin_foundation::isolated_trading {
             let positionsTable = perpetual::positions(perp);
 
             // // if maker/taker positions don't exist create them
-            position::create_position(perpID, positionsTable, data.makerOrder.makerAddress);
-            position::create_position(perpID, positionsTable, data.takerOrder.makerAddress);
+            position::create_position(perpID, positionsTable, data.makerOrder.maker);
+            position::create_position(perpID, positionsTable, data.takerOrder.maker);
 
             // // get order hashes
-            let makerHash = get_hash(data.makerOrder, perpID);
-            let takerHash = get_hash(data.takerOrder, perpID);
+            let makerHash = get_hash(data.makerOrder);
+            let takerHash = get_hash(data.takerOrder);
 
             // if maker/taker orders are coming on-chain for first time, add them to order table
             create_order(ordersTable, makerHash);
@@ -138,12 +139,12 @@ module bluefin_foundation::isolated_trading {
             data.makerOrder.leverage = library::round_down(data.makerOrder.leverage);
             data.takerOrder.leverage = library::round_down(data.takerOrder.leverage);
 
-            let initMakerPos = *table::borrow(positionsTable, data.makerOrder.makerAddress);
-            let initTakerPos = *table::borrow(positionsTable, data.takerOrder.makerAddress);
+            let initMakerPos = *table::borrow(positionsTable, data.makerOrder.maker);
+            let initTakerPos = *table::borrow(positionsTable, data.takerOrder.maker);
 
             // Validate orders are correct and can be executed for the trade
-            verify_order(initMakerPos, ordersTable, data.makerOrder, makerHash, data.fill, oraclePrice, 0);
-            verify_order(initTakerPos, ordersTable, data.takerOrder, takerHash, data.fill, oraclePrice, 1);
+            verify_order(initMakerPos, ordersTable, data.makerOrder, makerHash, data.makerSignature, data.fill, 0);
+            verify_order(initTakerPos, ordersTable, data.takerOrder, takerHash, data.takerSignature, data.fill, 1);
 
             // verify pre-trade checks
             evaluator::verify_price_checks(tradeChecks, data.fill.price);
@@ -154,7 +155,7 @@ module bluefin_foundation::isolated_trading {
             // apply isolated margin
             let makerResponse = apply_isolated_margin(
                 tradeChecks,
-                table::borrow_mut(positionsTable, data.makerOrder.makerAddress), 
+                table::borrow_mut(positionsTable, data.makerOrder.maker), 
                 data.makerOrder, 
                 data.fill, 
                 library::base_mul(data.fill.price, makerFee),
@@ -162,15 +163,15 @@ module bluefin_foundation::isolated_trading {
 
             let takerResponse = apply_isolated_margin(
                 tradeChecks,
-                table::borrow_mut(positionsTable, data.takerOrder.makerAddress), 
+                table::borrow_mut(positionsTable, data.takerOrder.maker), 
                 data.takerOrder, 
                 data.fill, 
                 library::base_mul(data.fill.price, takerFee),
                 1);
 
 
-            let newMakerPosition = *table::borrow(positionsTable, data.makerOrder.makerAddress);
-            let newTakerPosition = *table::borrow(positionsTable, data.takerOrder.makerAddress);
+            let newMakerPosition = *table::borrow(positionsTable, data.makerOrder.maker);
+            let newTakerPosition = *table::borrow(positionsTable, data.takerOrder.maker);
                                    
             // verify collateralization of maker and take
             position::verify_collat_checks(
@@ -196,8 +197,8 @@ module bluefin_foundation::isolated_trading {
             margin_bank::transfer_trade_margin(
                 bank,
                 perpAddress,
-                data.makerOrder.makerAddress,
-                data.takerOrder.makerAddress,
+                data.makerOrder.maker,
+                data.takerOrder.maker,
                 makerResponse.fundsFlow,
                 takerResponse.fundsFlow
             );
@@ -212,16 +213,16 @@ module bluefin_foundation::isolated_trading {
                 2
             );
 
-            position::emit_position_update_event(perpID, data.makerOrder.makerAddress, newMakerPosition, ACTION_TRADE);
-            position::emit_position_update_event(perpID, data.takerOrder.makerAddress, newTakerPosition, ACTION_TRADE);
+            position::emit_position_update_event(perpID, data.makerOrder.maker, newMakerPosition, ACTION_TRADE);
+            position::emit_position_update_event(perpID, data.takerOrder.maker, newTakerPosition, ACTION_TRADE);
 
     
             emit(TradeExecuted{
                 sender,
                 perpID,
                 tradeType: TRADE_TYPE,
-                maker: data.makerOrder.makerAddress,
-                taker: data.takerOrder.makerAddress,
+                maker: data.makerOrder.maker,
+                taker: data.takerOrder.maker,
                 makerOrderHash: makerHash,
                 takerOrderHash: takerHash,
                 makerMRO: position::mro(newMakerPosition),
@@ -242,7 +243,6 @@ module bluefin_foundation::isolated_trading {
 
     public fun pack_trade_data(
          // maker
-        makerTriggerPrice: u128,
         makerIsBuy: bool,
         makerPrice: u128,
         makerQuantity: u128,
@@ -254,7 +254,6 @@ module bluefin_foundation::isolated_trading {
         makerSignature:vector<u8>,
 
         // taker
-        takerTriggerPrice: u128,
         takerIsBuy: bool,
         takerPrice: u128,
         takerQuantity: u128,
@@ -268,41 +267,44 @@ module bluefin_foundation::isolated_trading {
         // fill
         quantity: u128, 
         price: u128,
+
+        // perp address
+        perpetual:address
+
     ): TradeData{
-        let makerOrder = pack_order(makerTriggerPrice, makerIsBuy, makerPrice, makerQuantity, makerLeverage, makerReduceOnly, makerAddress, makerExpiration, makerSalt, makerSignature);
-        let takerOrder = pack_order(takerTriggerPrice, takerIsBuy, takerPrice, takerQuantity, takerLeverage, takerReduceOnly, takerAddress, takerExpiration, takerSalt, takerSignature);
+        let makerOrder = pack_order(perpetual, makerIsBuy, makerPrice, makerQuantity, makerLeverage, makerReduceOnly, makerAddress, makerExpiration, makerSalt);
+        let takerOrder = pack_order(perpetual, takerIsBuy, takerPrice, takerQuantity, takerLeverage, takerReduceOnly, takerAddress, takerExpiration, takerSalt);
         let fill = Fill{quantity, price};
-        return TradeData{makerOrder, takerOrder, fill}
+        return TradeData{makerOrder, takerOrder, fill, makerSignature, takerSignature}
 
     }
 
     fun pack_order(
-        triggerPrice: u128,
+        market: address,
         isBuy: bool,
         price: u128,
         quantity: u128,
         leverage: u128,
         reduceOnly: bool,
-        makerAddress: address,
+        maker: address,
         expiration: u128,
         salt: u128,
-        signature: vector<u8>
     ): Order {
         return Order {
-                triggerPrice,
+                market,
+                maker,
                 isBuy,
                 price,
                 quantity,
                 leverage,
                 reduceOnly,
-                makerAddress,
                 expiration,
-                salt,
-                signature,
+                salt
         }
     }
 
-    fun get_hash(order:Order, _perpID: ID): vector<u8>{
+    fun get_hash(order:Order): vector<u8>{
+        
         /*
         serializedOrder
          [0,15]     => price            (128 bits = 16 bytes)
@@ -310,40 +312,39 @@ module bluefin_foundation::isolated_trading {
          [32,47]    => leverage         (128 bits = 16 bytes)
          [48,63]    => expiration       (128 bits = 16 bytes)
          [64,79]    => salt             (128 bits = 16 bytes)
-         [80,95]    => triggerPrice     (128 bits = 16 bytes)
-         [96,115]   => data.makerOrder.makerAddress     (160 bits = 20 bytes)
-         [116,116]  => reduceOnly       (1 byte)
-         [117,117]  => isBuy            (1 byte)
+         [80,99]   => maker     (160 bits = 20 bytes)
+         [100,119]   => market     (160 bits = 20 bytes)
+         [120,120]  => reduceOnly       (1 byte)
+         [121,121]  => isBuy            (1 byte)
         */
 
         let serialized_order = vector::empty<u8>();
         let price_b = bcs::to_bytes(&order.price);
         let quantity_b = bcs::to_bytes(&order.quantity);
         let leverage_b = bcs::to_bytes(&order.leverage);
-        let maker_address_b = bcs::to_bytes(&order.makerAddress); // doesn't need reverse
+        let maker_address_b = bcs::to_bytes(&order.maker); // doesn't need reverse
+        let market_address_b = bcs::to_bytes(&order.market); // doesn't need reverse
         let expiration_b = bcs::to_bytes(&order.expiration);
         let salt_b = bcs::to_bytes(&order.salt);
-        let trigger_price_b = bcs::to_bytes(&order.triggerPrice);
         let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
         let is_buy_b = bcs::to_bytes(&order.isBuy);
-
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
         vector::reverse(&mut leverage_b);
         vector::reverse(&mut expiration_b);
         vector::reverse(&mut salt_b);
-        vector::reverse(&mut trigger_price_b);
 
         vector::append(&mut serialized_order, price_b);
         vector::append(&mut serialized_order, quantity_b);
         vector::append(&mut serialized_order, leverage_b);
         vector::append(&mut serialized_order, expiration_b);
         vector::append(&mut serialized_order, salt_b);
-        vector::append(&mut serialized_order, trigger_price_b);
         vector::append(&mut serialized_order, maker_address_b);
+        vector::append(&mut serialized_order, market_address_b);
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
+
 
         return hash::sha2_256(serialized_order)
 
@@ -358,15 +359,15 @@ module bluefin_foundation::isolated_trading {
     }
 
 
-    fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, fill:Fill, oraclePrice: u128, isTaker: u64){
+    fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
 
             verify_order_state(ordersTable, hash, isTaker);
 
-            verify_order_signature(order, hash, isTaker);
+            verify_order_signature(order.maker, hash, signature, isTaker);
 
             verify_order_expiry(order, isTaker);
 
-            verify_order_fills(position, order, fill, oraclePrice, isTaker);
+            verify_order_fills(position, order, fill, isTaker);
 
             verify_order_leverage(position, order, isTaker);
 
@@ -394,13 +395,13 @@ module bluefin_foundation::isolated_trading {
     }
 
 
-    fun verify_order_signature(order:Order, hash:vector<u8>, isTaker:u64){
+    fun verify_order_signature(maker:address, hash:vector<u8>, signature: vector<u8>, isTaker:u64){
 
-        let publicKey = ecdsa_k1::ecrecover(&order.signature, &hash);
+        let publicKey = ecdsa_k1::ecrecover(&signature, &hash);
 
         let publicAddress = library::get_public_address(publicKey);
 
-        assert!(order.makerAddress == publicAddress, error::order_has_invalid_signature(isTaker));
+        assert!(maker == publicAddress, error::order_has_invalid_signature(isTaker));
     }
 
     fun verify_order_expiry(order:Order, isTaker:u64){
@@ -408,7 +409,7 @@ module bluefin_foundation::isolated_trading {
         assert!(order.expiration == 0 || order.expiration > 1, error::order_has_expired(isTaker));
     }
 
-    fun verify_order_fills(userPosition: UserPosition, order:Order, fill:Fill, oraclePrice: u128, isTaker:u64){
+    fun verify_order_fills(userPosition: UserPosition, order:Order, fill:Fill, isTaker:u64){
 
         // Ensure order is being filled at the specified or better price
         // For long/buy orders, the fill price must be equal or lower
@@ -416,13 +417,6 @@ module bluefin_foundation::isolated_trading {
         let validPrice = if (order.isBuy) { fill.price <= order.price } else {fill.price >= order.price};
 
         assert!(validPrice, error::fill_price_invalid(isTaker));
-
-
-        // When triggerPrice is specified (for stop orders), ensure the trigger condition has been met. Will be 0 for market & limit orders.
-        if (order.triggerPrice != 0) {
-            let validTriggerPrice =  if (order.isBuy) { order.triggerPrice <= oraclePrice } else { order.triggerPrice >= oraclePrice };
-            assert!(validTriggerPrice, error::trigger_price_not_reached(isTaker));
-        };
 
         // For reduce only orders, ensure that the order would result in an
         // open position's size to reduce (fill amount <= open position size)

@@ -18,7 +18,7 @@ import { getMakerTakerAccounts, getTestAccounts } from "./helpers/accounts";
 import { Trader } from "../src/classes/Trader";
 import { network } from "../src/DeploymentConfig";
 import { DEFAULT } from "../src/defaults";
-import { UserPositionExtended } from "../src";
+import { Order, UserPositionExtended } from "../src";
 import { mintAndDeposit } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
@@ -35,22 +35,16 @@ describe("Liquidation Trade Method", () => {
 
     const orderSigner = new OrderSigner(alice.keyPair);
 
-    const order = createOrder({
-        isBuy: true,
-        makerAddress: alice.address,
-        price: 100,
-        leverage: 10,
-        quantity: 1
-    });
+    let order: Order;
 
     before(async () => {
         // deploy market
-        deployment["markets"] = [
-            {
+        deployment["markets"] = {
+            "ETH-PERP": {
                 Objects: (await createMarket(deployment, ownerSigner, provider))
                     .marketObjects
             }
-        ];
+        };
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 
@@ -73,6 +67,15 @@ describe("Liquidation Trade Method", () => {
         await mintAndDeposit(onChain, alice.address);
         await mintAndDeposit(onChain, bob.address);
         await mintAndDeposit(onChain, ownerAddress);
+
+        order = createOrder({
+            market: onChain.getPerpetualID(),
+            maker: alice.address,
+            isBuy: true,
+            price: 100,
+            leverage: 10,
+            quantity: 1
+        });
 
         // open a position at 10x leverage between
         const trade = await Trader.setupNormalTrade(
@@ -259,10 +262,11 @@ describe("Liquidation Trade Method", () => {
         await mintAndDeposit(onChain, makerTaker.taker.address);
 
         const order = createOrder({
+            market: onChain.getPerpetualID(),
             price: 100,
             isBuy: true,
             leverage: 2,
-            makerAddress: await makerTaker.maker.address
+            maker: await makerTaker.maker.address
         });
 
         const trade = await Trader.setupNormalTrade(
@@ -336,13 +340,13 @@ describe("Liquidation Trade Method", () => {
         // deploy market
         const localDeployment = deployment;
 
-        localDeployment["markets"] = [
-            {
+        localDeployment["markets"] = {
+            "ETH-PERP": {
                 Objects: (
                     await createMarket(localDeployment, ownerSigner, provider)
                 ).marketObjects
             }
-        ];
+        };
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
@@ -356,11 +360,12 @@ describe("Liquidation Trade Method", () => {
         await mintAndDeposit(onChain, makerTaker.taker.address);
 
         const order = createOrder({
+            market: onChain.getPerpetualID(),
             quantity: 2,
             price: 100,
             isBuy: true,
             leverage: 10,
-            makerAddress: makerTaker.maker.address
+            maker: makerTaker.maker.address
         });
 
         const trade = await Trader.setupNormalTrade(

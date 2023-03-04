@@ -64,10 +64,10 @@ async function main() {
         marketConfig
     );
 
-    deployment.markets.push({
+    deployment.markets[marketConfig.name as string] = {
         Config: marketConfig,
         Objects: marketMap.marketObjects
-    });
+    };
 
     deployment.bankAccounts = {
         ...deployment.bankAccounts,

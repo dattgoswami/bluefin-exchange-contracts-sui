@@ -6,7 +6,7 @@ module bluefin_foundation::test {
     use sui::ecdsa_k1;
     use sui::event;
     use sui::bcs;
-    use bluefin_foundation::evaluator::{initialize,verify_qty_checks,verify_price_checks,verify_market_take_bound_checks,verify_oi_open_for_account};
+    use bluefin_foundation::evaluator::{Self};
 
     struct SignatureVerifiedEvent has copy, drop {
         is_verified: bool,
@@ -44,31 +44,31 @@ module bluefin_foundation::test {
     }
 
     struct Order has drop {
+        market:address,
+        maker: address,
         isBuy: bool,
+        reduceOnly: bool,
         price: u128,
         quantity: u128,
         leverage: u128,
-        reduceOnly: bool,
-        makerAddress: address,
         expiration: u128,
         salt: u128,
-        triggerPrice: u128,
     }
 
-    public entry fun hash(addr:address){
-        // let value = @0x9e61bd8cac66d89b78ebd145d6bbfbdd6ff550cf;
+    public entry fun hash(maker:address, market:address){
+        // let value = @0x7586a1eba8b4986abeafc704193428141445e5e3;
         // let bytes = bcs::to_bytes(&value);
         // let addr:address =  object::address_from_bytes(bytes);
-        let order = Order { 
+        let order = Order {
+            market: market,
             price: 1000000000,
             quantity:1000000000,
             leverage: 1000000000,
             isBuy: true,
             reduceOnly: false,
-            triggerPrice: 0,
             expiration: 3655643731,
             salt: 1668690862116,
-            makerAddress: addr
+            maker: maker
         };
         
         /*
@@ -78,20 +78,20 @@ module bluefin_foundation::test {
          [32,47]    => leverage         (128 bits = 16 bytes)
          [48,63]    => expiration       (128 bits = 16 bytes)
          [64,79]    => salt             (128 bits = 16 bytes)
-         [80,95]    => triggerPrice     (128 bits = 16 bytes)
-         [96,115]   => makerAddress     (160 bits = 20 bytes)
-         [116,116]  => reduceOnly       (1 byte)
-         [117,117]  => isBuy            (1 byte)
+         [80,99]   => maker     (160 bits = 20 bytes)
+         [100,119]   => market     (160 bits = 20 bytes)
+         [120,120]  => reduceOnly       (1 byte)
+         [121,121]  => isBuy            (1 byte)
         */
     
         let serialized_order = vector::empty<u8>();
         let price_b = bcs::to_bytes(&order.price);
         let quantity_b = bcs::to_bytes(&order.quantity);
         let leverage_b = bcs::to_bytes(&order.leverage);
-        let maker_address_b = bcs::to_bytes(&order.makerAddress); // doesn't need reverse
+        let maker_address_b = bcs::to_bytes(&order.maker); // doesn't need reverse
+        let market_address_b = bcs::to_bytes(&order.market); // doesn't need reverse
         let expiration_b = bcs::to_bytes(&order.expiration);
         let salt_b = bcs::to_bytes(&order.salt);
-        let trigger_price_b = bcs::to_bytes(&order.triggerPrice);
         let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
         let is_buy_b = bcs::to_bytes(&order.isBuy);
 
@@ -100,15 +100,14 @@ module bluefin_foundation::test {
         vector::reverse(&mut leverage_b);
         vector::reverse(&mut expiration_b);
         vector::reverse(&mut salt_b);
-        vector::reverse(&mut trigger_price_b);
 
         vector::append(&mut serialized_order, price_b);
         vector::append(&mut serialized_order, quantity_b);
         vector::append(&mut serialized_order, leverage_b);
         vector::append(&mut serialized_order, expiration_b);
         vector::append(&mut serialized_order, salt_b);
-        vector::append(&mut serialized_order, trigger_price_b);
         vector::append(&mut serialized_order, maker_address_b);
+        vector::append(&mut serialized_order, market_address_b);
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
 
@@ -172,7 +171,7 @@ module bluefin_foundation::test {
             vector::push_back(&mut maxAllowedOIOpen, 0);
             vector::append(&mut maxAllowedOIOpen, maxOILimit);
         
-            let checks = initialize(
+            let checks = evaluator::initialize(
                 minPrice,
                 maxPrice,
                 tickSize,
@@ -187,9 +186,9 @@ module bluefin_foundation::test {
 
             let isTaker : u64 = 0;
 
-            verify_qty_checks(checks,tradeQty);
-            verify_price_checks(checks, tradePrice);
-            verify_market_take_bound_checks(checks,tradePrice,oraclePrice,isBuy);
-            verify_oi_open_for_account(checks, mro, oiOpen,isTaker);
+            evaluator::verify_qty_checks(checks,tradeQty);
+            evaluator::verify_price_checks(checks, tradePrice);
+            evaluator::verify_market_take_bound_checks(checks,tradePrice,oraclePrice,isBuy);
+            evaluator::verify_oi_open_for_account(checks, mro, oiOpen,isTaker);
         }
 }

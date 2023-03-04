@@ -328,19 +328,17 @@ module bluefin_foundation::exchange {
         ordersTable: &mut Table<vector<u8>, OrderStatus>,
 
         // maker
-        makerTriggerPrice: u128,
         makerIsBuy: bool,
         makerPrice: u128,
         makerQuantity: u128,
         makerLeverage: u128,
         makerReduceOnly: bool,
-        makerAddress: address,
+        maker: address,
         makerExpiration: u128,
         makerSalt: u128,
         makerSignature:vector<u8>,
 
         // taker
-        takerTriggerPrice: u128,
         takerIsBuy: bool,
         takerPrice: u128,
         takerQuantity: u128,
@@ -371,20 +369,22 @@ module bluefin_foundation::exchange {
 
             // TODO apply funding rate
 
+            let perpID = object::uid_to_inner(perpetual::id(perp));
+
+
             let data = isolated_trading::pack_trade_data(
                  // maker
-                makerTriggerPrice, 
                 makerIsBuy, 
                 makerPrice, 
                 makerQuantity, 
                 makerLeverage, 
                 makerReduceOnly, 
-                makerAddress, 
+                maker, 
                 makerExpiration, 
                 makerSalt, 
                 makerSignature,
+
                 // taker
-                takerTriggerPrice, 
                 takerIsBuy, 
                 takerPrice, 
                 takerQuantity, 
@@ -397,7 +397,10 @@ module bluefin_foundation::exchange {
 
                 // fill
                 quantity,
-                price
+                price,
+
+                // perp id/address
+                object::id_to_address(&perpID)
             );
 
             isolated_trading::trade(sender, perp, bank, ordersTable, data);

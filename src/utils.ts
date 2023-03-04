@@ -20,7 +20,8 @@ import {
     DeploymentData,
     DeploymentObjectMap,
     DeploymentObjects,
-    MarketDeployment
+    MarketDeployment,
+    MarketDeploymentData
 } from "../src/interfaces";
 import { toBigNumber, bigNumber } from "./library";
 import { Order } from "../src/interfaces";
@@ -265,7 +266,7 @@ export async function createMarket(
     }
     const map = await getGenesisMap(provider, txResult);
 
-    // get account details for insruance pool, perpetual and fee pool
+    // get account details for insurance pool, perpetual and fee pool
     const bankAccounts: BankAccountMap = {};
     const bankAccountIDs = Transaction.getAllBankAccounts(txResult);
     for (const acctID of bankAccountIDs) {
@@ -287,35 +288,34 @@ export function getPrivateKey(keypair: Keypair) {
 export function getDeploymentData(
     deployer: string,
     objects: DeploymentObjectMap,
-    markets?: Array<any>,
+    markets?: MarketDeploymentData,
     bankAccounts?: BankAccountMap
 ): DeploymentData {
     return {
         deployer,
         objects,
-        markets: markets || [],
+        markets: markets || ({} as any),
         bankAccounts: bankAccounts || {}
     };
 }
 
 export function createOrder(params: {
-    triggerPrice?: number;
+    market?: string;
+    maker?: string;
     isBuy?: boolean;
     price?: number;
     quantity?: number;
     leverage?: number;
     reduceOnly?: boolean;
-    makerAddress?: string;
     expiration?: number;
     salt?: number;
 }): Order {
     return {
-        triggerPrice: params.triggerPrice
-            ? toBigNumber(params.triggerPrice)
-            : bigNumber(0),
-        price: params.price ? toBigNumber(params.price) : DEFAULT.ORDER.price,
+        market: params.market || DEFAULT.ORDER.market,
+        maker: params.maker || DEFAULT.ORDER.maker,
         isBuy: params.isBuy == true,
         reduceOnly: params.reduceOnly == true,
+        price: params.price ? toBigNumber(params.price) : DEFAULT.ORDER.price,
         quantity: params.quantity
             ? toBigNumber(params.quantity)
             : DEFAULT.ORDER.quantity,
@@ -325,8 +325,7 @@ export function createOrder(params: {
         expiration: params.expiration
             ? bigNumber(params.expiration)
             : DEFAULT.ORDER.expiration,
-        salt: params.salt ? bigNumber(params.salt) : bigNumber(Date.now()),
-        maker: params.makerAddress ? params.makerAddress : DEFAULT.ORDER.maker
+        salt: params.salt ? bigNumber(params.salt) : bigNumber(Date.now())
     } as Order;
 }
 
@@ -342,8 +341,6 @@ export function printOrder(order: Order) {
         order.leverage.toFixed(0),
         "order.reduceOnly:",
         order.reduceOnly,
-        "order.triggerPrice:",
-        order.triggerPrice.toFixed(0),
         "order.maker:",
         order.maker,
         "order.expiration:",

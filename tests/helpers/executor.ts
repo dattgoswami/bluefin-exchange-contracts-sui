@@ -70,11 +70,8 @@ export async function executeTests(
                     );
 
                     // init state
-                    deployment["markets"] = [
-                        {
-                            Objects: marketData.marketObjects
-                        }
-                    ];
+                    deployment["markets"]["ETH-PERP"]["Objects"] =
+                        marketData.marketObjects;
 
                     deployment.bankAccounts = {
                         ...deployment.bankAccounts,
@@ -93,7 +90,7 @@ export async function executeTests(
                     await onChain.withdrawAllMarginFromBank(dog.signer);
                     await onChain.withdrawAllMarginFromBank(liquidator.signer);
 
-                    // provide maker/taker starting margin in maring bank
+                    // provide maker/taker starting margin in margin bank
                     alice.bankAccountId = await mintAndDeposit(
                         onChain,
                         alice.address,
@@ -208,11 +205,12 @@ export async function executeTests(
                         const { maker, taker } = getMakerTakerOfTrade(testCase);
 
                         const order = createOrder({
+                            market: onChain.getPerpetualID(),
                             price: testCase.price,
                             quantity: Math.abs(testCase.size),
                             leverage: testCase.leverage,
                             isBuy: testCase.size > 0,
-                            makerAddress: maker.address,
+                            maker: maker.address,
                             salt: Date.now()
                         });
 

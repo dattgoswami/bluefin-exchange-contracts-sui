@@ -106,10 +106,6 @@ module bluefin_foundation::error {
         return isTakerInvalid + 34
     }
 
-    public fun trigger_price_not_reached(isTakerInvalid : u64) : u64 {
-        return isTakerInvalid + 36
-    }
-
     public fun fill_does_not_decrease_size(isTakerInvalid : u64) : u64 {
         return isTakerInvalid + 38
     }

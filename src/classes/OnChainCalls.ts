@@ -37,10 +37,10 @@ export class OnChainCalls {
     ): Promise<SuiExecuteTransactionResponse> {
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.adminID || this.getAdminCap());
         callArgs.push(this.getBankID());
 
-        callArgs.push(args.name ? args.name : "ETH-PERP");
+        callArgs.push(args.name || "ETH-PERP");
 
         callArgs.push(args.minPrice || toBigNumberStr(0.1));
         callArgs.push(args.maxPrice || toBigNumberStr(100000));
@@ -107,8 +107,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minPrice));
 
         return this.signAndCall(caller, "set_min_price", callArgs, "exchange");
@@ -126,8 +126,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxPrice));
 
         return this.signAndCall(caller, "set_max_price", callArgs, "exchange");
@@ -145,8 +145,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.stepSize));
 
         return this.signAndCall(caller, "set_step_size", callArgs, "exchange");
@@ -164,8 +164,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.tickSize));
 
         return this.signAndCall(caller, "set_tick_size", callArgs, "exchange");
@@ -183,8 +183,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbLong));
 
         return this.signAndCall(caller, "set_mtb_long", callArgs, "exchange");
@@ -202,8 +202,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbShort));
 
         return this.signAndCall(caller, "set_mtb_short", callArgs, "exchange");
@@ -221,8 +221,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxQtyLimit));
 
         return this.signAndCall(
@@ -245,8 +245,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxQtyMarket));
 
         return this.signAndCall(
@@ -269,8 +269,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minQty));
 
         return this.signAndCall(caller, "set_min_qty", callArgs, "exchange");
@@ -288,8 +288,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(args.maxLimit);
 
         return this.signAndCall(
@@ -311,7 +311,7 @@ export class OnChainCalls {
         const caller = signer || this.signer;
         const callArgs = [];
 
-        callArgs.push(args.adminID ? args.adminID : this.getAdminCap());
+        callArgs.push(args.adminID || this.getAdminCap());
         callArgs.push(this.getSettlementOperatorTable());
 
         callArgs.push(args.operator);
@@ -340,13 +340,12 @@ export class OnChainCalls {
         const caller = signer || this.signer;
 
         const callArgs = [];
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
 
         callArgs.push(this.getOperatorTableID());
         callArgs.push(this.getOrdersTableID());
 
-        callArgs.push(args.makerOrder.triggerPrice.toFixed(0));
         callArgs.push(args.makerOrder.isBuy);
         callArgs.push(args.makerOrder.price.toFixed(0));
         callArgs.push(args.makerOrder.quantity.toFixed(0));
@@ -357,7 +356,6 @@ export class OnChainCalls {
         callArgs.push(args.makerOrder.salt.toFixed(0));
         callArgs.push(Array.from(hexToBuffer(args.makerSignature)));
 
-        callArgs.push(args.takerOrder.triggerPrice.toFixed(0));
         callArgs.push(args.takerOrder.isBuy);
         callArgs.push(args.takerOrder.price.toFixed(0));
         callArgs.push(args.takerOrder.quantity.toFixed(0));
@@ -399,7 +397,7 @@ export class OnChainCalls {
         const caller = signer || this.signer;
 
         const callArgs = [];
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
 
         callArgs.push(args.liquidatee);
@@ -424,7 +422,7 @@ export class OnChainCalls {
         const caller = signer || this.signer;
 
         const callArgs = [];
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
 
         callArgs.push(args.maker);
@@ -446,7 +444,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
         callArgs.push(toBigNumberStr(args.amount));
 
@@ -464,7 +462,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
         callArgs.push(toBigNumberStr(args.amount));
 
@@ -482,7 +480,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
         callArgs.push(toBigNumberStr(args.leverage));
 
@@ -506,7 +504,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(
             args.updateOPCapID
                 ? args.updateOPCapID
@@ -535,13 +533,13 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminCapID ? args.adminCapID : this.getAdminCap());
+        callArgs.push(args.adminCapID || this.getAdminCap());
         callArgs.push(
             args.updateOPCapID
                 ? args.updateOPCapID
                 : this.getUpdatePriceOracleCap()
         );
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.perpID || this.getPerpetualID());
 
         callArgs.push(args.operator);
 
@@ -565,8 +563,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminCapID ? args.adminCapID : this.getAdminCap());
-        callArgs.push(args.perpID ? args.perpID : this.getPerpetualID());
+        callArgs.push(args.adminCapID || this.getAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(args.maxAllowedPriceDifference);
 
         return this.signAndCall(
@@ -843,12 +841,12 @@ export class OnChainCalls {
     }
 
     // by default returns the perpetual id of 1st market
-    getPerpetualID(market = 0): string {
+    getPerpetualID(market = "ETH-PERP"): string {
         return this.deployment["markets"][market]["Objects"]["Perpetual"]
             .id as string;
     }
 
-    getUpdatePriceOracleCap(market = 0): string {
+    getUpdatePriceOracleCap(market = "ETH-PERP"): string {
         return this.deployment["markets"][market]["Objects"][
             "UpdatePriceOracleCap"
         ].id as string;

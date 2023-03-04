@@ -44,8 +44,6 @@ export const ERROR_CODES: { [key: string]: string } = {
     "33": "Taker: Order has expired",
     "34": "Maker: Fill price is invalid",
     "35": "Taker: Fill price is invalid",
-    "36": "Maker: Order trigger price has not been reached",
-    "37": "Taker: Order trigger price has not been reached",
     "38": "Maker: Fill does not decrease size",
     "39": "Taker: Fill does not decrease size",
     "40": "Maker: Invalid leverage",

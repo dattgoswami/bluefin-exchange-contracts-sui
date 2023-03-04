@@ -38,12 +38,12 @@ describe("Evaluator", () => {
 
     // deploy the market again before each test
     beforeEach(async () => {
-        deployment["markets"] = [
-            {
+        deployment["markets"] = {
+            "ETH-PERP": {
                 Objects: (await createMarket(deployment, ownerSigner, provider))
                     .marketObjects
             }
-        ];
+        };
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
 

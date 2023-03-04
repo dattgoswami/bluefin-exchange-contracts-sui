@@ -26,8 +26,17 @@ export interface MarketDeployment {
 export interface DeploymentData {
     deployer: string;
     objects: DeploymentObjectMap;
-    markets: Array<any>;
+    markets: MarketsMap;
     bankAccounts: BankAccountMap;
+}
+
+export interface MarketDeploymentData {
+    Objects: DeploymentObjectMap;
+    Config: MarketDetails;
+}
+
+export interface MarketsMap {
+    [marketName: string]: MarketDeploymentData;
 }
 
 export interface DeploymentConfig {

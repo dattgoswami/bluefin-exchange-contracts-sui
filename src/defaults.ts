@@ -4,12 +4,12 @@ import { ADDRESSES } from "./library";
 
 export const DEFAULT = {
     ORDER: {
+        market: "0x7586a1eba8b4986abeafc704193428141445e5e3",
         price: toBigNumber(1),
         quantity: toBigNumber(1),
         leverage: toBigNumber(1),
         isBuy: true,
         reduceOnly: false,
-        triggerPrice: toBigNumber(0),
         maker: ADDRESSES.ZERO,
         expiration: bigNumber(3655643731),
         salt: bigNumber(1668690862116)

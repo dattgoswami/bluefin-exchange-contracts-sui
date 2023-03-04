@@ -245,7 +245,7 @@ describe("Order Signer", () => {
         const receipt = await onChain.signAndCall(
             ownerSigner,
             "hash",
-            [order.maker],
+            [order.maker, order.market],
             "test"
         );
 

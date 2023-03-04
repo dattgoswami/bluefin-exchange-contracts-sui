@@ -31,38 +31,16 @@ export class OrderSigner {
     }
 
     public getSerializedOrder(order: Order): string {
-        const buffer = Buffer.alloc(118);
-
-        const {
-            price,
-            quantity,
-            leverage,
-            expiration,
-            salt,
-            triggerPrice,
-            maker,
-            reduceOnly,
-            isBuy
-        } = order;
-
-        const priceB = hexToBuffer(bnToHex(price));
-        const quantityB = hexToBuffer(bnToHex(quantity));
-        const leverageB = hexToBuffer(bnToHex(leverage));
-        const expirationB = hexToBuffer(bnToHex(expiration));
-        const saltB = hexToBuffer(bnToHex(salt));
-        const triggerPriceB = hexToBuffer(bnToHex(triggerPrice));
-        const makerB = hexToBuffer(maker); // 20 bytes address 40 hex chars
-
-        buffer.set(priceB, 0);
-        buffer.set(quantityB, 16);
-        buffer.set(leverageB, 32);
-        buffer.set(expirationB, 48);
-        buffer.set(saltB, 64);
-        buffer.set(triggerPriceB, 80);
-        buffer.set(makerB, 96);
-        buffer.set([reduceOnly ? 1 : 0], 116);
-        buffer.set([isBuy ? 1 : 0], 117);
-
+        const buffer = Buffer.alloc(122);
+        buffer.set(hexToBuffer(bnToHex(order.price)), 0);
+        buffer.set(hexToBuffer(bnToHex(order.quantity)), 16);
+        buffer.set(hexToBuffer(bnToHex(order.leverage)), 32);
+        buffer.set(hexToBuffer(bnToHex(order.expiration)), 48);
+        buffer.set(hexToBuffer(bnToHex(order.salt)), 64);
+        buffer.set(hexToBuffer(order.maker), 80);
+        buffer.set(hexToBuffer(order.market), 100);
+        buffer.set([order.reduceOnly ? 1 : 0], 120);
+        buffer.set([order.isBuy ? 1 : 0], 121);
         return buffer.toString("hex");
     }
 

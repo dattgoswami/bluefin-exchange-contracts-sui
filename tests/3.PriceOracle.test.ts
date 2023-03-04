@@ -42,12 +42,12 @@ describe("Price Oracle", () => {
     });
 
     beforeEach(async () => {
-        deployment["markets"] = [
-            {
+        deployment["markets"] = {
+            "ETH-PERP": {
                 Objects: (await createMarket(deployment, ownerSigner, provider))
                     .marketObjects
             }
-        ];
+        };
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
 

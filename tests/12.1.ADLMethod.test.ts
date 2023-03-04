@@ -21,7 +21,7 @@ import {
 import { Trader } from "../src/classes/Trader";
 import { network } from "../src/DeploymentConfig";
 import { DEFAULT } from "../src/defaults";
-import { UserPositionExtended } from "../src";
+import { Order, UserPositionExtended } from "../src";
 import { mintAndDeposit } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
@@ -38,22 +38,16 @@ describe("Deleveraging Trade Method", () => {
 
     const orderSigner = new OrderSigner(alice.keyPair);
 
-    const order = createOrder({
-        isBuy: true,
-        makerAddress: alice.address,
-        price: 100,
-        leverage: 10,
-        quantity: 1
-    });
+    let order: Order;
 
     before(async () => {
         // deploy market
-        deployment["markets"] = [
-            {
+        deployment["markets"] = {
+            "ETH-PERP": {
                 Objects: (await createMarket(deployment, ownerSigner, provider))
                     .marketObjects
             }
-        ];
+        };
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 
@@ -75,6 +69,15 @@ describe("Deleveraging Trade Method", () => {
 
         await mintAndDeposit(onChain, alice.address);
         await mintAndDeposit(onChain, bob.address);
+
+        order = createOrder({
+            market: onChain.getPerpetualID(),
+            isBuy: true,
+            maker: alice.address,
+            price: 100,
+            leverage: 10,
+            quantity: 1
+        });
 
         // open a position at 10x leverage between
         const trade = await Trader.setupNormalTrade(
@@ -473,13 +476,13 @@ describe("Deleveraging Trade Method", () => {
         // deploy market
         const localDeployment = deployment;
 
-        localDeployment["markets"] = [
-            {
+        localDeployment["markets"] = {
+            "ETH-PERP": {
                 Objects: (
                     await createMarket(localDeployment, ownerSigner, provider)
                 ).marketObjects
             }
-        ];
+        };
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
@@ -491,11 +494,12 @@ describe("Deleveraging Trade Method", () => {
         });
 
         const order = createOrder({
+            market: onChain.getPerpetualID(),
             quantity: 1,
             price: 100,
             isBuy: true,
             leverage: 10,
-            makerAddress: alice.address
+            maker: alice.address
         });
 
         // open a position between alice and bob

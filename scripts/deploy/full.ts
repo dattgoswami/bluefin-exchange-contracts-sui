@@ -58,10 +58,11 @@ async function main() {
                 provider,
                 marketConfig
             );
-            deploymentData["markets"].push({
+
+            deploymentData["markets"][marketConfig.name as string] = {
                 Config: marketConfig,
                 Objects: marketObjects
-            });
+            };
 
             deploymentData.bankAccounts = {
                 ...deploymentData.bankAccounts,

@@ -31,7 +31,9 @@ export class Trader {
             makerSignature,
             takerOrder: takerOrder,
             takerSignature,
-            fillQuantity: options?.quantity || makerOrder.quantity,
+            fillQuantity:
+                options?.quantity ||
+                BigNumber.min(makerOrder.quantity, takerOrder.quantity),
             fillPrice: makerOrder.price
         };
     }
