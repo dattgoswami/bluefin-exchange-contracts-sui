@@ -81,6 +81,35 @@ describe("Regular Trade Method", () => {
         expectTxToSucceed(tx);
     });
 
+    it("should execute trade call and fill alice`s order but opens no position as its a self trade", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1)
+        });
+
+        expectTxToSucceed(priceTx);
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair, // alice is maker
+            alice.keyPair, // alice is taker
+            defaultOrder
+        );
+
+        const tx = await onChain.trade(trade);
+        expectTxToSucceed(tx); // tx should succeed
+        expect(Transaction.getEvents(tx, "TradeExecuted").length).to.be.equal(
+            0
+        );
+        expect(
+            Transaction.getEvents(tx, "BankBalanceUpdate").length
+        ).to.be.equal(0);
+        // both alice's orders should be filled
+        expect(Transaction.getEvents(tx, "OrderFill").length).to.be.equal(2);
+    });
+
     it("should revert trade as alice is not a settlement operator", async () => {
         const txResponse = await onChain.trade(
             await Trader.setupNormalTrade(

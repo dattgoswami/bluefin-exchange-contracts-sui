@@ -151,6 +151,11 @@ module bluefin_foundation::isolated_trading {
             evaluator::verify_qty_checks(tradeChecks, data.fill.quantity);
             evaluator::verify_market_take_bound_checks(tradeChecks, data.fill.price, oraclePrice, data.takerOrder.isBuy);
 
+            // Self-trade prevention; only fill order and return
+            if (data.makerOrder.maker == data.takerOrder.maker) {
+                return
+            };
+
 
             // apply isolated margin
             let makerResponse = apply_isolated_margin(
