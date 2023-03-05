@@ -37,7 +37,7 @@ export class Transaction {
     static getEvents(
         tx: SuiExecuteTransactionResponse | any,
         eventName?: string
-    ) {
+    ): Array<any> {
         let events = [];
 
         if (tx?.effects) {

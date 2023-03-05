@@ -4,14 +4,17 @@ module bluefin_foundation::isolated_adl {
     use sui::object::{Self, ID};
     use sui::table::{Self};
 
+    // custom modules
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::margin_bank::{Self, Bank};
     use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::evaluator::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
+
+    // friend modules
+    friend bluefin_foundation::exchange;
 
     //===========================================================//
     //                           EVENTS                          //
@@ -52,6 +55,11 @@ module bluefin_foundation::isolated_adl {
         pnl: Number
     }
 
+    struct TradeResponse has copy, store, drop {
+        makerFundsFlow: Number,
+        takerFundsFlow: Number
+    }
+
     //===========================================================//
     //                      CONSTANTS
     //===========================================================//
@@ -65,10 +73,9 @@ module bluefin_foundation::isolated_adl {
     //===========================================================//
     //                      TRADE METHOD                         //
     //===========================================================//
-    public fun trade(sender: address, perp: &mut Perpetual, bank: &mut Bank, data:TradeData){
+    public (friend) fun trade(sender: address, perp: &mut Perpetual, data:TradeData): TradeResponse{
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
-        let perpAddress = object::id_to_address(&perpID);
         let imr = perpetual::imr(perp);
         let mmr = perpetual::mmr(perp);
         let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
@@ -167,18 +174,7 @@ module bluefin_foundation::isolated_adl {
             mmr, 
             oraclePrice, 
             TRADE_TYPE, 
-            1);
-        
-        
-        // transfer margins between perp and accounts
-        margin_bank::transfer_trade_margin(
-                bank,
-                perpAddress,
-                data.maker,
-                data.taker,
-                makerResponse.fundsFlow,
-                takerResponse.fundsFlow
-            );
+            1);            
 
         // emit position updates
         position::emit_position_update_event(perpID, data.maker, newMakerPos, ACTION_TRADE);
@@ -199,13 +195,18 @@ module bluefin_foundation::isolated_adl {
             isBuy: isBuy,
         });
 
+        return TradeResponse{
+            makerFundsFlow:makerResponse.fundsFlow,
+            takerFundsFlow:takerResponse.fundsFlow
+        }
+
     }
 
     //===========================================================//
-    //                      HELPER METHODS
+    //                      FRIEND METHODS
     //===========================================================//
 
-    public fun pack_trade_data(maker:address, taker:address, quantity:u128, allOrNothing:bool):TradeData{
+    public (friend) fun pack_trade_data(maker:address, taker:address, quantity:u128, allOrNothing:bool):TradeData{
         return TradeData{
             maker,
             taker,
@@ -213,6 +214,18 @@ module bluefin_foundation::isolated_adl {
             allOrNothing
         }
     }
+
+    public (friend) fun makerFundsFlow(resp:TradeResponse): Number{
+        return resp.makerFundsFlow
+    }
+    
+    public (friend) fun takerFundsFlow(resp:TradeResponse): Number{
+        return resp.takerFundsFlow
+    }
+
+    //===========================================================//
+    //                      HELPER METHODS
+    //===========================================================//
 
     /**
      * @dev verifies if the liquidation is possible or not
@@ -306,7 +319,4 @@ module bluefin_foundation::isolated_adl {
             pnl: pnlPerUnit
         }
     }
-
-    
-    
 }

@@ -8,6 +8,13 @@ module bluefin_foundation::position {
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::error::{Self};
 
+
+    // friend modules
+    friend bluefin_foundation::exchange;
+    friend bluefin_foundation::isolated_liquidation;
+    friend bluefin_foundation::isolated_trading;
+    friend bluefin_foundation::isolated_adl;
+
     //===========================================================//
     //                           EVENTS                          //
     //===========================================================//
@@ -37,7 +44,7 @@ module bluefin_foundation::position {
     //                      INITIALIZATION                       //
     //===========================================================//
     
-    public fun initialize(perpID: ID, user:address): UserPosition{
+    public (friend) fun initialize(perpID: ID, user:address): UserPosition{
         return UserPosition {
             user,
             perpID,
@@ -81,7 +88,7 @@ module bluefin_foundation::position {
     //                          SETTERS                          //
     //===========================================================//
 
-    public fun set_mro(position:&mut UserPosition, mro:u128) {
+    public (friend) fun set_mro(position:&mut UserPosition, mro:u128) {
         //  if position is closed due to reducing trade reset mro to zero
         if(position.qPos == 0){
             position.mro = 0;
@@ -90,16 +97,16 @@ module bluefin_foundation::position {
         }
     }
 
-    public fun set_oiOpen(position:&mut UserPosition, oiOpen:u128) {
+    public (friend) fun set_oiOpen(position:&mut UserPosition, oiOpen:u128) {
         position.oiOpen = oiOpen;
     }
 
-    public fun set_margin(position:&mut UserPosition, margin:u128) {
+    public (friend) fun set_margin(position:&mut UserPosition, margin:u128) {
         position.margin = margin;
     }
 
 
-    public fun set_qPos(position:&mut UserPosition, qPos:u128) {
+    public (friend) fun set_qPos(position:&mut UserPosition, qPos:u128) {
         position.qPos = qPos;
 
         if(qPos == 0){
@@ -112,7 +119,7 @@ module bluefin_foundation::position {
 
     }
 
-    public fun set_isPosPositive(position:&mut UserPosition, isPosPositive:bool) {
+    public (friend) fun set_isPosPositive(position:&mut UserPosition, isPosPositive:bool) {
         position.isPosPositive = isPosPositive;
     }
 

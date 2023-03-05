@@ -167,9 +167,6 @@ module bluefin_foundation::error {
         return 103
     }
 
-    public fun invalid_price_oracle_capability() : u64 {
-        return 104
-    }
 
     public fun mr_less_than_imr_can_not_open_or_flip_position(isTaker: u64): u64 {
         return 400 + isTaker
@@ -262,5 +259,8 @@ module bluefin_foundation::error {
     }
 
 
+    public fun new_exchange_admin_can_not_be_same_as_current_one(): u64 {
+        return 900
+    }
     
 }

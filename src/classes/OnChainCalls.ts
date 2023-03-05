@@ -31,13 +31,34 @@ export class OnChainCalls {
         this.deployment = _deployment;
     }
 
+    public async transferExchangeAdmin(
+        args: {
+            address: string;
+            adminID?: string;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.address);
+
+        return this.signAndCall(
+            caller,
+            "transfer_exchange_admin",
+            callArgs,
+            "roles"
+        );
+    }
+
     public async createPerpetual(
         args: PerpCreationMarketDetails,
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(this.getBankID());
 
         callArgs.push(args.name || "ETH-PERP");
@@ -107,7 +128,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minPrice));
 
@@ -126,7 +147,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxPrice));
 
@@ -145,7 +166,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.stepSize));
 
@@ -164,7 +185,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.tickSize));
 
@@ -183,7 +204,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbLong));
 
@@ -202,7 +223,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbShort));
 
@@ -221,7 +242,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxQtyLimit));
 
@@ -245,7 +266,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxQtyMarket));
 
@@ -269,7 +290,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minQty));
 
@@ -288,7 +309,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(args.maxLimit);
 
@@ -311,7 +332,7 @@ export class OnChainCalls {
         const caller = signer || this.signer;
         const callArgs = [];
 
-        callArgs.push(args.adminID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(this.getSettlementOperatorTable());
 
         callArgs.push(args.operator);
@@ -321,7 +342,7 @@ export class OnChainCalls {
             caller,
             "set_settlement_operator",
             callArgs,
-            "exchange"
+            "roles"
         );
     }
 
@@ -505,11 +526,7 @@ export class OnChainCalls {
         const callArgs = [];
 
         callArgs.push(args.perpID || this.getPerpetualID());
-        callArgs.push(
-            args.updateOPCapID
-                ? args.updateOPCapID
-                : this.getUpdatePriceOracleCap()
-        );
+        callArgs.push(args.updateOPCapID || this.getPriceOracleOperatorCap());
         callArgs.push(args.price);
 
         return this.signAndCall(
@@ -522,8 +539,8 @@ export class OnChainCalls {
 
     public async updatePriceOracleOperator(
         args: {
-            adminCapID?: string;
-            updateOPCapID?: string;
+            adminID?: string;
+            oracleOperatorID?: string;
             perpID?: string;
             operator: string;
         },
@@ -533,27 +550,23 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminCapID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(
-            args.updateOPCapID
-                ? args.updateOPCapID
-                : this.getUpdatePriceOracleCap()
+            args.oracleOperatorID || this.getPriceOracleOperatorCap()
         );
-        callArgs.push(args.perpID || this.getPerpetualID());
-
         callArgs.push(args.operator);
 
         return this.signAndCall(
             caller,
             "set_price_oracle_operator",
             callArgs,
-            "exchange"
+            "roles"
         );
     }
 
     public async updatePriceOracleMaxAllowedPriceDifference(
         args: {
-            adminCapID?: string;
+            adminID?: string;
             perpID?: string;
             maxAllowedPriceDifference: string;
         },
@@ -563,7 +576,7 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.adminCapID || this.getAdminCap());
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(args.maxAllowedPriceDifference);
 
@@ -609,7 +622,7 @@ export class OnChainCalls {
         args: {
             isAllowed: boolean;
             bankID?: string;
-            bankAdminCapID?: string;
+            guardianID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -617,10 +630,8 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(
-            args.bankAdminCapID ? args.bankAdminCapID : this.getBankAdminCapID()
-        );
-        callArgs.push(args.bankID ? args.bankID : this.getBankID());
+        callArgs.push(args.guardianID || this.getGuardianID());
+        callArgs.push(args.bankID || this.getBankID());
         callArgs.push(args.isAllowed);
 
         return this.signAndCall(
@@ -836,8 +847,8 @@ export class OnChainCalls {
         return this.deployment["objects"]["package"].id as string;
     }
 
-    getAdminCap(): string {
-        return this.deployment["objects"]["AdminCap"].id as string;
+    getExchangeAdminCap(): string {
+        return this.deployment["objects"]["ExchangeAdminCap"].id as string;
     }
 
     // by default returns the perpetual id of 1st market
@@ -846,9 +857,9 @@ export class OnChainCalls {
             .id as string;
     }
 
-    getUpdatePriceOracleCap(market = "ETH-PERP"): string {
+    getPriceOracleOperatorCap(market = "ETH-PERP"): string {
         return this.deployment["markets"][market]["Objects"][
-            "UpdatePriceOracleCap"
+            "PriceOracleOperatorCap"
         ].id as string;
     }
     getOperatorTableID(): string {
@@ -865,8 +876,8 @@ export class OnChainCalls {
         return this.deployment["objects"]["Bank"].id as string;
     }
 
-    getBankAdminCapID(): string {
-        return this.deployment["objects"]["BankAdminCap"].id as string;
+    getGuardianID(): string {
+        return this.deployment["objects"]["ExchangeGuardianCap"].id as string;
     }
 
     getCurrencyID(): string {

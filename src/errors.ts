@@ -61,7 +61,6 @@ export const ERROR_CODES: { [key: string]: string } = {
     "101": "Address is already price oracle operator",
     "102": "Price is out of max allowed price difference bounds",
     "103": "Max allowed price difference cannot be 0%",
-    "104": "UpdateOraclePriceCapability's Perpetual ID mismatch with provided Perpetual ID",
     "400": "Maker: MR < IMR, can not open a new or flip position",
     "401": "Taker: MR < IMR, can not open a new or flip position",
     "402": "Maker: MR < IMR, Margin Ratio must improve or stay the same",
@@ -83,7 +82,7 @@ export const ERROR_CODES: { [key: string]: string } = {
     "601": "Taker: Insufficient margin in margin bank",
     "602": "Perpetual: Insufficient margin in margin bank",
     "603": "Insufficient margin in margin bank",
-    "604": "Withdrawl from bank is not allowed at the moment",
+    "604": "Withdrawal from bank is not allowed at the moment",
     "605": "User does not have a bank account",
     "606": "Amount provided to be deposited is < the balance in provided coin",
     "700": "Liquidation: Maker has no position to liquidate",
@@ -94,5 +93,6 @@ export const ERROR_CODES: { [key: string]: string } = {
     "801": "IsolatedADL: Cannot deleverage since taker is underwater",
     "802": "IsolatedADL: Taker and maker must have same side positions",
     "803": "IsolatedADL: allOrNothing is set and maker position is < quantity",
-    "804": "IsolatedADL: allOrNothing is set and taker position is < quantity"
+    "804": "IsolatedADL: allOrNothing is set and taker position is < quantity",
+    "900": "New exchange admin address can not be same as current one"
 };

@@ -1,30 +1,27 @@
 module bluefin_foundation::price_oracle {
 
-    use sui::object::{Self, ID, UID};
+    use sui::object::{ID};
     use sui::event::{emit};
-    use sui::tx_context::{TxContext};
-    use sui::transfer;
 
     // custom
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{base_uint};
+    use bluefin_foundation::roles::{Self, PriceOracleOperatorCap};
+
+    // friend module
+    friend bluefin_foundation::exchange;
 
     //===========================================================//
     //                           EVENTS                          //
     //===========================================================//
 
-    struct OraclePriceUpdated has copy, drop {
+    struct OraclePriceUpdateEvent has copy, drop {
         id: ID,
         price: u128,
         updatedAt: u128,
     }
 
-    struct PriceOracleOperatorUpdated has copy, drop {
-        id: ID, 
-        account:address
-    }
-
-    struct PriceOracleMaxAllowedPriceDiffUpdated has copy, drop {
+    struct MaxAllowedPriceDiffUpdateEvent has copy, drop {
         id: ID, 
         maxAllowedPriceDifference: u128
     }
@@ -34,11 +31,6 @@ module bluefin_foundation::price_oracle {
     //                           STORAGE                         //
     //===========================================================//
 
-    struct UpdatePriceOracleCap has key {
-        id: UID,
-        account: address,
-        perpetualID: ID
-    }
 
     struct PriceOracle has copy, drop, store {
         
@@ -53,88 +45,61 @@ module bluefin_foundation::price_oracle {
     }
 
     //===========================================================//
-    //                      INITIALIZATION                       //
+    //                      FRIEND FUNCTIONS                     //
     //===========================================================//
 
-    public fun initialize(
-       price: u128, 
-       maxAllowedPriceDifference: u128, 
-       updatedAt: u128,
+    public (friend) fun initialize(
        perp: ID,
-       operator: address,
-        ctx: &mut TxContext
+       maxAllowedPriceDifference: u128, 
     ): PriceOracle {
         
-        let op = PriceOracle {
-            price,
+        let oracle = PriceOracle {
+            price:0,
             maxAllowedPriceDifference,
-            updatedAt
+            // to do set current time
+            updatedAt: 0
         };
 
-        emit(OraclePriceUpdated { 
+        emit(OraclePriceUpdateEvent { 
             id: perp,
-            price,
-            updatedAt
+            price: 0,
+            updatedAt: 0 // to do set current time
         });
 
-        emit(PriceOracleMaxAllowedPriceDiffUpdated { 
+        emit(MaxAllowedPriceDiffUpdateEvent { 
             id: perp,
             maxAllowedPriceDifference
         });
 
-        emit(PriceOracleOperatorUpdated{ 
-            id: perp,
-            account: operator 
-        });
-
-        let uopCapability = UpdatePriceOracleCap{
-            id: object::new(ctx),
-            account: operator,
-            perpetualID: perp
-        };
-        
-        transfer::share_object(uopCapability);
-        return op
-    }
-
-    //===========================================================//
-    //                         SETTERS                           //
-    //===========================================================//
-
-    public fun set_price_oracle_operator(perp: ID, cap: &mut UpdatePriceOracleCap, operator: address){
-        assert!(cap.account != operator, error::already_price_oracle_operator());
-        assert!(cap.perpetualID == perp, error::invalid_price_oracle_capability());
-        cap.account = operator;
-
-        emit(PriceOracleOperatorUpdated{ 
-            id: perp,
-            account: operator 
-        });
+        return oracle
     }
     
-    public fun set_oracle_price_max_allowed_diff(perp: ID, op: &mut PriceOracle, maxAllowedPriceDifference: u128){
+    public (friend) fun set_oracle_price_max_allowed_diff(perp: ID, op: &mut PriceOracle, maxAllowedPriceDifference: u128){
         assert!(maxAllowedPriceDifference != 0, 103);
+
         op.maxAllowedPriceDifference = maxAllowedPriceDifference;
-        emit(PriceOracleMaxAllowedPriceDiffUpdated{ 
+
+        emit(MaxAllowedPriceDiffUpdateEvent{ 
             id: perp,
             maxAllowedPriceDifference
         });
     }
     
-    public fun set_oracle_price(perp: ID, cap: &UpdatePriceOracleCap, op: &mut PriceOracle, price: u128, sender: address){
-        assert!(sender == cap.account, error::not_valid_price_oracle_operator());
+    public (friend) fun set_oracle_price(perp: ID, cap: &PriceOracleOperatorCap, op: &mut PriceOracle, price: u128, sender: address){
+        
+        assert!(roles::is_valid_price_oracle_operator(cap, perp, sender), error::not_valid_price_oracle_operator());
+        
         assert!(
-            verify_oracle_price_update_diff(op.maxAllowedPriceDifference,price, op.price), 
+            verify_oracle_price_update_diff(op.maxAllowedPriceDifference, price, op.price), 
             error::out_of_max_allowed_price_diff_bounds());
 
         op.price = price;
-        emit(OraclePriceUpdated { 
+        emit(OraclePriceUpdateEvent { 
             id: perp,
             price, 
             updatedAt: 0
         });
     }
-
 
     //===========================================================//
     //                          ACCESSORS                        //

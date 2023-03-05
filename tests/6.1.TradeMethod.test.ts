@@ -95,7 +95,7 @@ describe("Regular Trade Method", () => {
             orderSigner,
             alice.keyPair, // alice is maker
             alice.keyPair, // alice is taker
-            defaultOrder
+            { ...defaultOrder, salt: bigNumber(Date.now()) }
         );
 
         const tx = await onChain.trade(trade);
@@ -106,6 +106,7 @@ describe("Regular Trade Method", () => {
         expect(
             Transaction.getEvents(tx, "BankBalanceUpdate").length
         ).to.be.equal(0);
+
         // both alice's orders should be filled
         expect(Transaction.getEvents(tx, "OrderFill").length).to.be.equal(2);
     });

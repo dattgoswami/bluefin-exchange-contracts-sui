@@ -61,7 +61,7 @@ describe("Price Oracle", () => {
 
             expectTxToSucceed(tx);
 
-            expectTxToEmitEvent(tx, "OraclePriceUpdated");
+            expectTxToEmitEvent(tx, "OraclePriceUpdateEvent");
 
             const details = await onChain.getOnChainObject(
                 onChain.getPerpetualID()
@@ -73,7 +73,10 @@ describe("Price Oracle", () => {
                 ).toFixed()
             ).to.equal(newPrice.toFixed());
 
-            const event = Transaction.getEvents(tx, "OraclePriceUpdated")[0];
+            const event = Transaction.getEvents(
+                tx,
+                "OraclePriceUpdateEvent"
+            )[0];
 
             expect(bigNumber(event?.fields?.price).toFixed(0)).to.be.equal(
                 newPrice.toFixed()
@@ -134,9 +137,12 @@ describe("Price Oracle", () => {
             );
 
             expectTxToSucceed(tx3);
-            expectTxToEmitEvent(tx3, "OraclePriceUpdated");
+            expectTxToEmitEvent(tx3, "OraclePriceUpdateEvent");
 
-            const event = Transaction.getEvents(tx3, "OraclePriceUpdated")[0];
+            const event = Transaction.getEvents(
+                tx3,
+                "OraclePriceUpdateEvent"
+            )[0];
             expect(bigNumber(event?.fields?.price).toFixed(0)).to.be.equal(
                 newPrice.toFixed()
             );
@@ -198,7 +204,7 @@ describe("Price Oracle", () => {
             );
 
             expectTxToSucceed(tx);
-            expectTxToEmitEvent(tx, "PriceOracleOperatorUpdated");
+            expectTxToEmitEvent(tx, "PriceOracleOperatorUpdateEvent");
 
             const newPrice = toBigNumber(3);
 
@@ -210,8 +216,11 @@ describe("Price Oracle", () => {
             );
 
             expectTxToSucceed(txb);
-            expectTxToEmitEvent(txb, "OraclePriceUpdated");
-            const event = Transaction.getEvents(txb, "OraclePriceUpdated")[0];
+            expectTxToEmitEvent(txb, "OraclePriceUpdateEvent");
+            const event = Transaction.getEvents(
+                txb,
+                "OraclePriceUpdateEvent"
+            )[0];
             expect(bigNumber(event?.fields?.price).toFixed(0)).to.be.equal(
                 newPrice.toFixed()
             );
@@ -231,7 +240,7 @@ describe("Price Oracle", () => {
 
         it("should not update price oracle operator when non-admin is the sender", async () => {
             const expectedError = OWNERSHIP_ERROR(
-                onChain.getAdminCap(),
+                onChain.getExchangeAdminCap(),
                 ownerAddress,
                 await getAddressFromSigner(testSigner)
             );
@@ -272,10 +281,10 @@ describe("Price Oracle", () => {
             );
 
             expectTxToSucceed(tx);
-            expectTxToEmitEvent(tx, "PriceOracleMaxAllowedPriceDiffUpdated");
+            expectTxToEmitEvent(tx, "MaxAllowedPriceDiffUpdateEvent");
             const event = Transaction.getEvents(
                 tx,
-                "PriceOracleMaxAllowedPriceDiffUpdated"
+                "MaxAllowedPriceDiffUpdateEvent"
             )[0];
             expect(
                 bigNumber(event?.fields?.maxAllowedPriceDifference).toFixed(0)
@@ -284,7 +293,7 @@ describe("Price Oracle", () => {
 
         it("should not update price oracle maxAllowedPriceDifference when non-admin is the sender", async () => {
             const expectedError = OWNERSHIP_ERROR(
-                onChain.getAdminCap(),
+                onChain.getExchangeAdminCap(),
                 ownerAddress,
                 await getAddressFromSigner(testSigner)
             );

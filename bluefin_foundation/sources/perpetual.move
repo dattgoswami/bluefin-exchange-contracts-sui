@@ -12,7 +12,13 @@ module bluefin_foundation::perpetual {
     use bluefin_foundation::price_oracle::{PriceOracle};
     use bluefin_foundation::evaluator::{TradeChecks};
 
-    
+
+    //friend modules
+    friend bluefin_foundation::exchange;
+    friend bluefin_foundation::isolated_trading;
+    friend bluefin_foundation::isolated_liquidation;
+    friend bluefin_foundation::isolated_adl;
+
     //===========================================================//
     //                           EVENTS                         //
     //===========================================================//
@@ -64,10 +70,10 @@ module bluefin_foundation::perpetual {
     }
 
     //===========================================================//
-    //                      INITIALIZATION                       //
+    //                      FRIEND FUNCTIONS                     //
     //===========================================================//
 
-    public fun initialize(
+    public (friend) fun initialize(
         id: UID,
         name:vector<u8>, 
         imr: u128,
@@ -116,6 +122,18 @@ module bluefin_foundation::perpetual {
         });
         
         transfer::share_object(perp);
+    }
+
+    public (friend) fun positions(perp:&mut Perpetual):&mut Table<address,UserPosition>{
+        return &mut perp.positions
+    }
+
+    public (friend) fun mut_checks(perp:&mut Perpetual):&mut TradeChecks{
+        return &mut perp.checks
+    }
+
+    public (friend) fun mut_priceOracle(perp:&mut Perpetual):&mut PriceOracle{
+        return &mut perp.priceOracle
     }
 
     //===========================================================//
@@ -170,16 +188,5 @@ module bluefin_foundation::perpetual {
         return perp.priceOracle
     }
 
-    public fun positions(perp:&mut Perpetual):&mut Table<address,UserPosition>{
-        return &mut perp.positions
-    }
-
-    public fun mut_checks(perp:&mut Perpetual):&mut TradeChecks{
-        return &mut perp.checks
-    }
-
-    public fun mut_priceOracle(perp:&mut Perpetual):&mut PriceOracle{
-        return &mut perp.priceOracle
-    }
 
 }

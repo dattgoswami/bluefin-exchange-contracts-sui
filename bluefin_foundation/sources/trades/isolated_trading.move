@@ -8,14 +8,17 @@ module bluefin_foundation::isolated_trading {
     use sui::table::{Self, Table};
     use sui::ecdsa_k1;
 
+    // custom modules
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::margin_bank::{Self, Bank};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
+
+    // friend modules
+    friend bluefin_foundation::exchange;
 
     //===========================================================//
     //                           EVENTS                          //
@@ -88,6 +91,12 @@ module bluefin_foundation::isolated_trading {
         fee: u128
     }
 
+    struct TradeResponse has copy, store, drop {
+        makerFundsFlow: Number,
+        takerFundsFlow: Number,
+        fee: u128
+    }
+
     //===========================================================//
     //                      CONSTANTS
     //===========================================================//
@@ -103,17 +112,23 @@ module bluefin_foundation::isolated_trading {
     //                      TRADE METHOD
     //===========================================================//
 
-    public fun trade(sender: address, perp: &mut Perpetual, bank: &mut Bank, ordersTable: &mut Table<vector<u8>, OrderStatus>, data: TradeData){
+    public (friend) fun trade(
+        sender: address, 
+        perp: &mut Perpetual, 
+        ordersTable: &mut Table<vector<u8>, 
+        OrderStatus>, 
+        data: TradeData):TradeResponse
+        {
 
-            assert!(data.makerOrder.isBuy != data.takerOrder.isBuy, error::order_cannot_be_of_same_side());
+            assert!(
+                data.makerOrder.isBuy != data.takerOrder.isBuy, 
+                error::order_cannot_be_of_same_side());
 
             let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
             let tradeChecks = perpetual::checks(perp);
             let makerFee = perpetual::makerFee(perp);
             let takerFee = perpetual::takerFee(perp);
-            let feePool = perpetual::feePool(perp);
             let perpID = object::uid_to_inner(perpetual::id(perp));
-            let perpAddress = object::id_to_address(&perpID);
             let imr = perpetual::imr(perp);
             let mmr = perpetual::mmr(perp);
             let positionsTable = perpetual::positions(perp);
@@ -153,7 +168,11 @@ module bluefin_foundation::isolated_trading {
 
             // Self-trade prevention; only fill order and return
             if (data.makerOrder.maker == data.takerOrder.maker) {
-                return
+                return TradeResponse{
+                    makerFundsFlow: signed_number::new(),
+                    takerFundsFlow: signed_number::new(),
+                    fee:0
+                }
             };
 
 
@@ -195,28 +214,7 @@ module bluefin_foundation::isolated_trading {
                 mmr, 
                 oraclePrice, 
                 TRADE_TYPE, 
-                1);
-
-
-            // transfer margins between perp and accounts
-            margin_bank::transfer_trade_margin(
-                bank,
-                perpAddress,
-                data.makerOrder.maker,
-                data.takerOrder.maker,
-                makerResponse.fundsFlow,
-                takerResponse.fundsFlow
-            );
-
-
-            // transfer fee to fee pool from perpetual
-            margin_bank::transfer_margin_to_account(
-                bank, 
-                perpAddress, 
-                feePool, 
-                makerResponse.fee + takerResponse.fee, 
-                2
-            );
+                1);           
 
             position::emit_position_update_event(perpID, data.makerOrder.maker, newMakerPosition, ACTION_TRADE);
             position::emit_position_update_event(perpID, data.takerOrder.maker, newTakerPosition, ACTION_TRADE);
@@ -240,13 +238,20 @@ module bluefin_foundation::isolated_trading {
                 tradePrice: data.fill.price,
                 isBuy: data.takerOrder.isBuy,
             });
+
+
+            return TradeResponse{
+                makerFundsFlow: makerResponse.fundsFlow,
+                takerFundsFlow: takerResponse.fundsFlow,
+                fee: takerResponse.fee + makerResponse.fee
+            }
     }
 
     //===========================================================//
-    //                      HELPER METHODS
+    //                      FRIEND METHODS
     //===========================================================//
-
-    public fun pack_trade_data(
+    
+    public (friend) fun pack_trade_data(
          // maker
         makerIsBuy: bool,
         makerPrice: u128,
@@ -283,6 +288,27 @@ module bluefin_foundation::isolated_trading {
         return TradeData{makerOrder, takerOrder, fill, makerSignature, takerSignature}
 
     }
+
+
+    public (friend) fun makerFundsFlow(resp:TradeResponse): Number{
+        return resp.makerFundsFlow
+    }
+    
+    public (friend) fun takerFundsFlow(resp:TradeResponse): Number{
+        return resp.takerFundsFlow
+    }
+
+    public (friend) fun fee(resp:TradeResponse): u128{
+        return resp.fee
+    }
+
+
+
+    //===========================================================//
+    //                      HELPER METHODS
+    //===========================================================//
+
+    
 
     fun pack_order(
         market: address,
@@ -354,7 +380,6 @@ module bluefin_foundation::isolated_trading {
         return hash::sha2_256(serialized_order)
 
     }
-
 
     fun create_order(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash: vector<u8>){
         // if the order does not already exists on-chain

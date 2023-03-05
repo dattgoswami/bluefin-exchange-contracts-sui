@@ -75,7 +75,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -106,7 +106,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -136,7 +136,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -168,7 +168,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -183,7 +183,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -203,7 +203,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -233,7 +233,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -280,7 +280,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -315,7 +315,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );
@@ -347,7 +347,7 @@ describe("Evaluator", () => {
                     provider
                 );
                 const expectedError = OWNERSHIP_ERROR(
-                    onChain.getAdminCap(),
+                    onChain.getExchangeAdminCap(),
                     ownerAddress,
                     TEST_WALLETS[0].address
                 );

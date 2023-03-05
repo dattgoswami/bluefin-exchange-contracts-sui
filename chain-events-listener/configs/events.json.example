@@ -4,12 +4,10 @@
         "module": "perpetual",
         "events": [
             "PerpetualCreationEvent",
-            "OperatorUpdateEvent",
+            "SettlementOperatorUpdateEvent",
             "MinOrderPriceUpdateEvent",
             "AccountPositionUpdateEvent",
-            "MaxAllowedPriceDiffInOraclePriceUpdated",
-            "PriceOracleOperatorUpdatedEvent",
-            "OraclePriceUpdated"
+            "OraclePriceUpdateEvent"
         ]
     }
 ]

@@ -3,9 +3,15 @@ module bluefin_foundation::evaluator {
     use sui::object::{ID};
     use sui::event::{emit};
     use std::vector;
+
+    // custom modules
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
 
+    // friend modules
+    friend bluefin_foundation::exchange;
+    // TODO remove it
+    friend bluefin_foundation::test;
 
     //===========================================================//
     //                           EVENTS                          //
@@ -92,7 +98,7 @@ module bluefin_foundation::evaluator {
     //                      INITIALIZATION                       //
     //===========================================================//
 
-    public fun initialize(
+    public (friend) fun initialize(
         minPrice: u128,
         maxPrice: u128,
         tickSize: u128,
@@ -140,7 +146,7 @@ module bluefin_foundation::evaluator {
     //===========================================================//
 
 
-    public fun set_min_price( perp: ID, checks: &mut TradeChecks, minPrice: u128){
+    public (friend) fun set_min_price( perp: ID, checks: &mut TradeChecks, minPrice: u128){
         
         assert!(minPrice > 0, error::min_price_greater_than_zero());
         assert!(minPrice < checks.maxPrice, error::min_price_less_than_max_price());        
@@ -152,7 +158,7 @@ module bluefin_foundation::evaluator {
         })
     }   
 
-    public fun set_max_price( perp: ID, checks: &mut TradeChecks, maxPrice: u128){
+    public (friend) fun set_max_price( perp: ID, checks: &mut TradeChecks, maxPrice: u128){
         
         assert!(maxPrice > checks.minPrice, error::max_price_greater_than_min_price());      
         checks.maxPrice = maxPrice;
@@ -163,7 +169,7 @@ module bluefin_foundation::evaluator {
         })
     }
 
-    public fun set_step_size( perp: ID, checks: &mut TradeChecks, stepSize: u128){
+    public (friend) fun set_step_size( perp: ID, checks: &mut TradeChecks, stepSize: u128){
         
         assert!(stepSize > 0, error::step_size_greater_than_zero());      
         checks.stepSize = stepSize;
@@ -174,7 +180,7 @@ module bluefin_foundation::evaluator {
         })
     }
 
-    public fun set_tick_size( perp: ID, checks: &mut TradeChecks, tickSize: u128){
+    public (friend) fun set_tick_size( perp: ID, checks: &mut TradeChecks, tickSize: u128){
         
         assert!(tickSize > 0, error::tick_size_greater_than_zero());      
         checks.tickSize = tickSize;
@@ -185,7 +191,7 @@ module bluefin_foundation::evaluator {
         })
     }
 
-    public fun set_mtb_long( perp: ID, checks: &mut TradeChecks, value: u128){
+    public (friend) fun set_mtb_long( perp: ID, checks: &mut TradeChecks, value: u128){
         
         assert!(value > 0, error::mtb_long_greater_than_zero());      
         checks.mtbLong = value;
@@ -196,7 +202,7 @@ module bluefin_foundation::evaluator {
         })
     }
 
-    public fun set_mtb_short( perp: ID, checks: &mut TradeChecks, value: u128){
+    public (friend) fun set_mtb_short( perp: ID, checks: &mut TradeChecks, value: u128){
         assert!(value > 0, 13);
         assert!(value < library::base_uint(), 14);      
         checks.mtbShort = value;
@@ -207,7 +213,7 @@ module bluefin_foundation::evaluator {
         })
     }
 
-    public fun set_max_qty_limit( perp: ID, checks: &mut TradeChecks, quantity: u128){
+    public (friend) fun set_max_qty_limit( perp: ID, checks: &mut TradeChecks, quantity: u128){
         
         assert!(quantity > checks.minQty, error::max_limit_qty_greater_than_min_qty());      
         checks.maxQtyLimit = quantity;
@@ -218,7 +224,7 @@ module bluefin_foundation::evaluator {
         })
     }
 
-    public fun set_max_qty_market( perp: ID, checks: &mut TradeChecks, quantity: u128){
+    public (friend) fun set_max_qty_market( perp: ID, checks: &mut TradeChecks, quantity: u128){
         
         assert!(quantity > checks.minQty, error::max_market_qty_less_than_min_qty());      
         checks.maxQtyMarket = quantity;
@@ -229,7 +235,7 @@ module bluefin_foundation::evaluator {
         })
     }
 
-    public fun set_min_qty( perp: ID, checks: &mut TradeChecks, quantity: u128){
+    public (friend) fun set_min_qty( perp: ID, checks: &mut TradeChecks, quantity: u128){
         
         assert!(quantity < checks.maxQtyLimit && quantity < checks.maxQtyMarket, error::min_qty_less_than_max_qty());
         assert!(quantity > 0, error::min_qty_greater_than_zero());
@@ -241,7 +247,7 @@ module bluefin_foundation::evaluator {
         })
     }
 
-    public fun set_max_oi_open( perp:ID, checks: &mut TradeChecks, maxLimit : vector<u128>){
+    public (friend) fun set_max_oi_open( perp:ID, checks: &mut TradeChecks, maxLimit : vector<u128>){
          let maxAllowedOIOpen : vector<u128> = vector::empty();
         // Push dummy value at index 0 because leverage starts at 1
         vector::push_back(&mut maxAllowedOIOpen, 0);

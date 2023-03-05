@@ -4,6 +4,9 @@ module bluefin_foundation::margin_math {
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::signed_number::{Self};
 
+    // friend module
+    friend bluefin_foundation::exchange;
+
     /**
      * @dev returns margin left in an account's position at the time of position closure
      * post perpetual delisting
@@ -11,7 +14,7 @@ module bluefin_foundation::margin_math {
      * @param price price of oracle for delisting
      * @param balance amount of balance, USDC perpetual has
      */
-    public fun get_margin_left(userPos: UserPosition, price: u128, balance: u128) : u128 {
+    public (friend) fun get_margin_left(userPos: UserPosition, price: u128, balance: u128) : u128 {
 
         let marginLeft;
         let pPos = position::compute_average_entry_price(userPos);
@@ -29,14 +32,13 @@ module bluefin_foundation::margin_math {
         return library::min(marginLeft, balance)
     }
 
-
     /**
      * @dev returns the target margin required when adjusting leverage
      * @param userPos account's position on perpetual
      * @param leverage new leverage
      * @param price oracle price of the asset
      */
-    public fun get_target_margin(userPos: UserPosition, leverage: u128, price: u128): u128{
+    public (friend) fun get_target_margin(userPos: UserPosition, leverage: u128, price: u128): u128{
         let targetMargin;
         let oiOpen = position::oiOpen(userPos);
         let qPos = position::qPos(userPos);
@@ -61,7 +63,7 @@ module bluefin_foundation::margin_math {
      * @param userPos account's position on perpetual
      * @param price oracle price of the asset
      */
-    public fun get_max_removeable_margin(userPos: UserPosition, price: u128): u128{
+    public (friend) fun get_max_removeable_margin(userPos: UserPosition, price: u128): u128{
         let maxRemovableAmount;
         let mro = position::mro(userPos);
         let margin = position::margin(userPos);

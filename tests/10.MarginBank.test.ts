@@ -39,8 +39,7 @@ describe("Margin Bank", () => {
         const objects = await getGenesisMap(provider, publishTxn);
         const deployment = {
             deployer: ownerAddress,
-            objects: objects,
-            markets: []
+            objects: objects
         };
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
@@ -227,12 +226,14 @@ describe("Margin Bank", () => {
                 alice
             );
 
-            await onChain.setIsWithdrawalAllowed(
+            const tx = await onChain.setIsWithdrawalAllowed(
                 {
                     isAllowed: false
                 },
                 ownerSigner
             );
+
+            expectTxToSucceed(tx);
 
             const txResult = await onChain.withdrawFromBank(
                 {

@@ -4,14 +4,17 @@ module bluefin_foundation::isolated_liquidation {
     use sui::object::{Self, ID};
     use sui::table::{Self};
 
+    // custom modules
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::margin_bank::{Self, Bank};
     use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
+
+    // friend modules
+    friend bluefin_foundation::exchange;
 
     //===========================================================//
     //                           EVENTS                          //
@@ -54,11 +57,16 @@ module bluefin_foundation::isolated_liquidation {
         pnl: Number
     }
 
-    struct Premium has store, drop {
+    struct Premium has copy, store, drop {
         pool: Number,
         liquidator: Number
     }
 
+    struct TradeResponse has copy, store, drop {
+        makerFundsFlow: Number,
+        takerFundsFlow: Number,
+        premium: Premium
+    }
 
     //===========================================================//
     //                      CONSTANTS
@@ -73,10 +81,9 @@ module bluefin_foundation::isolated_liquidation {
     //===========================================================//
     //                      TRADE METHOD                         //
     //===========================================================//
-    public fun trade(sender: address, perp: &mut Perpetual, bank: &mut Bank, data:TradeData){
+    public fun trade(sender: address, perp: &mut Perpetual, data:TradeData): TradeResponse{
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
-        let perpAddress = object::id_to_address(&perpID);
         let imr = perpetual::imr(perp);
         let mmr = perpetual::mmr(perp);
         let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
@@ -193,20 +200,6 @@ module bluefin_foundation::isolated_liquidation {
         // pnl
         takerResponse.pnl = signed_number::add(premium.liquidator, takerResponse.pnl);
 
-
-        // transfer premium amount between perpetual/liquidator and insurance pool
-        transfer_premium(bank, premium, data.liquidator, perpetual::insurancePool(perp), perpAddress);
-
-        // transfer margins between perp and accounts
-        margin_bank::transfer_trade_margin(
-            bank,
-            perpAddress,
-            data.liquidatee,
-            data.liquidator,
-            makerResponse.fundsFlow,
-            takerResponse.fundsFlow
-        );
-
         // emit position updates
         position::emit_position_update_event(perpID, data.liquidatee, newMakerPos, ACTION_TRADE);
         position::emit_position_update_event(perpID, data.liquidator, newTakerPos, ACTION_TRADE);
@@ -226,13 +219,18 @@ module bluefin_foundation::isolated_liquidation {
             isBuy: isBuy,
         });
 
+            return TradeResponse{
+                makerFundsFlow: makerResponse.fundsFlow,
+                takerFundsFlow: takerResponse.fundsFlow,
+                premium
+            }
     }
 
     //===========================================================//
-    //                      HELPER METHODS
+    //                      FRIEND FUNCTIONS                     //
     //===========================================================//
 
-    public fun pack_trade_data(liquidator:address, liquidatee:address, quantity:u128, leverage:u128, allOrNothing:bool):TradeData{
+    public (friend) fun pack_trade_data(liquidator:address, liquidatee:address, quantity:u128, leverage:u128, allOrNothing:bool):TradeData{
         return TradeData{
             liquidator,
             liquidatee,
@@ -242,44 +240,26 @@ module bluefin_foundation::isolated_liquidation {
         }
     }
 
-    fun transfer_premium(bank: &mut Bank, premium: Premium, liquidator:address, insurancePool: address, perpetual:address){
-        
-        // if liquidator's portion is positive
-        if(signed_number::gt_uint(premium.liquidator, 0)){
-            // transfer percentage of premium to liquidator
-            margin_bank::transfer_margin_to_account(
-                bank,
-                perpetual,
-                liquidator,
-                signed_number::value(premium.liquidator), 
-                2, 
-            )
-        }
-        // if negative, implies under water/bankrupt liquidation
-        else if(signed_number::lt_uint(premium.liquidator, 0)){
-            // transfer negative liquidation premium from liquidator to perpetual
-            margin_bank::transfer_margin_to_account(
-                bank,
-                liquidator,
-                perpetual,
-                signed_number::value(premium.liquidator), 
-                1, 
-            )
-        };
-
-        // insurance pool portion
-        if(signed_number::gt_uint(premium.pool, 0)){
-            // transfer percentage of premium to insurance pool
-            margin_bank::transfer_margin_to_account(
-                bank,
-                perpetual,
-                insurancePool,
-                signed_number::value(premium.pool), 
-                2, 
-            )
-        };
-
+    public (friend) fun makerFundsFlow(resp:TradeResponse): Number{
+        return resp.makerFundsFlow
     }
+    
+    public (friend) fun takerFundsFlow(resp:TradeResponse): Number{
+        return resp.takerFundsFlow
+    }
+
+    public (friend) fun liquidatorPortion(resp:TradeResponse): Number{
+        return resp.premium.liquidator
+    }
+
+    public (friend) fun insurancePoolPortion(resp:TradeResponse): Number{
+        return resp.premium.pool
+    }
+
+    //===========================================================//
+    //                      HELPER METHODS
+    //===========================================================//
+    
     /**
      * @dev verifies if the liquidation is possible or not
      * @param  tradeData   the data passed to trade method

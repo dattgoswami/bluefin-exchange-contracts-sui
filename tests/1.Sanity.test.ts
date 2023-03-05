@@ -40,8 +40,10 @@ describe("Sanity Tests", () => {
         expect(coins.length).to.be.greaterThan(0);
     });
 
-    it("The deployer account must be the owner of AdminCap", async () => {
-        const details = await onChain.getOnChainObject(onChain.getAdminCap());
+    it("The deployer account must be the owner of ExchangeAdminCap", async () => {
+        const details = await onChain.getOnChainObject(
+            onChain.getExchangeAdminCap()
+        );
         expect((details.owner as any).AddressOwner).to.be.equal(ownerAddress);
     });
 
@@ -57,7 +59,7 @@ describe("Sanity Tests", () => {
     it("should revert when non-admin account tries to create a perpetual", async () => {
         const alice = getSignerFromSeed(TEST_WALLETS[0].phrase, provider);
         const expectedError = OWNERSHIP_ERROR(
-            onChain.getAdminCap(),
+            onChain.getExchangeAdminCap(),
             ownerAddress,
             TEST_WALLETS[0].address
         );
