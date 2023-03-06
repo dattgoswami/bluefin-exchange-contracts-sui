@@ -167,6 +167,13 @@ module bluefin_foundation::error {
         return 103
     }
 
+    public fun can_not_be_greater_than_hundred_percent() : u64 {
+        return 104
+    }
+
+    public fun address_cannot_be_zero() : u64 {
+        return 105
+    }
 
     public fun mr_less_than_imr_can_not_open_or_flip_position(isTaker: u64): u64 {
         return 400 + isTaker

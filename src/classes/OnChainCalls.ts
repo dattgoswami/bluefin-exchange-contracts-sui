@@ -346,6 +346,98 @@ export class OnChainCalls {
         );
     }
 
+    public async setFeePoolAddress(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            address: string;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+        const callArgs = [];
+
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
+        callArgs.push(args.address);
+
+        return this.signAndCall(
+            caller,
+            "set_fee_pool_address",
+            callArgs,
+            "perpetual"
+        );
+    }
+
+    public async setInsurancePoolAddress(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            address: string;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+        const callArgs = [];
+
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
+        callArgs.push(args.address);
+
+        return this.signAndCall(
+            caller,
+            "set_insurance_pool_address",
+            callArgs,
+            "perpetual"
+        );
+    }
+
+    public async setInsurancePoolPercentage(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            percentage: number;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+        const callArgs = [];
+
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.percentage));
+
+        return this.signAndCall(
+            caller,
+            "set_insurance_pool_percentage",
+            callArgs,
+            "perpetual"
+        );
+    }
+
+    public async setMaxAllowedFundingRate(
+        args: {
+            adminID?: string;
+            perpID?: string;
+            maxAllowedFR: number;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+        const callArgs = [];
+
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
+        callArgs.push(toBigNumberStr(args.maxAllowedFR));
+
+        return this.signAndCall(
+            caller,
+            "set_max_allowed_funding_rate",
+            callArgs,
+            "perpetual"
+        );
+    }
+
     public async trade(
         args: {
             perpID?: string;

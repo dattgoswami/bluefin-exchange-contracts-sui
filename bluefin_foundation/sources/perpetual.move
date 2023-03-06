@@ -11,14 +11,16 @@ module bluefin_foundation::perpetual {
     use bluefin_foundation::position::{UserPosition};
     use bluefin_foundation::price_oracle::{PriceOracle};
     use bluefin_foundation::evaluator::{TradeChecks};
-
+    use bluefin_foundation::roles::{ExchangeAdminCap};
+    use bluefin_foundation::error::{Self};
+    use bluefin_foundation::library::{Self};
 
     //friend modules
     friend bluefin_foundation::exchange;
     friend bluefin_foundation::isolated_trading;
     friend bluefin_foundation::isolated_liquidation;
     friend bluefin_foundation::isolated_adl;
-
+    
     //===========================================================//
     //                           EVENTS                         //
     //===========================================================//
@@ -35,6 +37,26 @@ module bluefin_foundation::perpetual {
         insurancePool: address,
         feePool: address,
         checks:TradeChecks
+    }
+
+    struct InsurancePoolRatioUpdateEvent has copy, drop {
+        id: ID,
+        ratio: u128
+    }
+
+    struct InsurancePoolAccountUpdateEvent has copy, drop {
+        id: ID,
+        account: address
+    }
+
+    struct FeePoolAccountUpdateEvent has copy, drop {
+        id: ID,
+        account: address
+    }
+
+    struct MaxAllowedFRUpdateEvent has copy, drop {
+        id: ID,
+        value: u128
     }
 
     //===========================================================//
@@ -189,4 +211,51 @@ module bluefin_foundation::perpetual {
     }
 
 
+    //===========================================================//
+    //                         SETTERS                           //
+    //===========================================================//
+
+    public entry fun set_insurance_pool_percentage(_: &ExchangeAdminCap, perp: &mut Perpetual,  percentage: u128){
+        assert!(percentage <= library::base_uint(), error::can_not_be_greater_than_hundred_percent());
+        let perpID = object::uid_to_inner(id(perp));
+        perp.insurancePoolRatio = percentage;
+
+        emit(InsurancePoolRatioUpdateEvent {
+            id: perpID,
+            ratio: percentage
+        });
+    }
+
+    public entry fun set_max_allowed_funding_rate(_: &ExchangeAdminCap, perp: &mut Perpetual,  maxAllowedFR: u128){
+        assert!(maxAllowedFR <= library::base_uint(), error::can_not_be_greater_than_hundred_percent());
+        let perpID = object::uid_to_inner(id(perp));
+        perp.maxAllowedFR = maxAllowedFR;
+        
+        emit(MaxAllowedFRUpdateEvent {
+            id: perpID,
+            value: maxAllowedFR
+        });
+    }
+
+    public entry fun set_fee_pool_address(_: &ExchangeAdminCap, perp: &mut Perpetual, account: address){
+        assert!(account != @0, error::address_cannot_be_zero());
+        let perpID = object::uid_to_inner(id(perp));
+        perp.feePool = account;
+        
+        emit(FeePoolAccountUpdateEvent {
+            id: perpID,
+            account
+        });
+    }
+
+    public entry fun set_insurance_pool_address(_: &ExchangeAdminCap, perp: &mut Perpetual, account: address){
+        assert!(account != @0, error::address_cannot_be_zero());
+        let perpID = object::uid_to_inner(id(perp));
+        perp.insurancePool = account;
+        
+        emit(InsurancePoolAccountUpdateEvent {
+            id: perpID,
+            account
+        });
+    }
 }
