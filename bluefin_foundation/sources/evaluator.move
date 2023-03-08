@@ -10,8 +10,6 @@ module bluefin_foundation::evaluator {
 
     // friend modules
     friend bluefin_foundation::exchange;
-    // TODO remove it
-    friend bluefin_foundation::test;
 
     //===========================================================//
     //                           EVENTS                          //

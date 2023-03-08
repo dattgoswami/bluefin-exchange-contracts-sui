@@ -9,7 +9,7 @@ import {
     publishPackageUsingClient,
     getDeploymentData
 } from "../src/utils";
-import { expectTxToSucceed } from "./helpers/expect";
+import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { OnChainCalls, Transaction } from "../src/classes";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { fundTestAccounts } from "./helpers/utils";
@@ -27,6 +27,8 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 describe("Roles", () => {
     let onChain: OnChainCalls;
     let ownerAddress: string;
+    const alice = getTestAccounts(provider)[0];
+    const bob = getTestAccounts(provider)[1];
 
     before(async () => {
         await fundTestAccounts();
@@ -42,9 +44,7 @@ describe("Roles", () => {
 
     describe("Exchange Admin", () => {
         it("should successfully transfer exchange admin role to alice", async () => {
-            const alice = getTestAccounts(provider)[0];
-
-            const tx = await onChain.transferExchangeAdmin({
+            const tx = await onChain.setExchangeAdmin({
                 address: alice.address
             });
             expectTxToSucceed(tx);
@@ -67,15 +67,12 @@ describe("Roles", () => {
             );
 
             await expect(
-                onChain.transferExchangeAdmin(
-                    { address: alice.address },
-                    bob.signer
-                )
+                onChain.setExchangeAdmin({ address: alice.address }, bob.signer)
             ).to.eventually.rejectedWith(expectedError);
         });
 
         it("should revert when trying to transfer ownership of exchange admin ot existing admin", async () => {
-            const tx = await onChain.transferExchangeAdmin(
+            const tx = await onChain.setExchangeAdmin(
                 { address: ownerAddress },
                 ownerSigner
             );
@@ -83,49 +80,187 @@ describe("Roles", () => {
         });
     });
 
+    describe("Exchange Guardian", () => {
+        it("should revert when non-exchange admin tries to set guardian", async () => {
+            const error = OWNERSHIP_ERROR(
+                onChain.getExchangeAdminCap(),
+                onChain.getDeployerAddress(),
+                bob.address
+            );
+            await expect(
+                onChain.setExchangeGuardian(
+                    { address: alice.address },
+                    bob.signer
+                )
+            ).to.be.eventually.rejectedWith(error);
+        });
+
+        it("should transfer guardian ship to alice", async () => {
+            const tx1 = await onChain.setExchangeGuardian({
+                address: alice.address
+            });
+            expectTxToSucceed(tx1);
+
+            // expect to fail as owner is no longer guardian
+            const tx2 = await onChain.setIsWithdrawalAllowed(
+                { isAllowed: false },
+                ownerSigner
+            );
+            expectTxToFail(tx2);
+            expect(Transaction.getError(tx2)).to.be.equal(ERROR_CODES[111]);
+
+            // should fail as alice has its own guardian cap, this guardian cap belongs to the admin/owner
+            const error = OWNERSHIP_ERROR(
+                onChain.getGuardianCap(),
+                onChain.getDeployerAddress(),
+                alice.address
+            );
+            expect(
+                onChain.setIsWithdrawalAllowed(
+                    {
+                        isAllowed: false,
+                        guardianCap: onChain.getGuardianCap()
+                    },
+                    alice.signer
+                )
+            ).to.be.eventually.rejectedWith(error);
+
+            const guardianCap = Transaction.getObjects(
+                tx1,
+                "newObject",
+                "ExchangeGuardianCap"
+            )[0];
+
+            const tx3 = await onChain.setIsWithdrawalAllowed(
+                { isAllowed: false, guardianCap: (guardianCap as any).id },
+                alice.signer
+            );
+            expectTxToSucceed(tx3);
+        });
+    });
+
     describe("Settlement Operators", () => {
-        it("should set owner as settlement operator", async () => {
-            const txResponse = await onChain.setSettlementOperator({
-                operator: ownerAddress,
-                status: true
+        it("should make owner the settlement operator", async () => {
+            const txResponse = await onChain.createSettlementOperator({
+                operator: ownerAddress
             });
             expectTxToSucceed(txResponse);
         });
 
         it("should remove settlement operator", async () => {
-            const txResponse = await onChain.setSettlementOperator({
-                operator: ownerAddress,
-                status: true
+            const tx1 = await onChain.createSettlementOperator({
+                operator: ownerAddress
             });
-            expectTxToSucceed(txResponse);
+            expectTxToSucceed(tx1);
 
-            const tx = await onChain.setSettlementOperator({
-                operator: ownerAddress,
-                status: false
+            const capID = (
+                Transaction.getObjects(
+                    tx1,
+                    "newObject",
+                    "SettlementCap"
+                )[0] as any
+            ).id;
+
+            const tx2 = await onChain.removeSettlementOperator({
+                capID: capID
+            });
+
+            expectTxToSucceed(tx2);
+        });
+
+        it("should revert when trying to remove a non-existent settlement operator", async () => {
+            const tx1 = await onChain.createSettlementOperator({
+                operator: ownerAddress
+            });
+            expectTxToSucceed(tx1);
+
+            const capID = (
+                Transaction.getObjects(
+                    tx1,
+                    "newObject",
+                    "SettlementCap"
+                )[0] as any
+            ).id;
+
+            const tx2 = await onChain.removeSettlementOperator({
+                capID: capID
+            });
+
+            expectTxToSucceed(tx2);
+
+            const tx3 = await onChain.removeSettlementOperator({
+                capID: capID
+            });
+
+            expectTxToFail(tx3);
+
+            expect(Transaction.getError(tx3)).to.be.equal(ERROR_CODES[112]);
+        });
+    });
+
+    describe("Price Oracle Operator", () => {
+        it("should revert when non-exchange admin tries to set price oracle operator", async () => {
+            const error = OWNERSHIP_ERROR(
+                onChain.getExchangeAdminCap(),
+                onChain.getDeployerAddress(),
+                alice.address
+            );
+
+            await expect(
+                onChain.setPriceOracleOperator(
+                    {
+                        operator: alice.address
+                    },
+                    alice.signer
+                )
+            ).to.be.eventually.rejectedWith(error);
+        });
+
+        it("should transfer price oracle operator capability to alice", async () => {
+            const tx = await onChain.setPriceOracleOperator({
+                operator: alice.address
             });
             expectTxToSucceed(tx);
+
+            const event = Transaction.getEvents(
+                tx,
+                "PriceOracleOperatorUpdate"
+            )[0];
+
+            expect(event.fields.account).to.be.equal(alice.address);
+        });
+    });
+
+    describe("Deleveraging Operator", () => {
+        it("should revert when non-exchange admin tries to set deleveraging operator", async () => {
+            const error = OWNERSHIP_ERROR(
+                onChain.getExchangeAdminCap(),
+                onChain.getDeployerAddress(),
+                alice.address
+            );
+
+            await expect(
+                onChain.setDeleveragingOperator(
+                    {
+                        operator: alice.address
+                    },
+                    alice.signer
+                )
+            ).to.be.eventually.rejectedWith(error);
         });
 
-        it("should revert when trying to add an already existing operator", async () => {
-            const txResponse = await onChain.setSettlementOperator({
-                operator: ownerAddress,
-                status: true
+        it("should transfer deleveraging operator capability to alice", async () => {
+            const tx = await onChain.setDeleveragingOperator({
+                operator: alice.address
             });
-            expectTxToSucceed(txResponse);
+            expectTxToSucceed(tx);
 
-            const tx = await onChain.setSettlementOperator({
-                operator: ownerAddress,
-                status: true
-            });
-            expect(Transaction.getError(tx), ERROR_CODES[7]);
-        });
+            const event = Transaction.getEvents(
+                tx,
+                "DelevergingOperatorUpdate"
+            )[0];
 
-        it("should revert when trying to remove a non-existing operator", async () => {
-            const tx = await onChain.setSettlementOperator({
-                operator: ownerAddress,
-                status: false
-            });
-            expect(Transaction.getError(tx), ERROR_CODES[8]);
+            expect(event.fields.account).to.be.equal(alice.address);
         });
     });
 });

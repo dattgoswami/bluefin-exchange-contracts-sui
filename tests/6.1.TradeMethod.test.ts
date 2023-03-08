@@ -11,7 +11,7 @@ import {
 } from "../src/utils";
 import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { ERROR_CODES } from "../src/errors";
+import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { bigNumber, toBigNumber, toBigNumberStr } from "../src/library";
 import { getTestAccounts } from "./helpers/accounts";
 import { Trader } from "../src/classes/Trader";
@@ -28,6 +28,8 @@ describe("Regular Trade Method", () => {
     const deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls;
     let ownerAddress: string;
+    let priceOracleCapID: string;
+    let settlementCapID: string;
 
     const [alice, bob] = getTestAccounts(provider);
 
@@ -37,20 +39,33 @@ describe("Regular Trade Method", () => {
 
     before(async () => {
         // deploy market
-        deployment["markets"] = {
-            "ETH-PERP": {
-                Objects: (await createMarket(deployment, ownerSigner, provider))
-                    .marketObjects
-            }
-        };
-        onChain = new OnChainCalls(ownerSigner, deployment);
+        deployment["markets"]["ETH-PERP"]["Objects"] = (
+            await createMarket(deployment, ownerSigner, provider)
+        ).marketObjects;
 
+        onChain = new OnChainCalls(ownerSigner, deployment);
         ownerAddress = await getAddressFromSigner(ownerSigner);
+
+        // make owner, the price oracle operator
+        const tx = await onChain.setPriceOracleOperator({
+            operator: ownerAddress
+        });
+        priceOracleCapID = (
+            Transaction.getObjects(
+                tx,
+                "newObject",
+                "PriceOracleOperatorCap"
+            )[0] as any
+        ).id as string;
+
         // make admin operator
-        await onChain.setSettlementOperator(
-            { operator: ownerAddress, status: true },
+        const tx2 = await onChain.createSettlementOperator(
+            { operator: ownerAddress },
             ownerSigner
         );
+        settlementCapID = (
+            Transaction.getObjects(tx2, "newObject", "SettlementCap")[0] as any
+        ).id as string;
 
         defaultOrder = createOrder({
             isBuy: true,
@@ -64,7 +79,8 @@ describe("Regular Trade Method", () => {
         await mintAndDeposit(onChain, bob.address, 2000);
 
         const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1)
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
         });
 
         expectTxToSucceed(priceTx);
@@ -77,7 +93,7 @@ describe("Regular Trade Method", () => {
             defaultOrder
         );
 
-        const tx = await onChain.trade(trade);
+        const tx = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx);
     });
 
@@ -85,7 +101,8 @@ describe("Regular Trade Method", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
 
         const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1)
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
         });
 
         expectTxToSucceed(priceTx);
@@ -98,7 +115,7 @@ describe("Regular Trade Method", () => {
             { ...defaultOrder, salt: bigNumber(Date.now()) }
         );
 
-        const tx = await onChain.trade(trade);
+        const tx = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx); // tx should succeed
         expect(Transaction.getEvents(tx, "TradeExecuted").length).to.be.equal(
             0
@@ -111,54 +128,91 @@ describe("Regular Trade Method", () => {
         expect(Transaction.getEvents(tx, "OrderFill").length).to.be.equal(2);
     });
 
-    it("should revert trade as alice is not a settlement operator", async () => {
-        const txResponse = await onChain.trade(
-            await Trader.setupNormalTrade(
-                provider,
-                orderSigner,
-                alice.keyPair,
-                bob.keyPair,
-                defaultOrder
-            ),
+    it("should revert trade as alice is not the owner of settlement cap", async () => {
+        const tradeData = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            defaultOrder
+        );
+
+        const error = OWNERSHIP_ERROR(
+            settlementCapID,
+            ownerAddress,
+            alice.address
+        );
+
+        await expect(
+            onChain.trade({ ...tradeData, settlementCapID }, alice.signer)
+        ).to.be.eventually.rejectedWith(error);
+    });
+
+    it("should revert trade as alice owns settlement cap but is removed from valid set of operators", async () => {
+        const tradeData = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            defaultOrder
+        );
+
+        const tx = await onChain.createSettlementOperator({
+            operator: alice.address
+        });
+        const capID = (
+            Transaction.getObjects(tx, "newObject", "SettlementCap")[0] as any
+        ).id as string;
+
+        const tx2 = await onChain.removeSettlementOperator({ capID });
+        expectTxToSucceed(tx2);
+
+        const tx3 = await onChain.trade(
+            {
+                ...tradeData,
+                settlementCapID: capID
+            },
             alice.signer
         );
-        expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[27]);
+
+        expect(Transaction.getError(tx3), ERROR_CODES[110]);
     });
 
     it("should revert as maker and taker are both going long", async () => {
-        const tx = await onChain.trade(
-            await Trader.setupNormalTrade(
+        const tx = await onChain.trade({
+            ...(await Trader.setupNormalTrade(
                 provider,
                 orderSigner,
                 alice.keyPair,
                 bob.keyPair,
                 { ...defaultOrder, isBuy: true },
                 { takerOrder: { ...defaultOrder, isBuy: true } }
-            )
-        );
+            )),
+            settlementCapID
+        });
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[18]);
     });
 
     it("should revert as maker and taker are both going short", async () => {
-        const tx = await onChain.trade(
-            await Trader.setupNormalTrade(
+        const tx = await onChain.trade({
+            ...(await Trader.setupNormalTrade(
                 provider,
                 orderSigner,
                 alice.keyPair,
                 bob.keyPair,
                 { ...defaultOrder, isBuy: false },
                 { takerOrder: { ...defaultOrder, isBuy: false } }
-            )
-        );
+            )),
+            settlementCapID
+        });
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[18]);
     });
 
     it("should revert as bob order expiration is < current chain time", async () => {
-        const tx = await onChain.trade(
-            await Trader.setupNormalTrade(
+        const tx = await onChain.trade({
+            ...(await Trader.setupNormalTrade(
                 provider,
                 orderSigner,
                 alice.keyPair,
@@ -171,8 +225,9 @@ describe("Regular Trade Method", () => {
                         expiration: bigNumber(1)
                     }
                 }
-            )
-        );
+            )),
+            settlementCapID
+        });
 
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[33]);
@@ -192,16 +247,17 @@ describe("Regular Trade Method", () => {
             quantity: 20
         });
 
-        const tx = await onChain.trade(
-            await Trader.setupNormalTrade(
+        const tx = await onChain.trade({
+            ...(await Trader.setupNormalTrade(
                 provider,
                 orderSigner,
                 alice.keyPair,
                 bob.keyPair,
                 makerOrder,
                 takerOrder
-            )
-        );
+            )),
+            settlementCapID
+        });
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[34]);
     });
@@ -220,16 +276,17 @@ describe("Regular Trade Method", () => {
             reduceOnly: true
         });
 
-        const tx = await onChain.trade(
-            await Trader.setupNormalTrade(
+        const tx = await onChain.trade({
+            ...(await Trader.setupNormalTrade(
                 provider,
                 orderSigner,
                 alice.keyPair,
                 bob.keyPair,
                 makerOrder,
                 takerOrder
-            )
-        );
+            )),
+            settlementCapID
+        });
 
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[39]);
@@ -250,16 +307,17 @@ describe("Regular Trade Method", () => {
             quantity: 20
         });
 
-        const tx = await onChain.trade(
-            await Trader.setupNormalTrade(
+        const tx = await onChain.trade({
+            ...(await Trader.setupNormalTrade(
                 provider,
                 orderSigner,
                 alice.keyPair,
                 bob.keyPair,
                 makerOrder,
                 takerOrder
-            )
-        );
+            )),
+            settlementCapID
+        });
 
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[40]);
@@ -282,16 +340,17 @@ describe("Regular Trade Method", () => {
             leverage: 0.9
         });
 
-        const tx = await onChain.trade(
-            await Trader.setupNormalTrade(
+        const tx = await onChain.trade({
+            ...(await Trader.setupNormalTrade(
                 provider,
                 orderSigner,
                 alice.keyPair,
                 bob.keyPair,
                 makerOrder,
                 { takerOrder: takerOrder }
-            )
-        );
+            )),
+            settlementCapID
+        });
 
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[41]);
@@ -319,7 +378,7 @@ describe("Regular Trade Method", () => {
             takerOrder
         );
 
-        const tx = await onChain.trade(tradeParams);
+        const tx = await onChain.trade({ ...tradeParams, settlementCapID });
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[29]);
     });
@@ -348,7 +407,7 @@ describe("Regular Trade Method", () => {
         );
 
         tradeParams.fillQuantity = toBigNumber(25);
-        const tx = await onChain.trade(tradeParams);
+        const tx = await onChain.trade({ ...tradeParams, settlementCapID });
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[27]);
     });
@@ -385,7 +444,8 @@ describe("Regular Trade Method", () => {
             makerSignature: makerOrderSigned.typedSignature,
             takerOrder: takerOrder,
             takerSignature: takerOrderSigned.typedSignature,
-            fillQuantity: toBigNumber(5)
+            fillQuantity: toBigNumber(5),
+            settlementCapID
         });
 
         expectTxToFail(txResponse);
@@ -394,7 +454,8 @@ describe("Regular Trade Method", () => {
 
     it("should revert as alice signed order for ETH market but is getting executed on BTC market", async () => {
         const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1)
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
         });
 
         expectTxToSucceed(priceTx);
@@ -417,7 +478,8 @@ describe("Regular Trade Method", () => {
 
         const tx = await onChain.trade({
             ...trade,
-            perpID: onChain.getPerpetualID("BTC-PERP")
+            perpID: onChain.getPerpetualID("BTC-PERP"),
+            settlementCapID
         });
 
         expectTxToFail(tx);

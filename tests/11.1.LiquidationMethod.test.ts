@@ -30,6 +30,8 @@ describe("Liquidation Trade Method", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
     let onChain: OnChainCalls;
     let ownerAddress: string;
+    let priceOracleCapID: string;
+    let settlementCapID: string;
 
     const [alice, bob] = getTestAccounts(provider);
 
@@ -39,27 +41,40 @@ describe("Liquidation Trade Method", () => {
 
     before(async () => {
         // deploy market
-        deployment["markets"] = {
-            "ETH-PERP": {
-                Objects: (await createMarket(deployment, ownerSigner, provider))
-                    .marketObjects
-            }
-        };
+        deployment["markets"]["ETH-PERP"]["Objects"] = (
+            await createMarket(deployment, ownerSigner, provider)
+        ).marketObjects;
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 
         // will be using owner as liquidator
         ownerAddress = await getAddressFromSigner(ownerSigner);
 
+        // make owner, the price oracle operator
+        const tx1 = await onChain.setPriceOracleOperator({
+            operator: ownerAddress
+        });
+        priceOracleCapID = (
+            Transaction.getObjects(
+                tx1,
+                "newObject",
+                "PriceOracleOperatorCap"
+            )[0] as any
+        ).id as string;
+
         // make admin operator
-        await onChain.setSettlementOperator(
-            { operator: ownerAddress, status: true },
+        const tx2 = await onChain.createSettlementOperator(
+            { operator: ownerAddress },
             ownerSigner
         );
+        settlementCapID = (
+            Transaction.getObjects(tx2, "newObject", "SettlementCap")[0] as any
+        ).id as string;
 
         // set oracle price
         const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(100)
+            price: toBigNumberStr(100),
+            updateOPCapID: priceOracleCapID
         });
 
         expectTxToSucceed(priceTx);
@@ -85,14 +100,15 @@ describe("Liquidation Trade Method", () => {
             bob.keyPair,
             order
         );
-        const tx = await onChain.trade(trade);
+        const tx = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx);
     });
 
     beforeEach(async () => {
         // set oracle price to 100
         await onChain.updateOraclePrice({
-            price: toBigNumberStr(100)
+            price: toBigNumberStr(100),
+            updateOPCapID: priceOracleCapID
         });
     });
 
@@ -185,7 +201,7 @@ describe("Liquidation Trade Method", () => {
             accounts.taker.keyPair,
             { ...order, maker: accounts.maker.address }
         );
-        const tx1 = await onChain.trade(trade);
+        const tx1 = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx1);
 
         // close position
@@ -196,7 +212,7 @@ describe("Liquidation Trade Method", () => {
             accounts.maker.keyPair,
             { ...order, maker: accounts.taker.address }
         );
-        const tx2 = await onChain.trade(trade2);
+        const tx2 = await onChain.trade({ ...trade2, settlementCapID });
         expectTxToSucceed(tx2);
 
         // try to deleverage
@@ -232,7 +248,8 @@ describe("Liquidation Trade Method", () => {
     it("should revert as all or nothing flag is set and liquidatee's qPos < liquidation quantity", async () => {
         // set oracle price to 89, alice becomes liquidate-able
         await onChain.updateOraclePrice({
-            price: toBigNumberStr(89)
+            price: toBigNumberStr(89),
+            updateOPCapID: priceOracleCapID
         });
 
         const txResponse = await onChain.liquidate(
@@ -277,14 +294,15 @@ describe("Liquidation Trade Method", () => {
             order
         );
 
-        const tx = await onChain.trade(trade);
+        const tx = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx);
 
         // ==================================================
 
         // set oracle price to 89, alice becomes liquidate-able
         await onChain.updateOraclePrice({
-            price: toBigNumberStr(89)
+            price: toBigNumberStr(89),
+            updateOPCapID: priceOracleCapID
         });
 
         // try to liquidate alice at 4x leverage using maker account
@@ -306,7 +324,8 @@ describe("Liquidation Trade Method", () => {
     it("should successfully completely liquidate alice/maker", async () => {
         // set oracle price to 89, alice becomes liquidate-able
         await onChain.updateOraclePrice({
-            price: toBigNumberStr(89)
+            price: toBigNumberStr(89),
+            updateOPCapID: priceOracleCapID
         });
 
         const txResponse = await onChain.liquidate(
@@ -340,18 +359,15 @@ describe("Liquidation Trade Method", () => {
         // deploy market
         const localDeployment = deployment;
 
-        localDeployment["markets"] = {
-            "ETH-PERP": {
-                Objects: (
-                    await createMarket(localDeployment, ownerSigner, provider)
-                ).marketObjects
-            }
-        };
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
+            await createMarket(localDeployment, ownerSigner, provider)
+        ).marketObjects;
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
         await onChain.updateOraclePrice({
-            price: toBigNumberStr(100)
+            price: toBigNumberStr(100),
+            updateOPCapID: priceOracleCapID
         });
 
         const makerTaker = await getMakerTakerAccounts(provider, true);
@@ -376,14 +392,15 @@ describe("Liquidation Trade Method", () => {
             order
         );
 
-        const tx = await onChain.trade(trade);
+        const tx = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx);
 
         // ==================================================
 
         // set oracle price to 115, taker becomes liquidate-able
         await onChain.updateOraclePrice({
-            price: toBigNumberStr(115)
+            price: toBigNumberStr(115),
+            updateOPCapID: priceOracleCapID
         });
 
         const txResponse = await onChain.liquidate(

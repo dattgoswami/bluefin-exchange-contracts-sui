@@ -27,7 +27,6 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Evaluator", () => {
     const deployment = readFile(DeploymentConfigs.filePath);
-    const args = DeploymentConfigs.markets[0];
     let onChain: OnChainCalls;
     let ownerAddress: string;
 
@@ -38,12 +37,10 @@ describe("Evaluator", () => {
 
     // deploy the market again before each test
     beforeEach(async () => {
-        deployment["markets"] = {
-            "ETH-PERP": {
-                Objects: (await createMarket(deployment, ownerSigner, provider))
-                    .marketObjects
-            }
-        };
+        deployment["markets"]["ETH-PERP"]["Objects"] = (
+            await createMarket(deployment, ownerSigner, provider)
+        ).marketObjects;
+
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
 
@@ -359,111 +356,6 @@ describe("Evaluator", () => {
                     onChain.setMaxAllowedOIOpen({ maxLimit }, alice)
                 ).to.eventually.be.rejectedWith(expectedError);
             });
-        });
-    });
-
-    describe("Verifying Functions Test", async () => {
-        let callArgs: any = [];
-        let onChainTestCall: any;
-        beforeEach(async () => {
-            callArgs.push(args.minPrice ? args.minPrice : toBigNumberStr(0.1));
-            callArgs.push(
-                args.maxPrice ? args.maxPrice : toBigNumberStr(100000)
-            );
-            callArgs.push(
-                args.tickSize ? args.tickSize : toBigNumberStr(0.001)
-            );
-            callArgs.push(args.minQty ? args.minQty : toBigNumberStr(0.1));
-
-            callArgs.push(
-                args.maxQtyLimit ? args.maxQtyLimit : toBigNumberStr(100000)
-            );
-            callArgs.push(
-                args.maxQtyMarket ? args.maxQtyMarket : toBigNumberStr(1000)
-            );
-            callArgs.push(args.stepSize ? args.stepSize : toBigNumberStr(0.1));
-            callArgs.push(args.mtbLong ? args.mtbLong : toBigNumberStr(0.2));
-            callArgs.push(args.mtbShort ? args.mtbShort : toBigNumberStr(0.2));
-
-            callArgs.push(
-                args.maxAllowedOIOpen
-                    ? args.maxAllowedOIOpen
-                    : [
-                          toBigNumberStr(100000),
-                          toBigNumberStr(100000),
-                          toBigNumberStr(200000),
-                          toBigNumberStr(200000),
-                          toBigNumberStr(500000)
-                      ]
-            );
-            onChainTestCall = (callArgs: any) => {
-                return ownerSigner.executeMoveCall({
-                    packageObjectId: deployment.objects.package.id,
-                    module: "test",
-                    function: "testTradeVerificationFunctions",
-                    typeArguments: [],
-                    arguments: callArgs,
-                    gasBudget: 1000
-                });
-            };
-        });
-        afterEach(async () => {
-            callArgs = [];
-        });
-
-        it("should pass all the verification functions", async () => {
-            callArgs.push(toBigNumberStr(100)); // trade Quantity,
-            callArgs.push(toBigNumberStr(10)); //trade Price
-            callArgs.push(toBigNumberStr(11)); // oracle Price
-            callArgs.push(true); //isBuy
-            callArgs.push(toBigNumberStr(0.2));
-            callArgs.push(toBigNumberStr(1000));
-            const tx = await onChainTestCall(callArgs);
-            expectTxToSucceed(tx);
-        });
-        it("should revert because trade Qty < min Qty", async () => {
-            callArgs.push(toBigNumberStr(0.001)); // trade Quantity,
-            callArgs.push(toBigNumberStr(10)); //trade Price
-            callArgs.push(toBigNumberStr(11)); // oracle Price
-            callArgs.push(true); //isBuy
-            callArgs.push(toBigNumberStr(0.2));
-            callArgs.push(toBigNumberStr(1000));
-
-            const tx = await onChainTestCall(callArgs);
-            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[19]);
-        });
-        it("should revert because trade price < min price", async () => {
-            callArgs.push(toBigNumberStr(10)); // trade Quantity,
-            callArgs.push(toBigNumberStr(0.01)); //trade Price
-            callArgs.push(toBigNumberStr(11)); // oracle Price
-            callArgs.push(true); //isBuy
-            callArgs.push(toBigNumberStr(0.2));
-            callArgs.push(toBigNumberStr(1000));
-
-            const tx = await onChainTestCall(callArgs);
-            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[3]);
-        });
-        xit("should revert because mtb short check", async () => {
-            callArgs.push(toBigNumberStr(10)); // trade Quantity,
-            callArgs.push(toBigNumberStr(10)); //trade Price
-            callArgs.push(toBigNumberStr(11)); // oracle Price
-            callArgs.push(false); //isBuy
-            callArgs.push(toBigNumberStr(0.2));
-            callArgs.push(toBigNumberStr(1000));
-
-            const tx = await onChainTestCall(callArgs);
-            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[24]);
-        });
-        xit("should revert because oi open > max Allowed OI ", async () => {
-            callArgs.push(toBigNumberStr(10)); // trade Quantity,
-            callArgs.push(toBigNumberStr(10)); //trade Price
-            callArgs.push(toBigNumberStr(11)); // oracle Price
-            callArgs.push(true); //isBuy
-            callArgs.push(toBigNumberStr(0.2)); //mro
-            callArgs.push(toBigNumberStr(500001)); // oi open
-
-            const tx = await onChainTestCall(callArgs);
-            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[25]);
         });
     });
 });

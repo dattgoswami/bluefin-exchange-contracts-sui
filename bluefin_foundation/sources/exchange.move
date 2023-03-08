@@ -16,7 +16,16 @@ module bluefin_foundation::exchange {
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::margin_math::{Self};
     use bluefin_foundation::signed_number::{Self};
-    use bluefin_foundation::roles::{Self, ExchangeAdminCap, PriceOracleOperatorCap};
+    
+    // roles and capabilities
+    use bluefin_foundation::roles::{
+        Self, 
+        ExchangeAdminCap, 
+        PriceOracleOperatorCap, 
+        CapabilitiesSafe,
+        SettlementCap,
+        DeleveragingCap
+        };
 
     // traders
     use bluefin_foundation::isolated_trading::{Self, OrderStatus};
@@ -37,15 +46,7 @@ module bluefin_foundation::exchange {
     //                      INITIALIZATION
     //===========================================================//
 
-    fun init(ctx: &mut TxContext) {
-        
-        roles::create_exchange_admin(ctx);
-
-        roles::create_exchange_guardian(ctx);
-
-        roles::initialize_settlement_operators_table(ctx); 
-
-
+    fun init(ctx: &mut TxContext) {        
         // create orders filled quantity table
         let orders = table::new<vector<u8>, OrderStatus>(ctx);
         transfer::share_object(orders);   
@@ -63,7 +64,7 @@ module bluefin_foundation::exchange {
      * Transfers adminship of created perpetual to admin
      */
     entry fun create_perpetual(
-        _: &ExchangeAdminCap, 
+        _: &ExchangeAdminCap,
         bank: &mut Bank,
 
         name: vector<u8>, 
@@ -91,7 +92,7 @@ module bluefin_foundation::exchange {
         
 
         let id = object::new(ctx);
-        let perpID = object::uid_to_inner(&id);
+        let perpID =  object::uid_to_inner(&id);
 
         let positions = table::new<address, UserPosition>(ctx);
 
@@ -113,9 +114,6 @@ module bluefin_foundation::exchange {
             perpID, 
             maxAllowedPriceDiffInOP,
         );
-
-        // make caller price oracle operator
-        roles::create_price_oracle_operator(perpID, ctx);
 
         // creates perpetual and shares it
         perpetual::initialize(
@@ -242,13 +240,15 @@ module bluefin_foundation::exchange {
     /*
      * Sets PriceOracle  
      */
-    entry fun set_oracle_price(perp: &mut Perpetual, cap: &PriceOracleOperatorCap, price: u128, ctx: &mut TxContext){
+    entry fun set_oracle_price(safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, perp: &mut Perpetual, price: u128){
+        let perpID = object::uid_to_inner(perpetual::id(perp));
         price_oracle::set_oracle_price(
-            object::uid_to_inner(perpetual::id(perp)), 
+            safe,
             cap, 
             perpetual::mut_priceOracle(perp),
-            price, 
-            tx_context::sender(ctx));
+            perpID, 
+            price
+            );
     }
 
     /*
@@ -271,7 +271,9 @@ module bluefin_foundation::exchange {
     entry fun trade(
         perp: &mut Perpetual, 
         bank: &mut Bank, 
-        operatorTable: &mut Table<address, bool>,
+        safe: &CapabilitiesSafe,
+        cap: &SettlementCap,
+
         ordersTable: &mut Table<vector<u8>, OrderStatus>,
 
         // maker
@@ -303,12 +305,11 @@ module bluefin_foundation::exchange {
         ctx: &mut TxContext        
         ){
 
+            // only settlement operators can trade
+            roles::check_settlement_operator_validity(safe, cap);
+
             let sender = tx_context::sender(ctx);
 
-            // check if caller is a valid settlement operator or not
-            assert!(
-                is_valid_settlement_operator(operatorTable, sender),
-                error::invalid_settlement_operator());
 
             // TODO check if trading is allowed by guardian for given perpetual or not
 
@@ -487,6 +488,9 @@ module bluefin_foundation::exchange {
      entry fun deleverage(
         perp: &mut Perpetual, 
         bank: &mut Bank, 
+        safe: &CapabilitiesSafe,
+        cap: &DeleveragingCap,
+
         // below water account to be deleveraged
         maker: address,
         // taker in profit
@@ -499,9 +503,10 @@ module bluefin_foundation::exchange {
         ctx: &mut TxContext        
     ){
 
+        roles::check_delevearging_operator_validity(safe, cap);
+
         let sender = tx_context::sender(ctx);
 
-        // TODO only deleveraging operator can perform deleveraging trades
 
         // TODO check if trading is allowed by guardian for given perpetual or not
 
@@ -709,14 +714,6 @@ module bluefin_foundation::exchange {
             0);
 
         position::emit_position_update_event(perpID, user, currBalance, ACTION_ADJUST_LEVERAGE);
-    }
-
-    // //===========================================================//
-    // //                      HELPER METHODS
-    // //===========================================================//
-
-    fun is_valid_settlement_operator(operatorTable: &mut Table<address, bool>, sender:address):bool{
-        return table::contains(operatorTable, sender)
     }
     
 }

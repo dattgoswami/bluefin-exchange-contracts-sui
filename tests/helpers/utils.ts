@@ -5,19 +5,9 @@ import { Balance } from "../../src/classes/Balance";
 import { OnChainCalls } from "../../src/classes/OnChainCalls";
 import { BASE_DECIMALS, bigNumber, toBigNumberStr } from "../../src/library";
 import { getAddressFromSigner, requestGas } from "../../src/utils";
-import { Account, TEST_WALLETS } from "./accounts";
+import { TEST_WALLETS } from "./accounts";
 import { expectTxToSucceed } from "./expect";
 import { TestPositionExpect } from "./interfaces";
-
-export async function postDeployment(
-    onChain: OnChainCalls,
-    ownerSigner: RawSigner
-) {
-    await onChain.setSettlementOperator(
-        { operator: await getAddressFromSigner(ownerSigner), status: true },
-        ownerSigner
-    );
-}
 
 export async function mintAndDeposit(
     onChain: OnChainCalls,
@@ -27,22 +17,27 @@ export async function mintAndDeposit(
     const amt = amount || 100_000;
     const ownerAddress = await getAddressFromSigner(onChain.signer);
 
-    // get USDC balance of owner
-    const ownerBalance = await onChain.getUSDCBalance();
+    let coin = undefined;
+    // TODO figure out why `onChain.getUSDCCoins` calls returns no coin
+    // until then use while
+    while (coin == undefined) {
+        // get USDC balance of owner
+        const ownerBalance = await onChain.getUSDCBalance();
 
-    // mint coins for owner
-    if (amt > ownerBalance) {
-        const tx = await onChain.mintUSDC({
-            amount: toBigNumberStr(1_000_000_000, 6)
-        });
-        expectTxToSucceed(tx);
+        // mint coins for owner
+        if (amt > ownerBalance) {
+            const tx = await onChain.mintUSDC({
+                amount: toBigNumberStr(1_000_000_000, 6)
+            });
+            expectTxToSucceed(tx);
+        }
+
+        // TODO: implement a method to get the coin with balance > amt
+        // assuming 0th index coin will have balance > amount
+        coin = (
+            await onChain.getUSDCCoins({ address: ownerAddress })
+        ).data.pop();
     }
-
-    // TODO: implement a method to get the coin with balance > amt
-    // assuming 0th index coin will have balance > amount
-    const coin = (
-        await onChain.getUSDCCoins({ address: ownerAddress })
-    ).data.pop();
 
     // transferring from owners usdc coin to receiver
     const tx = await onChain.depositToBank({
@@ -56,12 +51,6 @@ export async function mintAndDeposit(
     return Transaction.getBankAccountID(tx);
 }
 
-export async function removeAllMarginFromBank(
-    onChain: OnChainCalls,
-    account: Account
-) {
-    const balance = await onChain.getUSDCBalance({ address: account.address });
-}
 export async function fundTestAccounts() {
     for (const wallet of TEST_WALLETS) {
         await requestGas(wallet.address);

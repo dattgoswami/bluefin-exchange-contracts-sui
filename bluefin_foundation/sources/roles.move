@@ -1,8 +1,8 @@
 module bluefin_foundation::roles {
     use sui::object::{Self, UID, ID};
     use sui::tx_context::{Self, TxContext};
+    use sui::vec_set::{Self, VecSet};
     use sui::event::{emit};
-    use sui::table::{Self, Table};
     use sui::transfer;
 
     // custom modules
@@ -20,17 +20,27 @@ module bluefin_foundation::roles {
     }
 
     struct ExchangeGuardianUpdateEvent has copy, drop {
+        id: ID,
         account:address,
     }
 
-
-    struct SettlementOperatorUpdateEvent has copy, drop {
-        account:address,
-        status: bool
+    struct SettlementOperatorCreationEvent has copy, drop {
+        id: ID,
+        account:address
     }
 
-    struct PriceOracleOperatorUpdateEvent has copy, drop {
-        id: ID, 
+    struct SettlementOperatorRemovalEvent has copy, drop {
+        id: ID
+    }
+
+
+    struct PriceOracleOperatorUpdate has copy, drop {
+        id: ID,
+        account:address
+    }
+
+    struct DelevergingOperatorUpdate has copy, drop {
+        id: ID,
         account:address
     }
 
@@ -47,17 +57,173 @@ module bluefin_foundation::roles {
     }
 
     struct PriceOracleOperatorCap has key {
+        id: UID
+    }
+
+    struct SettlementCap has key {
+        id: UID
+    }
+
+    struct DeleveragingCap has key {
+        id: UID
+    }
+
+    struct CapabilitiesSafe has key {
         id: UID,
-        account: address,
-        perpetualID: ID
+        // there can only be one guardian
+        guardian: ID,
+        // address of price oracle operator
+        priceOracleOperator: ID,
+        // address of deleveraging operator
+        deleveraging: ID,
+        // there can be N different settlement operators
+        settlementOperators: VecSet<ID>,
+    }
+
+    //===========================================================//
+    //                      INITIALIZATION
+    //===========================================================//
+
+    fun init(ctx: &mut TxContext) {
+        
+        // make deployer exchange admin
+        create_exchange_admin(ctx);
+
+        // create exchange guardian 
+        let guardianID = create_exchange_guardian(tx_context::sender(ctx), ctx);
+
+        // create exchange price oracle operator
+        let pooID = create_price_oracle_operator(tx_context::sender(ctx), ctx);
+
+        // create deleveraging operator
+        let deleveragerID = create_deleveraging_operator(tx_context::sender(ctx), ctx);
+
+        let safe = CapabilitiesSafe {
+            id: object::new(ctx),
+            guardian: guardianID,
+            priceOracleOperator: pooID,
+            deleveraging: deleveragerID,
+            settlementOperators: vec_set::empty()
+        };
+
+        transfer::share_object(safe);
+    }
+   
+    //===========================================================//
+    //                      ENTRY METHODS                        //
+    //===========================================================//
+
+    /**
+     * Transfers adminship of exchange to provided address
+     * Only exchange admin can invoke this method
+     */
+    entry fun set_exchange_admin(admin: ExchangeAdminCap, newAdmin:address, ctx: &mut TxContext){
+        assert!(
+            newAdmin != tx_context::sender(ctx), 
+            error::new_address_can_not_be_same_as_current_one());
+
+        transfer::transfer(admin, newAdmin);
+
+        emit(ExchangeAdminUpdateEvent{account: newAdmin});
+    }
+
+    /**
+     * Transfers guardianship of exchange to provided address
+     * Only exchange admin can invoke this method
+     */
+    entry fun set_exchange_guardian(_: &ExchangeAdminCap, safe: &mut CapabilitiesSafe, newGuardian:address, ctx: &mut TxContext){
+        // update new id in safe
+        safe.guardian = create_exchange_guardian(newGuardian, ctx);
+    }
+
+    /**
+     * Creates price oracle operator
+     * Only exchange admin can invoke this method
+     */
+    public entry fun set_price_oracle_operator(
+        _:&ExchangeAdminCap, 
+        safe: &mut CapabilitiesSafe, 
+        newOperator: address, 
+        ctx: &mut TxContext
+        ){
+
+        // update new id address in safe
+        safe.priceOracleOperator = create_price_oracle_operator(newOperator, ctx);
+
     }
 
 
+    /**
+     * Creates deleveraing operator
+     * Only exchange admin can invoke this method
+     */
+    public entry fun set_deleveraging_operator(
+        _:&ExchangeAdminCap, 
+        safe: &mut CapabilitiesSafe, 
+        newOperator: address, 
+        ctx: &mut TxContext
+        ){
+
+        // update new id address in safe
+        safe.deleveraging = create_deleveraging_operator(newOperator, ctx);
+
+    }
+
+
+    /**
+     * Creates and transfers settlement operator capability
+     * Only Admin can invoke this method
+     */
+    entry fun create_settlement_operator(
+        _:&ExchangeAdminCap, 
+        safe: &mut CapabilitiesSafe, 
+        operator:address, 
+        ctx: &mut TxContext
+        ){
+
+        // create new price oracle operator
+        let operatorCap = SettlementCap{
+            id: object::new(ctx)
+        };
+        
+        emit(SettlementOperatorCreationEvent{ 
+            id: object::uid_to_inner(&operatorCap.id),
+            account: operator 
+        });
+        
+        // insert newly created price oracle operator to safe
+        vec_set::insert(&mut safe.settlementOperators, object::uid_to_inner(&operatorCap.id));
+
+        // transfer capability to operator
+        transfer::transfer(operatorCap, operator);
+        
+    }
+        
+
+    /**
+     * Removes settlement oracle operator capability from safe
+     * Only exchange admin can invoke this method
+     */
+    entry fun remove_settlement_operator(_: &ExchangeAdminCap, safe: &mut CapabilitiesSafe, settlementCap:ID){
+        
+        assert!(
+            vec_set::contains(&safe.settlementOperators, &settlementCap),
+            error::operator_already_removed()
+        );
+
+        vec_set::remove(&mut safe.settlementOperators, &settlementCap);
+
+        emit(SettlementOperatorRemovalEvent{
+            id: settlementCap
+        });
+
+    }
+
     //===========================================================//
-    //                       FRIEND FUNCTIONS                    //
+    //                      HELPER METHODS                       //
     //===========================================================//
 
-    public(friend) fun create_exchange_admin(ctx: &mut TxContext){
+    fun create_exchange_admin(ctx: &mut TxContext){
 
         let admin = ExchangeAdminCap {
             id: object::new(ctx),
@@ -68,99 +234,87 @@ module bluefin_foundation::roles {
         emit(ExchangeAdminUpdateEvent{account: tx_context::sender(ctx)});
     }
 
-    public(friend) fun create_exchange_guardian(ctx: &mut TxContext){
+    fun create_exchange_guardian(owner: address, ctx: &mut TxContext): ID{
 
-        let admin = ExchangeGuardianCap {
-            id: object::new(ctx),
-        };
+        let id = object::new(ctx);
+        let guardianID = object::uid_to_inner(&id);
 
-        transfer::transfer(admin, tx_context::sender(ctx));
+        let guardian = ExchangeGuardianCap {id};
 
-        emit(ExchangeGuardianUpdateEvent{account: tx_context::sender(ctx)});
+        transfer::transfer(guardian, owner);
+
+        emit(ExchangeGuardianUpdateEvent{id: guardianID, account: owner});
+
+        return guardianID
     }
 
-    public(friend) fun initialize_settlement_operators_table(ctx: &mut TxContext){
-        transfer::share_object(table::new<address, bool>(ctx));  
-    }
+    fun create_price_oracle_operator(owner: address, ctx: &mut TxContext): ID {
 
-    public (friend) fun create_price_oracle_operator(perp: ID, ctx: &mut TxContext){
+        let id = object::new(ctx);
+        let pooID = object::uid_to_inner(&id);
+        let operator = PriceOracleOperatorCap {id};
         
-        let operatorCap = PriceOracleOperatorCap{
-            id: object::new(ctx),
-            account: tx_context::sender(ctx),
-            perpetualID: perp
-        };
+        transfer::transfer(operator, owner);
         
-        transfer::share_object(operatorCap);
+        emit(PriceOracleOperatorUpdate{id: pooID, account: owner});
 
-        emit(PriceOracleOperatorUpdateEvent{ 
-            id: perp,
-            account: tx_context::sender(ctx) 
-        });
+        return pooID
+    }
+
+    fun create_deleveraging_operator(owner: address, ctx: &mut TxContext): ID {
+
+        let id = object::new(ctx);
+        let deleveragerID = object::uid_to_inner(&id);
+        let operator = DeleveragingCap {id};
+        
+        transfer::transfer(operator, owner);
+        
+        emit(DelevergingOperatorUpdate{id: deleveragerID, account: owner});
+
+        return deleveragerID
 
     }
 
-    //===========================================================//
-    //                      ENTRY METHODS                        //
-    //===========================================================//
+    public fun check_guardian_validity(
+        safe: &CapabilitiesSafe,
+        cap: &ExchangeGuardianCap,
+        ){ 
+        assert!( 
+            safe.guardian == object::uid_to_inner(&cap.id),
+            error::invalid_guardian());       
+    }
 
-    /**
-     * Transfers adminship of exchange to provided address
-     */
-    entry fun transfer_exchange_admin(admin: ExchangeAdminCap, newAdmin:address, ctx: &mut TxContext){
+    public fun check_price_oracle_operator_validity(
+        safe: &CapabilitiesSafe,
+        cap: &PriceOracleOperatorCap
+        ){ 
+        
+        assert!( 
+            safe.priceOracleOperator == object::uid_to_inner(&cap.id),
+            error::invalid_price_oracle_operator()
+        ); 
+    }
+
+    public fun check_delevearging_operator_validity(
+        safe: &CapabilitiesSafe,
+        cap: &DeleveragingCap
+        ){ 
+        
+        assert!( 
+            safe.deleveraging == object::uid_to_inner(&cap.id),
+            error::invalid_deleveraging_operator()
+        ); 
+    }
+
+    public fun check_settlement_operator_validity(
+        safe: &CapabilitiesSafe,
+        cap: &SettlementCap,
+        ){ 
         assert!(
-            newAdmin != tx_context::sender(ctx), 
-            error::new_exchange_admin_can_not_be_same_as_current_one());
-
-        transfer::transfer(admin, newAdmin);
-
-        emit(ExchangeAdminUpdateEvent{account: newAdmin});
-
+            vec_set::contains(&safe.settlementOperators, &object::id(cap)),
+            error::invalid_settlement_operator()
+        );       
     }
 
-    /**
-     * Updates status(active/inactive) of settlement operator
-     * Only Admin can invoke this method
-     */
-    entry fun set_settlement_operator(_:&ExchangeAdminCap, operatorTable: &mut Table<address, bool>, operator:address, status:bool){
-        
-        if(table::contains(operatorTable, operator)){
-            assert!(status == false, error::operator_already_whitelisted_for_settlement());
-            table::remove(operatorTable, operator); 
-        } else {
-            assert!(status == true, error::operator_not_found());
-            table::add(operatorTable, operator, true);
-        };
-
-        emit(SettlementOperatorUpdateEvent {
-            account: operator,
-            status: status
-        });
-    }    
-
-    /**
-     * Updates price oracle operator address for given price oracle operator cap
-     */
-    entry fun set_price_oracle_operator(_:&ExchangeAdminCap, cap: &mut PriceOracleOperatorCap, operator: address){
-        assert!(cap.account != operator, error::already_price_oracle_operator());
-
-        cap.account = operator;
-
-        emit(PriceOracleOperatorUpdateEvent{ 
-            id: cap.perpetualID,
-            account: operator 
-        });
-    }
-
-    //===========================================================//
-    //                      HELPER METHODS                       //
-    //===========================================================//
-
-    public fun is_valid_price_oracle_operator(
-        cap: &PriceOracleOperatorCap,
-        perpetual: ID,
-        caller: address
-        ):bool{        
-        return cap.perpetualID == perpetual && cap.account == caller
-    }
+    
 }

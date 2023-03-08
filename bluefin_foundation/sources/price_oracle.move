@@ -6,7 +6,7 @@ module bluefin_foundation::price_oracle {
     // custom
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{base_uint};
-    use bluefin_foundation::roles::{Self, PriceOracleOperatorCap};
+    use bluefin_foundation::roles::{Self, CapabilitiesSafe, PriceOracleOperatorCap};
 
     // friend module
     friend bluefin_foundation::exchange;
@@ -85,9 +85,9 @@ module bluefin_foundation::price_oracle {
         });
     }
     
-    public (friend) fun set_oracle_price(perp: ID, cap: &PriceOracleOperatorCap, op: &mut PriceOracle, price: u128, sender: address){
+    public (friend) fun set_oracle_price(safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, op: &mut PriceOracle, perp: ID, price: u128){
         
-        assert!(roles::is_valid_price_oracle_operator(cap, perp, sender), error::not_valid_price_oracle_operator());
+        roles::check_price_oracle_operator_validity(safe, cap);
         
         assert!(
             verify_oracle_price_update_diff(op.maxAllowedPriceDifference, price, op.price), 

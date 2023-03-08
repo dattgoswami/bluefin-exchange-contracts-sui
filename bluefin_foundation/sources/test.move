@@ -6,7 +6,6 @@ module bluefin_foundation::test {
     use sui::ecdsa_k1;
     use sui::event;
     use sui::bcs;
-    use bluefin_foundation::evaluator::{Self};
 
     struct SignatureVerifiedEvent has copy, drop {
         is_verified: bool,
@@ -146,49 +145,4 @@ module bluefin_foundation::test {
         let pubkey = ecdsa_k1::ecrecover(&signature, &hash);
         event::emit(PublicKeyRecoveredEvent {public_key:pubkey});
     }
-
-    public entry fun testTradeVerificationFunctions(
-        minPrice: u128,
-        maxPrice: u128,
-        tickSize: u128,
-        minQty: u128,
-        maxQtyLimit: u128,
-        maxQtyMarket: u128,
-        stepSize: u128,
-        mtbLong: u128,
-        mtbShort: u128,
-        maxOILimit: vector<u128>,
-        tradeQty: u128,
-        tradePrice: u128,
-        oraclePrice: u128,
-        isBuy: bool,
-        mro: u128,
-        oiOpen: u128
-        ) {
-            
-            let maxAllowedOIOpen : vector<u128> = vector::empty();
-            // Push dummy value at index 0 because leverage starts at 1
-            vector::push_back(&mut maxAllowedOIOpen, 0);
-            vector::append(&mut maxAllowedOIOpen, maxOILimit);
-        
-            let checks = evaluator::initialize(
-                minPrice,
-                maxPrice,
-                tickSize,
-                minQty,
-                maxQtyLimit,
-                maxQtyMarket,
-                stepSize,
-                mtbLong,
-                mtbShort,
-                maxAllowedOIOpen
-            );
-
-            let isTaker : u64 = 0;
-
-            evaluator::verify_qty_checks(checks,tradeQty);
-            evaluator::verify_price_checks(checks, tradePrice);
-            evaluator::verify_market_take_bound_checks(checks,tradePrice,oraclePrice,isBuy);
-            evaluator::verify_oi_open_for_account(checks, mro, oiOpen,isTaker);
-        }
 }

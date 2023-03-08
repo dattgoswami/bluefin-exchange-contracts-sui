@@ -15,7 +15,6 @@ export const ERROR_CODES: { [key: string]: string } = {
     "4": "Maker: Trade price is > max allowed price",
     "5": "Maker: Trade price does not conforms to allowed tick size",
     "6": "User already has a position object",
-    "7": "Operator already whitelisted as settlement operator",
     "8": "Operator does not exist",
     "9": "Maximum trade price must be > min trade price",
     "10": "Step Size must be > 0",
@@ -35,7 +34,6 @@ export const ERROR_CODES: { [key: string]: string } = {
     "24": "Trade price is < Market Take Bound for short side",
     "25": "Maker: OI open for selected leverage > max allowed oi open",
     "26": "Maker: OI open for selected leverage > max allowed oi open",
-    "27": "Only settlement operators can trade",
     "28": "Maker: Order was already canceled",
     "29": "Taker: Order was already canceled",
     "30": "Maker: Order has invalid signature",
@@ -61,6 +59,10 @@ export const ERROR_CODES: { [key: string]: string } = {
     "101": "Address is already price oracle operator",
     "102": "Price is out of max allowed price difference bounds",
     "103": "Max allowed price difference cannot be 0%",
+    "110": "Sender is not a valid settlement operator",
+    "111": "Caller is not the guardian",
+    "112": "Operator already removed from valid operators list from safe",
+    "113": "Caller is not the deleveraging operator",
     "400": "Maker: MR < IMR, can not open a new or flip position",
     "401": "Taker: MR < IMR, can not open a new or flip position",
     "402": "Maker: MR < IMR, Margin Ratio must improve or stay the same",
@@ -94,5 +96,5 @@ export const ERROR_CODES: { [key: string]: string } = {
     "802": "IsolatedADL: Taker and maker must have same side positions",
     "803": "IsolatedADL: allOrNothing is set and maker position is < quantity",
     "804": "IsolatedADL: allOrNothing is set and taker position is < quantity",
-    "900": "New exchange admin address can not be same as current one"
+    "900": "New address can not be same as current one"
 };

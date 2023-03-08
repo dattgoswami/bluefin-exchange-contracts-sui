@@ -31,7 +31,7 @@ export class OnChainCalls {
         this.deployment = _deployment;
     }
 
-    public async transferExchangeAdmin(
+    public async setExchangeAdmin(
         args: {
             address: string;
             adminID?: string;
@@ -46,7 +46,30 @@ export class OnChainCalls {
 
         return this.signAndCall(
             caller,
-            "transfer_exchange_admin",
+            "set_exchange_admin",
+            callArgs,
+            "roles"
+        );
+    }
+
+    public async setExchangeGuardian(
+        args: {
+            address: string;
+            adminID?: string;
+            safeID?: string;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.safeID || this.getSafeID());
+        callArgs.push(args.address);
+
+        return this.signAndCall(
+            caller,
+            "set_exchange_guardian",
             callArgs,
             "roles"
         );
@@ -59,6 +82,7 @@ export class OnChainCalls {
         const callArgs = [];
 
         callArgs.push(args.adminID || this.getExchangeAdminCap());
+
         callArgs.push(this.getBankID());
 
         callArgs.push(args.name || "ETH-PERP");
@@ -321,11 +345,11 @@ export class OnChainCalls {
         );
     }
 
-    public async setSettlementOperator(
+    public async createSettlementOperator(
         args: {
-            adminID?: string;
             operator: string;
-            status: boolean;
+            adminID?: string;
+            safeID?: string;
         },
         signer?: RawSigner
     ) {
@@ -333,14 +357,35 @@ export class OnChainCalls {
         const callArgs = [];
 
         callArgs.push(args.adminID || this.getExchangeAdminCap());
-        callArgs.push(this.getSettlementOperatorTable());
-
+        callArgs.push(args.safeID || this.getSafeID());
         callArgs.push(args.operator);
-        callArgs.push(args.status);
 
         return this.signAndCall(
             caller,
-            "set_settlement_operator",
+            "create_settlement_operator",
+            callArgs,
+            "roles"
+        );
+    }
+
+    public async removeSettlementOperator(
+        args: {
+            capID: string;
+            adminID?: string;
+            safeID?: string;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+        const callArgs = [];
+
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.safeID || this.getSafeID());
+        callArgs.push(args.capID);
+
+        return this.signAndCall(
+            caller,
+            "remove_settlement_operator",
             callArgs,
             "roles"
         );
@@ -440,13 +485,16 @@ export class OnChainCalls {
 
     public async trade(
         args: {
-            perpID?: string;
+            settlementCapID: string;
             makerOrder: Order;
             makerSignature: string;
             takerOrder: Order;
             takerSignature: string;
             fillPrice?: BigNumber;
             fillQuantity?: BigNumber;
+            perpID?: string;
+            safeID?: string;
+            bankID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -454,9 +502,10 @@ export class OnChainCalls {
 
         const callArgs = [];
         callArgs.push(args.perpID || this.getPerpetualID());
-        callArgs.push(this.getBankID());
+        callArgs.push(args.bankID || this.getBankID());
+        callArgs.push(args.safeID || this.getSafeID());
+        callArgs.push(args.settlementCapID);
 
-        callArgs.push(this.getOperatorTableID());
         callArgs.push(this.getOrdersTableID());
 
         callArgs.push(args.makerOrder.isBuy);
@@ -524,11 +573,13 @@ export class OnChainCalls {
 
     public async deleverage(
         args: {
-            perpID?: string;
             maker: string;
             taker: string;
             quantity: string;
             allOrNothing?: boolean;
+            perpID?: string;
+            deleveragingCapID?: string;
+            safeID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -537,6 +588,8 @@ export class OnChainCalls {
         const callArgs = [];
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
+        callArgs.push(args.safeID || this.getSafeID());
+        callArgs.push(args.deleveragingCapID || this.getDeleveragingCapID());
 
         callArgs.push(args.maker);
         callArgs.push(args.taker);
@@ -548,8 +601,8 @@ export class OnChainCalls {
 
     public async addMargin(
         args: {
-            perpID?: string;
             amount: number;
+            perpID?: string;
         },
         signer?: RawSigner
     ) {
@@ -584,8 +637,8 @@ export class OnChainCalls {
 
     public async adjustLeverage(
         args: {
-            perpID?: string;
             leverage: number;
+            perpID?: string;
         },
         signer?: RawSigner
     ) {
@@ -607,9 +660,10 @@ export class OnChainCalls {
 
     public async updateOraclePrice(
         args: {
-            perpID?: string;
-            updateOPCapID?: string;
             price: string;
+            safeID?: string;
+            updateOPCapID?: string;
+            perpID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -617,8 +671,9 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.perpID || this.getPerpetualID());
+        callArgs.push(args.safeID || this.getSafeID());
         callArgs.push(args.updateOPCapID || this.getPriceOracleOperatorCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(args.price);
 
         return this.signAndCall(
@@ -629,12 +684,11 @@ export class OnChainCalls {
         );
     }
 
-    public async updatePriceOracleOperator(
+    public async setPriceOracleOperator(
         args: {
-            adminID?: string;
-            oracleOperatorID?: string;
-            perpID?: string;
             operator: string;
+            adminID?: string;
+            safeID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -643,14 +697,38 @@ export class OnChainCalls {
         const callArgs = [];
 
         callArgs.push(args.adminID || this.getExchangeAdminCap());
-        callArgs.push(
-            args.oracleOperatorID || this.getPriceOracleOperatorCap()
-        );
+        callArgs.push(args.safeID || this.getSafeID());
+
         callArgs.push(args.operator);
 
         return this.signAndCall(
             caller,
             "set_price_oracle_operator",
+            callArgs,
+            "roles"
+        );
+    }
+
+    public async setDeleveragingOperator(
+        args: {
+            operator: string;
+            adminID?: string;
+            safeID?: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.safeID || this.getSafeID());
+
+        callArgs.push(args.operator);
+
+        return this.signAndCall(
+            caller,
+            "set_deleveraging_operator",
             callArgs,
             "roles"
         );
@@ -714,7 +792,8 @@ export class OnChainCalls {
         args: {
             isAllowed: boolean;
             bankID?: string;
-            guardianID?: string;
+            safeID?: string;
+            guardianCap?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -722,13 +801,14 @@ export class OnChainCalls {
 
         const callArgs = [];
 
-        callArgs.push(args.guardianID || this.getGuardianID());
+        callArgs.push(args.safeID || this.getSafeID());
+        callArgs.push(args.guardianCap || this.getGuardianCap());
         callArgs.push(args.bankID || this.getBankID());
         callArgs.push(args.isAllowed);
 
         return this.signAndCall(
             caller,
-            "set_is_withdrawal_allowed",
+            "set_withdrawal_status",
             callArgs,
             "margin_bank"
         );
@@ -931,6 +1011,22 @@ export class OnChainCalls {
         return (details.data as any).fields;
     }
 
+    getBankID(): string {
+        return this.deployment["objects"]["Bank"].id as string;
+    }
+
+    getSafeID(): string {
+        return this.deployment["objects"]["CapabilitiesSafe"].id as string;
+    }
+
+    getGuardianCap(): string {
+        return this.deployment["objects"]["ExchangeGuardianCap"].id as string;
+    }
+
+    getDeleveragingCapID(): string {
+        return this.deployment["objects"]["DeleveragingCap"].id as string;
+    }
+
     getSettlementOperatorTable(): string {
         return this.deployment["objects"]["Table<address, bool>"].id as string;
     }
@@ -943,19 +1039,15 @@ export class OnChainCalls {
         return this.deployment["objects"]["ExchangeAdminCap"].id as string;
     }
 
+    getPriceOracleOperatorCap(): string {
+        return this.deployment["objects"]["PriceOracleOperatorCap"]
+            .id as string;
+    }
+
     // by default returns the perpetual id of 1st market
     getPerpetualID(market = "ETH-PERP"): string {
         return this.deployment["markets"][market]["Objects"]["Perpetual"]
             .id as string;
-    }
-
-    getPriceOracleOperatorCap(market = "ETH-PERP"): string {
-        return this.deployment["markets"][market]["Objects"][
-            "PriceOracleOperatorCap"
-        ].id as string;
-    }
-    getOperatorTableID(): string {
-        return this.deployment["objects"]["Table<address, bool>"].id as string;
     }
 
     getOrdersTableID(): string {
@@ -964,12 +1056,8 @@ export class OnChainCalls {
         ].id as string;
     }
 
-    getBankID(): string {
-        return this.deployment["objects"]["Bank"].id as string;
-    }
-
-    getGuardianID(): string {
-        return this.deployment["objects"]["ExchangeGuardianCap"].id as string;
+    getDeployerAddress(): string {
+        return this.deployment["deployer"] as string;
     }
 
     getCurrencyID(): string {

@@ -9,7 +9,7 @@ import {
     createMarket
 } from "../src/utils";
 import { OnChainCalls, Transaction } from "../src/classes";
-import { TEST_WALLETS } from "./helpers/accounts";
+import { getTestAccounts } from "./helpers/accounts";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { bigNumber, toBigNumber } from "../src/library";
 import {
@@ -28,12 +28,13 @@ const provider = getProvider(
 );
 
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
-const testSigner = getSignerFromSeed(TEST_WALLETS[0].phrase, provider);
+const testWallet = getTestAccounts(provider)[0];
 
 describe("Price Oracle", () => {
     const deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls;
     let ownerAddress: string;
+    let cap: string;
 
     before(async () => {
         await fundTestAccounts();
@@ -42,13 +43,23 @@ describe("Price Oracle", () => {
     });
 
     beforeEach(async () => {
-        deployment["markets"] = {
-            "ETH-PERP": {
-                Objects: (await createMarket(deployment, ownerSigner, provider))
-                    .marketObjects
-            }
-        };
+        deployment["markets"]["ETH-PERP"]["Objects"] = (
+            await createMarket(deployment, ownerSigner, provider)
+        ).marketObjects;
+
         onChain = new OnChainCalls(ownerSigner, deployment);
+
+        // make owner the price oracle operator
+        const tx = await onChain.setPriceOracleOperator({
+            operator: ownerAddress
+        });
+        cap = (
+            Transaction.getObjects(
+                tx,
+                "newObject",
+                "PriceOracleOperatorCap"
+            )[0] as any
+        ).id as string;
     });
 
     describe("Setting oracle price", () => {
@@ -56,7 +67,8 @@ describe("Price Oracle", () => {
             const newPrice = toBigNumber(12);
 
             const tx = await onChain.updateOraclePrice({
-                price: newPrice.toFixed()
+                price: newPrice.toFixed(),
+                updateOPCapID: cap
             });
 
             expectTxToSucceed(tx);
@@ -83,16 +95,57 @@ describe("Price Oracle", () => {
             );
         });
 
-        it("should not allow non-capable sender to setOraclePrice", async () => {
-            const tx = await onChain.updateOraclePrice(
+        it("should only allow price oracle capability owner to update oracle price", async () => {
+            const error = OWNERSHIP_ERROR(
+                onChain.getPriceOracleOperatorCap(),
+                ownerAddress,
+                testWallet.address
+            );
+            await expect(
+                onChain.updateOraclePrice(
+                    {
+                        price: toBigNumber(12).toFixed()
+                    },
+                    testWallet.signer
+                )
+            ).to.be.eventually.rejectedWith(error);
+        });
+
+        it("should allow new price oracle operator to update price once it has become the operator", async () => {
+            const tx1 = await onChain.setPriceOracleOperator({
+                operator: testWallet.address
+            });
+            const capID = (
+                Transaction.getObjects(
+                    tx1,
+                    "newObject",
+                    "PriceOracleOperatorCap"
+                )[0] as any
+            ).id as string;
+
+            const tx2 = await onChain.updateOraclePrice(
                 {
-                    price: toBigNumber(12).toFixed()
+                    price: toBigNumber(12).toFixed(),
+                    updateOPCapID: capID
                 },
-                testSigner
+                testWallet.signer
             );
 
-            expectTxToFail(tx);
-            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[100]);
+            expectTxToSucceed(tx2);
+        });
+
+        it("should revert when an old price oracle operator tries to update oracle price", async () => {
+            const tx1 = await onChain.setPriceOracleOperator({
+                operator: testWallet.address
+            });
+            expectTxToSucceed(tx1);
+
+            const tx2 = await onChain.updateOraclePrice({
+                price: toBigNumber(12).toFixed(),
+                updateOPCapID: onChain.getPriceOracleOperatorCap() // this is old cap still owned by admin
+            });
+
+            expect(Transaction.getError(tx2)).to.be.equal(ERROR_CODES[100]);
         });
 
         it("should allow oracle price update when price difference is within max allowed bound", async () => {
@@ -112,7 +165,8 @@ describe("Price Oracle", () => {
 
             const tx1 = await onChain.updateOraclePrice(
                 {
-                    price: oldPrice.toFixed()
+                    price: oldPrice.toFixed(),
+                    updateOPCapID: cap
                 },
                 ownerSigner
             );
@@ -131,7 +185,8 @@ describe("Price Oracle", () => {
 
             const tx3 = await onChain.updateOraclePrice(
                 {
-                    price: newPrice.toFixed()
+                    price: newPrice.toFixed(),
+                    updateOPCapID: cap
                 },
                 ownerSigner
             );
@@ -165,7 +220,8 @@ describe("Price Oracle", () => {
 
             const tx1 = await onChain.updateOraclePrice(
                 {
-                    price: oldPrice.toFixed()
+                    price: oldPrice.toFixed(),
+                    updateOPCapID: cap
                 },
                 ownerSigner
             );
@@ -184,75 +240,14 @@ describe("Price Oracle", () => {
 
             const tx3 = await onChain.updateOraclePrice(
                 {
-                    price: newPrice.toFixed()
+                    price: newPrice.toFixed(),
+                    updateOPCapID: cap
                 },
                 ownerSigner
             );
 
             expectTxToFail(tx3);
             expect(Transaction.getError(tx3)).to.be.equal(ERROR_CODES[102]);
-        });
-    });
-
-    describe("Updating Operator", () => {
-        it("should update price oracle operator", async () => {
-            const tx = await onChain.updatePriceOracleOperator(
-                {
-                    operator: await getAddressFromSigner(testSigner)
-                },
-                ownerSigner
-            );
-
-            expectTxToSucceed(tx);
-            expectTxToEmitEvent(tx, "PriceOracleOperatorUpdateEvent");
-
-            const newPrice = toBigNumber(3);
-
-            const txb = await onChain.updateOraclePrice(
-                {
-                    price: newPrice.toFixed()
-                },
-                testSigner
-            );
-
-            expectTxToSucceed(txb);
-            expectTxToEmitEvent(txb, "OraclePriceUpdateEvent");
-            const event = Transaction.getEvents(
-                txb,
-                "OraclePriceUpdateEvent"
-            )[0];
-            expect(bigNumber(event?.fields?.price).toFixed(0)).to.be.equal(
-                newPrice.toFixed()
-            );
-        });
-
-        it("should revert when trying to update oracle operator to existing one", async () => {
-            const tx = await onChain.updatePriceOracleOperator(
-                {
-                    operator: ownerAddress
-                },
-                ownerSigner
-            );
-
-            expectTxToFail(tx);
-            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[101]);
-        });
-
-        it("should not update price oracle operator when non-admin is the sender", async () => {
-            const expectedError = OWNERSHIP_ERROR(
-                onChain.getExchangeAdminCap(),
-                ownerAddress,
-                await getAddressFromSigner(testSigner)
-            );
-
-            await expect(
-                onChain.updatePriceOracleOperator(
-                    {
-                        operator: await getAddressFromSigner(testSigner)
-                    },
-                    testSigner
-                )
-            ).to.eventually.rejectedWith(expectedError);
         });
     });
 
@@ -295,7 +290,7 @@ describe("Price Oracle", () => {
             const expectedError = OWNERSHIP_ERROR(
                 onChain.getExchangeAdminCap(),
                 ownerAddress,
-                await getAddressFromSigner(testSigner)
+                await getAddressFromSigner(testWallet.signer)
             );
 
             await expect(
@@ -304,7 +299,7 @@ describe("Price Oracle", () => {
                         maxAllowedPriceDifference:
                             toBigNumber(100000).toFixed(0)
                     },
-                    testSigner
+                    testWallet.signer
                 )
             ).to.be.eventually.rejectedWith(expectedError);
         });

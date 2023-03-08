@@ -15,6 +15,7 @@ module bluefin_foundation::margin_bank {
     // custom modules
     use bluefin_foundation::roles::{ExchangeGuardianCap};
     use bluefin_foundation::signed_number::{Self, Number};
+    use bluefin_foundation::roles::{Self, CapabilitiesSafe};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::tusdc::{TUSDC};
 
@@ -32,6 +33,10 @@ module bluefin_foundation::margin_bank {
         amount: u128,
         srcBalance: u128,
         destBalance: u128
+    }
+
+    struct WithdrawalStatusUpdate has drop, copy {
+        status: bool
     }
 
     //================================================================//
@@ -81,9 +86,12 @@ module bluefin_foundation::margin_bank {
     //                      GUARDIAN METHODS
     //===========================================================//
 
-    entry fun set_is_withdrawal_allowed( _: &ExchangeGuardianCap, bank: &mut Bank, isWithdrawalAllowed: bool) {
+    entry fun set_withdrawal_status( safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, bank: &mut Bank, isWithdrawalAllowed: bool) {
+        roles::check_guardian_validity(safe, guardian);
         // setting the withdrawal allowed flag
         bank.isWithdrawalAllowed = isWithdrawalAllowed;
+
+        emit(WithdrawalStatusUpdate{status: isWithdrawalAllowed});
     }
 
     //===========================================================//

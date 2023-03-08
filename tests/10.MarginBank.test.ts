@@ -10,7 +10,7 @@ import {
 } from "../src/utils";
 import { OnChainCalls, Transaction } from "../src/classes";
 import { fundTestAccounts } from "./helpers/utils";
-import { TEST_WALLETS } from "./helpers/accounts";
+import { getTestAccounts, TEST_WALLETS } from "./helpers/accounts";
 import { toBigNumberStr } from "../src/library";
 import { expectTxToSucceed } from "./helpers/expect";
 
@@ -244,6 +244,51 @@ describe("Margin Bank", () => {
 
             expect(Transaction.getStatus(txResult)).to.be.equal("failure");
             expect(Transaction.getErrorCode(txResult)).to.be.equal(604);
+        });
+
+        it("should revert when an old guardian tries to start withdraw", async () => {
+            // current guardian sets withdrawal to false
+            const tx1 = await onChain.setIsWithdrawalAllowed(
+                {
+                    isAllowed: false
+                },
+                ownerSigner
+            );
+
+            expectTxToSucceed(tx1);
+
+            // making alice new guardian
+            const alice = getTestAccounts(provider)[0];
+            const tx2 = await onChain.setExchangeGuardian({
+                address: alice.address
+            });
+            const aliceGuardCap = (
+                Transaction.getObjects(
+                    tx2,
+                    "newObject",
+                    "ExchangeGuardianCap"
+                )[0] as any
+            ).id as string;
+
+            // old guardian trying to turn on withdrawal
+            const tx3 = await onChain.setIsWithdrawalAllowed(
+                {
+                    isAllowed: true
+                },
+                ownerSigner
+            );
+
+            expect(Transaction.getErrorCode(tx3)).to.be.equal(111);
+
+            const tx4 = await onChain.setIsWithdrawalAllowed(
+                {
+                    isAllowed: true,
+                    guardianCap: aliceGuardCap
+                },
+                alice.signer
+            );
+
+            expectTxToSucceed(tx4);
         });
     });
 });

@@ -4,6 +4,7 @@ import { network, DeploymentConfigs } from "../../src/DeploymentConfig";
 import {
     createMarket,
     createOrder,
+    getAddressFromSigner,
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
@@ -23,7 +24,7 @@ import { ERROR_CODES } from "../../src/errors";
 import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
 import { config } from "dotenv";
-import { mintAndDeposit, postDeployment } from "./utils";
+import { mintAndDeposit } from "./utils";
 import { TestCaseJSON } from "./interfaces";
 config({ path: ".env" });
 
@@ -33,6 +34,9 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const orderSigner = new OrderSigner(ownerKeyPair);
 const deployment = readFile(DeploymentConfigs.filePath);
 let onChain: OnChainCalls;
+let settlementCapID: string;
+let priceOracleCapID: string;
+let deleveragingCapID: string;
 
 export async function executeTests(
     testCases: TestCaseJSON,
@@ -50,301 +54,360 @@ export async function executeTests(
     let feePoolAddress: string;
     let insurancePoolAddress: string;
 
-    Object.keys(testCases).forEach((testName) => {
-        describe(testName, () => {
-            testCases[testName].forEach((testCase) => {
-                before(async () => {
-                    lastOraclePrice = new BigNumber(0);
-                    feePoolAddress = Wallet.generate().getAddressString();
-                    insurancePoolAddress = Wallet.generate().getAddressString();
+    // described block is only made to have `before` method so that capabilities
+    // can be initialized
+    describe("", () => {
+        before(async () => {
+            onChain = new OnChainCalls(ownerSigner, deployment);
 
-                    const marketData = await createMarket(
-                        deployment,
-                        ownerSigner,
-                        provider,
-                        {
-                            ...marketConfig,
-                            feePool: feePoolAddress,
-                            insurancePool: insurancePoolAddress
-                        }
-                    );
+            const address = await getAddressFromSigner(onChain.signer);
 
-                    // init state
-                    deployment["markets"]["ETH-PERP"]["Objects"] =
-                        marketData.marketObjects;
+            // make owner, the price oracle operator
+            const tx1 = await onChain.setPriceOracleOperator({
+                operator: address
+            });
+            priceOracleCapID = (
+                Transaction.getObjects(
+                    tx1,
+                    "newObject",
+                    "PriceOracleOperatorCap"
+                )[0] as any
+            ).id as string;
 
-                    deployment.bankAccounts = {
-                        ...deployment.bankAccounts,
-                        ...marketData.bankAccounts
-                    };
+            // make admin settlement operator
+            const tx2 = await onChain.createSettlementOperator({
+                operator: address
+            });
+            settlementCapID = (
+                Transaction.getObjects(
+                    tx2,
+                    "newObject",
+                    "SettlementCap"
+                )[0] as any
+            ).id as string;
 
-                    onChain = new OnChainCalls(ownerSigner, deployment);
+            // make admin deleveraging operator
+            const tx3 = await onChain.setDeleveragingOperator({
+                operator: address
+            });
 
-                    // post deployment steps
-                    await postDeployment(onChain, ownerSigner);
+            deleveragingCapID = (
+                Transaction.getObjects(
+                    tx3,
+                    "newObject",
+                    "DeleveragingCap"
+                )[0] as any
+            ).id as string;
+        });
 
-                    // empty all accounts
-                    await onChain.withdrawAllMarginFromBank(alice.signer);
-                    await onChain.withdrawAllMarginFromBank(bob.signer);
-                    await onChain.withdrawAllMarginFromBank(cat.signer);
-                    await onChain.withdrawAllMarginFromBank(dog.signer);
-                    await onChain.withdrawAllMarginFromBank(liquidator.signer);
+        Object.keys(testCases).forEach((testName) => {
+            describe(testName, () => {
+                testCases[testName].forEach((testCase) => {
+                    before(async () => {
+                        lastOraclePrice = new BigNumber(0);
+                        feePoolAddress = Wallet.generate().getAddressString();
+                        insurancePoolAddress =
+                            Wallet.generate().getAddressString();
 
-                    // provide maker/taker starting margin in margin bank
-                    alice.bankAccountId = await mintAndDeposit(
-                        onChain,
-                        alice.address,
-                        initialBalances?.traders || 2_000
-                    );
+                        const marketData = await createMarket(
+                            deployment,
+                            ownerSigner,
+                            provider,
+                            {
+                                ...marketConfig,
+                                feePool: feePoolAddress,
+                                insurancePool: insurancePoolAddress
+                            }
+                        );
 
-                    bob.bankAccountId = await mintAndDeposit(
-                        onChain,
-                        bob.address,
-                        initialBalances?.traders || 2_000
-                    );
+                        // init state
+                        deployment["markets"]["ETH-PERP"]["Objects"] =
+                            marketData.marketObjects;
 
-                    cat.bankAccountId = await mintAndDeposit(
-                        onChain,
-                        cat.address,
-                        5_000
-                    );
+                        deployment.bankAccounts = {
+                            ...deployment.bankAccounts,
+                            ...marketData.bankAccounts
+                        };
 
-                    dog.bankAccountId = await mintAndDeposit(
-                        onChain,
-                        dog.address,
-                        5_000
-                    );
+                        onChain = new OnChainCalls(ownerSigner, deployment);
 
-                    liquidator.bankAccountId = await mintAndDeposit(
-                        onChain,
-                        liquidator.address,
-                        initialBalances?.liquidator || 5_000
-                    );
-                });
+                        // empty all accounts
+                        await onChain.withdrawAllMarginFromBank(alice.signer);
+                        await onChain.withdrawAllMarginFromBank(bob.signer);
+                        await onChain.withdrawAllMarginFromBank(cat.signer);
+                        await onChain.withdrawAllMarginFromBank(dog.signer);
+                        await onChain.withdrawAllMarginFromBank(
+                            liquidator.signer
+                        );
 
-                testCase.size = testCase.size as any as number;
+                        // provide maker/taker starting margin in margin bank
+                        alice.bankAccountId = await mintAndDeposit(
+                            onChain,
+                            alice.address,
+                            initialBalances?.traders || 2_000
+                        );
 
-                const testCaseName =
-                    testCase.tradeType == "liquidation"
-                        ? `Liquidator liquidates Alice at oracle price: ${
-                              testCase.pOracle
-                          } leverage:${testCase.leverage}x size:${Math.abs(
-                              testCase.size
-                          )}`
-                        : testCase.tradeType == "liquidator_bob"
-                        ? `Liquidator opens size:${Math.abs(
-                              testCase.size
-                          )} price:${testCase.price} leverage:${
-                              testCase.leverage
-                          }x ${
-                              testCase.size > 0 ? "Long" : "Short"
-                          } against Bob`
-                        : testCase.tradeType == "liquidator_cat"
-                        ? `Liquidator opens size:${Math.abs(
-                              testCase.size
-                          )} price:${testCase.price} leverage:${
-                              testCase.leverage
-                          }x ${
-                              testCase.size > 0 ? "Long" : "Short"
-                          } against Bob`
-                        : testCase.tradeType == "cat_dog"
-                        ? `Cat opens size:${Math.abs(testCase.size)} price:${
-                              testCase.price
-                          } leverage:${testCase.leverage}x ${
-                              testCase.size > 0 ? "Long" : "Short"
-                          } against dog`
-                        : testCase.tradeType == "deleveraging"
-                        ? `Deleveraging Alice against Cat at oracle price: ${
-                              testCase.pOracle
-                          } size:${Math.abs(testCase.size)}`
-                        : testCase.isTaker == true
-                        ? `Bob opens size:${Math.abs(testCase.size)} price:${
-                              testCase.price
-                          } leverage:${testCase.leverage}x ${
-                              testCase.size > 0 ? "Long" : "Short"
-                          } against Alice`
-                        : testCase.size && testCase.size != 0
-                        ? `Alice opens size:${Math.abs(testCase.size)} price:${
-                              testCase.price
-                          } leverage:${testCase.leverage}x ${
-                              testCase.size > 0 ? "Long" : "Short"
-                          } against Bob`
-                        : testCase.addMargin != undefined
-                        ? `Bob adds margin: ${testCase.addMargin} to position`
-                        : testCase.removeMargin != undefined
-                        ? `Bob removes margin: ${testCase.removeMargin} from position`
-                        : testCase.adjustLeverage != undefined
-                        ? `Bob adjusts leverage: ${testCase.adjustLeverage}`
-                        : `Price oracle updated to ${testCase.pOracle}`;
+                        bob.bankAccountId = await mintAndDeposit(
+                            onChain,
+                            bob.address,
+                            initialBalances?.traders || 2_000
+                        );
 
-                it(testCaseName, async () => {
+                        cat.bankAccountId = await mintAndDeposit(
+                            onChain,
+                            cat.address,
+                            5_000
+                        );
+
+                        dog.bankAccountId = await mintAndDeposit(
+                            onChain,
+                            dog.address,
+                            5_000
+                        );
+
+                        liquidator.bankAccountId = await mintAndDeposit(
+                            onChain,
+                            liquidator.address,
+                            initialBalances?.liquidator || 5_000
+                        );
+                    });
+
                     testCase.size = testCase.size as any as number;
-                    const oraclePrice = toBigNumber(
-                        testCase.pOracle as any as number
-                    );
 
-                    // set oracle price if need be
-                    if (!oraclePrice.isEqualTo(lastOraclePrice)) {
-                        const priceTx = await onChain.updateOraclePrice({
-                            price: oraclePrice.toFixed()
-                        });
-                        expectTxToSucceed(priceTx);
-                        lastOraclePrice = oraclePrice;
-                    }
+                    const testCaseName =
+                        testCase.tradeType == "liquidation"
+                            ? `Liquidator liquidates Alice at oracle price: ${
+                                  testCase.pOracle
+                              } leverage:${testCase.leverage}x size:${Math.abs(
+                                  testCase.size
+                              )}`
+                            : testCase.tradeType == "liquidator_bob"
+                            ? `Liquidator opens size:${Math.abs(
+                                  testCase.size
+                              )} price:${testCase.price} leverage:${
+                                  testCase.leverage
+                              }x ${
+                                  testCase.size > 0 ? "Long" : "Short"
+                              } against Bob`
+                            : testCase.tradeType == "liquidator_cat"
+                            ? `Liquidator opens size:${Math.abs(
+                                  testCase.size
+                              )} price:${testCase.price} leverage:${
+                                  testCase.leverage
+                              }x ${
+                                  testCase.size > 0 ? "Long" : "Short"
+                              } against Bob`
+                            : testCase.tradeType == "cat_dog"
+                            ? `Cat opens size:${Math.abs(
+                                  testCase.size
+                              )} price:${testCase.price} leverage:${
+                                  testCase.leverage
+                              }x ${
+                                  testCase.size > 0 ? "Long" : "Short"
+                              } against dog`
+                            : testCase.tradeType == "deleveraging"
+                            ? `Deleveraging Alice against Cat at oracle price: ${
+                                  testCase.pOracle
+                              } size:${Math.abs(testCase.size)}`
+                            : testCase.isTaker == true
+                            ? `Bob opens size:${Math.abs(
+                                  testCase.size
+                              )} price:${testCase.price} leverage:${
+                                  testCase.leverage
+                              }x ${
+                                  testCase.size > 0 ? "Long" : "Short"
+                              } against Alice`
+                            : testCase.size && testCase.size != 0
+                            ? `Alice opens size:${Math.abs(
+                                  testCase.size
+                              )} price:${testCase.price} leverage:${
+                                  testCase.leverage
+                              }x ${
+                                  testCase.size > 0 ? "Long" : "Short"
+                              } against Bob`
+                            : testCase.addMargin != undefined
+                            ? `Bob adds margin: ${testCase.addMargin} to position`
+                            : testCase.removeMargin != undefined
+                            ? `Bob removes margin: ${testCase.removeMargin} from position`
+                            : testCase.adjustLeverage != undefined
+                            ? `Bob adjusts leverage: ${testCase.adjustLeverage}`
+                            : `Price oracle updated to ${testCase.pOracle}`;
 
-                    // normal, liquidator_bob or cat_dog trade
-                    // normal trade is between alice and bob
-                    // liquidator_bob trade is between liquidator and bob
-                    // liquidator_bob trade is between liquidator and cat
-                    // cat_dog trade is between cat and dog
-                    if (
-                        testCase.size &&
-                        testCase.tradeType != "liquidation" &&
-                        testCase.tradeType != "deleveraging"
-                    ) {
-                        const { maker, taker } = getMakerTakerOfTrade(testCase);
+                    it(testCaseName, async () => {
+                        testCase.size = testCase.size as any as number;
+                        const oraclePrice = toBigNumber(
+                            testCase.pOracle as any as number
+                        );
 
-                        const order = createOrder({
-                            market: onChain.getPerpetualID(),
-                            price: testCase.price,
-                            quantity: Math.abs(testCase.size),
-                            leverage: testCase.leverage,
-                            isBuy: testCase.size > 0,
-                            maker: maker.address,
-                            salt: Date.now()
-                        });
+                        // set oracle price if need be
+                        if (!oraclePrice.isEqualTo(lastOraclePrice)) {
+                            const priceTx = await onChain.updateOraclePrice({
+                                price: oraclePrice.toFixed(),
+                                updateOPCapID: priceOracleCapID
+                            });
+                            expectTxToSucceed(priceTx);
+                            lastOraclePrice = oraclePrice;
+                        }
 
-                        if (testCase.tradeType == "liquidator_bob") {
-                            await onChain.adjustLeverage(
+                        // normal, liquidator_bob or cat_dog trade
+                        // normal trade is between alice and bob
+                        // liquidator_bob trade is between liquidator and bob
+                        // liquidator_bob trade is between liquidator and cat
+                        // cat_dog trade is between cat and dog
+                        if (
+                            testCase.size &&
+                            testCase.tradeType != "liquidation" &&
+                            testCase.tradeType != "deleveraging"
+                        ) {
+                            const { maker, taker } =
+                                getMakerTakerOfTrade(testCase);
+
+                            const order = createOrder({
+                                market: onChain.getPerpetualID(),
+                                price: testCase.price,
+                                quantity: Math.abs(testCase.size),
+                                leverage: testCase.leverage,
+                                isBuy: testCase.size > 0,
+                                maker: maker.address,
+                                salt: Date.now()
+                            });
+
+                            if (testCase.tradeType == "liquidator_bob") {
+                                await onChain.adjustLeverage(
+                                    {
+                                        leverage: testCase.leverage as number
+                                    },
+                                    taker.signer
+                                );
+                            }
+
+                            tx = await onChain.trade(
                                 {
-                                    leverage: testCase.leverage as number
+                                    ...(await Trader.setupNormalTrade(
+                                        provider,
+                                        orderSigner,
+                                        maker.keyPair,
+                                        taker.keyPair,
+                                        order
+                                    )),
+                                    settlementCapID
                                 },
-                                taker.signer
+                                ownerSigner
+                            );
+                        }
+                        // liquidation trade
+                        else if (testCase.tradeType == "liquidation") {
+                            tx = await onChain.liquidate(
+                                {
+                                    liquidatee: alice.address,
+                                    quantity: toBigNumberStr(
+                                        Math.abs(testCase.size)
+                                    ),
+                                    leverage: toBigNumberStr(
+                                        testCase.leverage as any as number
+                                    )
+                                },
+                                liquidator.signer
+                            );
+                        }
+                        // deleveraging trade
+                        else if (testCase.tradeType == "deleveraging") {
+                            tx = await onChain.deleverage(
+                                {
+                                    maker: alice.address,
+                                    taker: cat.address,
+                                    quantity: toBigNumberStr(
+                                        Math.abs(testCase.size)
+                                    ),
+                                    deleveragingCapID
+                                },
+                                ownerSigner
+                            );
+                        }
+                        // add margin
+                        else if (testCase.addMargin != undefined) {
+                            tx = await onChain.addMargin(
+                                { amount: testCase.addMargin },
+                                bob.signer
+                            );
+                        }
+                        // remove margin
+                        else if (testCase.removeMargin != undefined) {
+                            tx = await onChain.removeMargin(
+                                { amount: testCase.removeMargin },
+                                bob.signer
+                            );
+                        }
+                        // adjust leverage
+                        else if (testCase.adjustLeverage != undefined) {
+                            tx = await onChain.adjustLeverage(
+                                { leverage: testCase.adjustLeverage },
+                                bob.signer
                             );
                         }
 
-                        tx = await onChain.trade(
-                            await Trader.setupNormalTrade(
-                                provider,
-                                orderSigner,
-                                maker.keyPair,
-                                taker.keyPair,
-                                order
-                            ),
-                            ownerSigner
-                        );
-                    }
-                    // liquidation trade
-                    else if (testCase.tradeType == "liquidation") {
-                        tx = await onChain.liquidate(
-                            {
-                                liquidatee: alice.address,
-                                quantity: toBigNumberStr(
-                                    Math.abs(testCase.size)
-                                ),
-                                leverage: toBigNumberStr(
-                                    testCase.leverage as any as number
-                                )
-                            },
-                            liquidator.signer
-                        );
-                    }
-                    // deleveraging trade
-                    else if (testCase.tradeType == "deleveraging") {
-                        tx = await onChain.deleverage(
-                            {
-                                maker: alice.address,
-                                taker: cat.address,
-                                quantity: toBigNumberStr(
-                                    Math.abs(testCase.size)
-                                )
-                            },
-                            ownerSigner
-                        );
-                    }
-                    // add margin
-                    else if (testCase.addMargin != undefined) {
-                        tx = await onChain.addMargin(
-                            { amount: testCase.addMargin },
-                            bob.signer
-                        );
-                    }
-                    // remove margin
-                    else if (testCase.removeMargin != undefined) {
-                        tx = await onChain.removeMargin(
-                            { amount: testCase.removeMargin },
-                            bob.signer
-                        );
-                    }
-                    // adjust leverage
-                    else if (testCase.adjustLeverage != undefined) {
-                        tx = await onChain.adjustLeverage(
-                            { leverage: testCase.adjustLeverage },
-                            bob.signer
-                        );
-                    }
+                        // if error is expected
+                        if (testCase.expectError) {
+                            expectTxToFail(tx);
+                            expect(Transaction.getError(tx)).to.be.equal(
+                                ERROR_CODES[testCase.expectError]
+                            );
+                            return;
+                        }
 
-                    // if error is expected
-                    if (testCase.expectError) {
-                        expectTxToFail(tx);
-                        expect(Transaction.getError(tx)).to.be.equal(
-                            ERROR_CODES[testCase.expectError]
-                        );
-                        return;
-                    }
+                        // console.log(JSON.stringify(tx));
+                        expectTxToSucceed(tx);
 
-                    // console.log(JSON.stringify(tx));
-                    expectTxToSucceed(tx);
+                        // if an expect for maker or taker exists
+                        if (testCase.expectMaker || testCase.expectTaker) {
+                            // if expect maker does not exists,
+                            // there will be expect taker
+                            const account =
+                                testCase.expectMaker == undefined ? bob : alice;
 
-                    // if an expect for maker or taker exists
-                    if (testCase.expectMaker || testCase.expectTaker) {
-                        // if expect maker does not exists,
-                        // there will be expect taker
-                        const account =
-                            testCase.expectMaker == undefined ? bob : alice;
+                            await evaluateAccountPositionExpect(
+                                onChain,
+                                account,
+                                testCase.expectMaker || testCase.expectTaker,
+                                oraclePrice,
+                                tx
+                            );
+                        }
 
-                        await evaluateAccountPositionExpect(
-                            onChain,
-                            account,
-                            testCase.expectMaker || testCase.expectTaker,
-                            oraclePrice,
-                            tx
-                        );
-                    }
+                        // if an expect for liquidator exists
+                        if (testCase.expectLiquidator) {
+                            await evaluateAccountPositionExpect(
+                                onChain,
+                                liquidator,
+                                testCase.expectLiquidator,
+                                oraclePrice,
+                                tx
+                            );
+                        }
 
-                    // if an expect for liquidator exists
-                    if (testCase.expectLiquidator) {
-                        await evaluateAccountPositionExpect(
-                            onChain,
-                            liquidator,
-                            testCase.expectLiquidator,
-                            oraclePrice,
-                            tx
-                        );
-                    }
+                        // if an expect for cat exists. either cat_dog trade
+                        //  or adl deleveraging trade has happened
+                        if (testCase.expectCat) {
+                            await evaluateAccountPositionExpect(
+                                onChain,
+                                cat,
+                                testCase.expectCat,
+                                oraclePrice,
+                                tx
+                            );
+                        }
 
-                    // if an expect for cat exists. either cat_dog trade
-                    //  or adl deleveraging trade has happened
-                    if (testCase.expectCat) {
-                        await evaluateAccountPositionExpect(
-                            onChain,
-                            cat,
-                            testCase.expectCat,
-                            oraclePrice,
-                            tx
-                        );
-                    }
-
-                    // if asked to evaluate system expects
-                    if (testCase.expectSystem) {
-                        await evaluateSystemExpect(
-                            onChain,
-                            testCase.expectSystem,
-                            feePoolAddress,
-                            insurancePoolAddress,
-                            onChain.getPerpetualID()
-                        );
-                    }
+                        // if asked to evaluate system expects
+                        if (testCase.expectSystem) {
+                            await evaluateSystemExpect(
+                                onChain,
+                                testCase.expectSystem,
+                                feePoolAddress,
+                                insurancePoolAddress,
+                                onChain.getPerpetualID()
+                            );
+                        }
+                    });
                 });
             });
         });

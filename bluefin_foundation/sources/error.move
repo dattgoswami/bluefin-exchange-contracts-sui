@@ -134,11 +134,6 @@ module bluefin_foundation::error {
         return 50 + isTaker
     }
 
-    // Operator errors
-    public fun invalid_settlement_operator() : u64 {
-        return 27
-    }
-
     public fun user_already_has_position() : u64 {
         return 6
     }
@@ -151,12 +146,8 @@ module bluefin_foundation::error {
         return 8
     }
 
-    public fun not_valid_price_oracle_operator() : u64 {
+    public fun invalid_price_oracle_operator() : u64 {
         return 100
-    }
-
-    public fun already_price_oracle_operator() : u64 {
-        return 101
     }
 
     public fun out_of_max_allowed_price_diff_bounds() : u64 {
@@ -173,6 +164,23 @@ module bluefin_foundation::error {
 
     public fun address_cannot_be_zero() : u64 {
         return 105
+    }
+
+
+    public fun invalid_settlement_operator() : u64 {
+        return 110
+    }
+
+    public fun invalid_guardian() : u64 {
+        return 111
+    }
+
+    public fun operator_already_removed() : u64 {
+        return 112
+    }
+
+    public fun invalid_deleveraging_operator(): u64{
+        return 113
     }
 
     public fun mr_less_than_imr_can_not_open_or_flip_position(isTaker: u64): u64 {
@@ -266,7 +274,7 @@ module bluefin_foundation::error {
     }
 
 
-    public fun new_exchange_admin_can_not_be_same_as_current_one(): u64 {
+    public fun new_address_can_not_be_same_as_current_one(): u64 {
         return 900
     }
     

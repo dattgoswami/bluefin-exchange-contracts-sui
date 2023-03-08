@@ -7,11 +7,14 @@ import {
     getAddressFromSigner,
     getSignerFromSeed,
     createOrder,
-    createMarket
+    createMarket,
+    publishPackageUsingClient,
+    getGenesisMap,
+    getDeploymentData
 } from "../src/utils";
 import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { ERROR_CODES } from "../src/errors";
+import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { toBigNumber, toBigNumberStr } from "../src/library";
 import {
     createAccount,
@@ -27,12 +30,12 @@ import { mintAndDeposit } from "./helpers/utils";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const provider = getProvider(network.rpc, network.faucet);
-const deployment = readFile(DeploymentConfigs.filePath);
 
 describe("Deleveraging Trade Method", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
     let onChain: OnChainCalls;
     let ownerAddress: string;
+    let settlementCapID: string;
 
     const [alice, bob] = getTestAccounts(provider);
 
@@ -41,24 +44,30 @@ describe("Deleveraging Trade Method", () => {
     let order: Order;
 
     before(async () => {
-        // deploy market
-        deployment["markets"] = {
-            "ETH-PERP": {
-                Objects: (await createMarket(deployment, ownerSigner, provider))
-                    .marketObjects
-            }
-        };
+        const publishTxn = await publishPackageUsingClient();
+        const objects = await getGenesisMap(provider, publishTxn);
+        const deploymentData = await getDeploymentData(ownerAddress, objects);
 
-        onChain = new OnChainCalls(ownerSigner, deployment);
+        // deploy market
+        deploymentData["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
+
+        deploymentData["markets"]["ETH-PERP"].Objects = (
+            await createMarket(deploymentData, ownerSigner, provider)
+        ).marketObjects;
+
+        onChain = new OnChainCalls(ownerSigner, deploymentData);
 
         // will be using owner as liquidator
         ownerAddress = await getAddressFromSigner(ownerSigner);
 
-        // make admin operator
-        await onChain.setSettlementOperator(
-            { operator: ownerAddress, status: true },
+        // make owner, the settlement operator
+        const txs = await onChain.createSettlementOperator(
+            { operator: ownerAddress },
             ownerSigner
         );
+        settlementCapID = (
+            Transaction.getObjects(txs, "newObject", "SettlementCap")[0] as any
+        ).id as string;
 
         // set oracle price
         const priceTx = await onChain.updateOraclePrice({
@@ -87,7 +96,7 @@ describe("Deleveraging Trade Method", () => {
             bob.keyPair,
             order
         );
-        const tx = await onChain.trade(trade);
+        const tx = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx);
     });
 
@@ -98,8 +107,23 @@ describe("Deleveraging Trade Method", () => {
         });
     });
 
-    xit("should revert as only ADL operator can perform deleveraging trades", async () => {
-        // TODO
+    it("should revert as only ADL operator can perform deleveraging trades", async () => {
+        const error = OWNERSHIP_ERROR(
+            onChain.getDeleveragingCapID(),
+            ownerAddress,
+            alice.address
+        );
+
+        await expect(
+            onChain.deleverage(
+                {
+                    maker: DEFAULT.RANDOM_ACCOUNT_ADDRESS, // a random account with no position
+                    taker: bob.address,
+                    quantity: toBigNumberStr(1)
+                },
+                alice.signer
+            )
+        ).to.be.eventually.rejectedWith(error);
     });
 
     it("should revert as maker account being deleveraged has no position object", async () => {
@@ -114,6 +138,38 @@ describe("Deleveraging Trade Method", () => {
 
         expectTxToFail(txResponse);
         expect(Transaction.getError(txResponse), ERROR_CODES[505]);
+    });
+
+    it("should revert as owner is no longer deleveraging operator", async () => {
+        const publishTxn = await publishPackageUsingClient();
+        const objects = await getGenesisMap(provider, publishTxn);
+        const localDeployment = getDeploymentData(ownerAddress, objects);
+
+        localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
+
+        localDeployment["markets"]["ETH-PERP"].Objects = (
+            await createMarket(localDeployment, ownerSigner, provider)
+        ).marketObjects;
+
+        const onChainCaller = new OnChainCalls(ownerSigner, localDeployment);
+
+        // made alice deleveraging operator
+        await onChainCaller.setDeleveragingOperator({
+            operator: alice.address
+        });
+
+        const txResponse = await onChainCaller.deleverage(
+            {
+                maker: DEFAULT.RANDOM_ACCOUNT_ADDRESS, // a random account with no position
+                taker: bob.address,
+                quantity: toBigNumberStr(1),
+                deleveragingCapID: onChainCaller.getDeleveragingCapID() // no longer the deleveraging operator
+            },
+            ownerSigner
+        );
+
+        expectTxToFail(txResponse);
+        expect(Transaction.getError(txResponse), ERROR_CODES[113]);
     });
 
     it("should revert as taker account being deleveraged has no position object", async () => {
@@ -144,7 +200,7 @@ describe("Deleveraging Trade Method", () => {
             accounts.taker.keyPair,
             { ...order, maker: accounts.maker.address }
         );
-        const tx1 = await onChain.trade(trade);
+        const tx1 = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx1);
 
         // close position
@@ -155,7 +211,7 @@ describe("Deleveraging Trade Method", () => {
             accounts.maker.keyPair,
             { ...order, maker: accounts.taker.address }
         );
-        const tx2 = await onChain.trade(trade2);
+        const tx2 = await onChain.trade({ ...trade2, settlementCapID });
         expectTxToSucceed(tx2);
 
         // try to deleverage
@@ -187,7 +243,7 @@ describe("Deleveraging Trade Method", () => {
             accounts.taker.keyPair,
             { ...order, maker: accounts.maker.address }
         );
-        const tx1 = await onChain.trade(trade);
+        const tx1 = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx1);
 
         // close position for taker
@@ -199,7 +255,7 @@ describe("Deleveraging Trade Method", () => {
             { ...order, maker: accounts.taker.address }
         );
 
-        const tx2 = await onChain.trade(trade2);
+        const tx2 = await onChain.trade({ ...trade2, settlementCapID });
         expectTxToSucceed(tx2);
 
         // try to deleverage
@@ -249,7 +305,7 @@ describe("Deleveraging Trade Method", () => {
             }
         );
 
-        const tx1 = await onChain.trade(trade);
+        const tx1 = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx1);
 
         const txResponse = await onChain.deleverage(
@@ -280,7 +336,7 @@ describe("Deleveraging Trade Method", () => {
         expect(Transaction.getError(txResponse), ERROR_CODES[19]);
     });
 
-    it("should revert as quantity to be liquidated > max allowed limit quantity", async () => {
+    it("should revert as quantity to be deleveraged > max allowed limit quantity", async () => {
         const txResponse = await onChain.deleverage(
             {
                 maker: alice.address,
@@ -294,7 +350,7 @@ describe("Deleveraging Trade Method", () => {
         expect(Transaction.getError(txResponse), ERROR_CODES[20]);
     });
 
-    it("should revert as quantity to be liquidated > max allowed market order size", async () => {
+    it("should revert as quantity to be deleveraged > max allowed market order size", async () => {
         const txResponse = await onChain.deleverage(
             {
                 maker: alice.address,
@@ -358,7 +414,7 @@ describe("Deleveraging Trade Method", () => {
             }
         );
 
-        const tx1 = await onChain.trade(trade);
+        const tx1 = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx1);
 
         // at this price bob becomes under water and so does accounts.taker
@@ -398,7 +454,7 @@ describe("Deleveraging Trade Method", () => {
             }
         );
 
-        const tx1 = await onChain.trade(trade);
+        const tx1 = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx1);
 
         // at this price bob becomes under water
@@ -439,7 +495,7 @@ describe("Deleveraging Trade Method", () => {
             }
         );
 
-        const tx1 = await onChain.trade(trade);
+        const tx1 = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx1);
 
         // set oracle price to 89, alice becomes under water
@@ -473,28 +529,35 @@ describe("Deleveraging Trade Method", () => {
     });
 
     it("should successfully partially deleverage taker of adl trade", async () => {
-        // deploy market
-        const localDeployment = deployment;
+        const publishTxn = await publishPackageUsingClient();
+        const objects = await getGenesisMap(provider, publishTxn);
+        const localDeployment = getDeploymentData(ownerAddress, objects);
 
-        localDeployment["markets"] = {
-            "ETH-PERP": {
-                Objects: (
-                    await createMarket(localDeployment, ownerSigner, provider)
-                ).marketObjects
-            }
-        };
+        localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
 
-        const onChain = new OnChainCalls(ownerSigner, localDeployment);
+        localDeployment["markets"]["ETH-PERP"].Objects = (
+            await createMarket(localDeployment, ownerSigner, provider)
+        ).marketObjects;
 
-        await mintAndDeposit(onChain, alice.address);
-        await mintAndDeposit(onChain, bob.address);
+        const onChainCaller = new OnChainCalls(ownerSigner, localDeployment);
 
-        await onChain.updateOraclePrice({
+        // make owner, the settlement operator
+        const txs = await onChainCaller.createSettlementOperator(
+            { operator: ownerAddress },
+            ownerSigner
+        );
+        const settlementCapID = (
+            Transaction.getObjects(txs, "newObject", "SettlementCap")[0] as any
+        ).id as string;
+
+        await mintAndDeposit(onChainCaller, alice.address);
+        await mintAndDeposit(onChainCaller, bob.address);
+        await onChainCaller.updateOraclePrice({
             price: toBigNumberStr(100)
         });
 
         const order = createOrder({
-            market: onChain.getPerpetualID(),
+            market: onChainCaller.getPerpetualID(),
             quantity: 1,
             price: 100,
             isBuy: true,
@@ -511,13 +574,13 @@ describe("Deleveraging Trade Method", () => {
             order
         );
 
-        const tx1 = await onChain.trade(trade1);
+        const tx1 = await onChainCaller.trade({ ...trade1, settlementCapID });
 
         expectTxToSucceed(tx1);
 
         const accounts = getMakerTakerAccounts(provider, true);
-        await mintAndDeposit(onChain, accounts.maker.address);
-        await mintAndDeposit(onChain, accounts.taker.address);
+        await mintAndDeposit(onChainCaller, accounts.maker.address);
+        await mintAndDeposit(onChainCaller, accounts.taker.address);
 
         // open a position between the accounts
         const trade2 = await Trader.setupNormalTrade(
@@ -534,17 +597,17 @@ describe("Deleveraging Trade Method", () => {
             }
         );
 
-        const tx2 = await onChain.trade(trade2);
+        const tx2 = await onChainCaller.trade({ ...trade2, settlementCapID });
         expectTxToSucceed(tx2);
 
         // ==================================================
 
         // set oracle price to 115, taker/bob becomes under water
-        await onChain.updateOraclePrice({
+        await onChainCaller.updateOraclePrice({
             price: toBigNumberStr(115)
         });
 
-        const txResponse = await onChain.deleverage(
+        const txResponse = await onChainCaller.deleverage(
             {
                 maker: bob.address,
                 taker: accounts.taker.address,
