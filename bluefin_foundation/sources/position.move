@@ -26,6 +26,12 @@ module bluefin_foundation::position {
         action: u8
     }
 
+    struct PositionClosedEvent has copy, drop{
+        perpID: ID,
+        account: address,
+        amount: u128,
+    }
+
     //===========================================================//
     //                           STORAGE                         //
     //===========================================================//
@@ -169,7 +175,7 @@ module bluefin_foundation::position {
 
     }   
 
-    public fun emit_position_update_event(perpID:ID, account:address, position: UserPosition, action:u8){
+    public (friend) fun emit_position_update_event(perpID:ID, account:address, position: UserPosition, action:u8){
         emit (AccountPositionUpdateEvent{
             perpID, 
             account,
@@ -177,6 +183,11 @@ module bluefin_foundation::position {
             action
         });
     }
+
+    public (friend) fun emit_position_closed_event(perpID:ID, account:address, amount: u128){
+        emit(PositionClosedEvent{perpID, account, amount});
+    }
+
 
     public fun verify_collat_checks(initialPosition: UserPosition, currentPosition: UserPosition, imr: u128, mmr: u128, price:u128, tradeType: u8, isTaker:u64){
 

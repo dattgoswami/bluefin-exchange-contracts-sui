@@ -31,9 +31,9 @@ module bluefin_foundation::exchange {
     use bluefin_foundation::isolated_trading::{Self, OrderStatus};
     use bluefin_foundation::isolated_liquidation::{Self};
     use bluefin_foundation::isolated_adl::{Self};
-        
+
     //===========================================================//
-    //                      CONSTANTS
+    //                      CONSTANTS                            // 
     //===========================================================//
 
     // action types
@@ -43,7 +43,7 @@ module bluefin_foundation::exchange {
     const ACTION_FINAL_WITHDRAWAL: u8 = 4;
      
     //===========================================================//
-    //                      INITIALIZATION
+    //                      INITIALIZATION                       //
     //===========================================================//
 
     fun init(ctx: &mut TxContext) {        
@@ -304,10 +304,13 @@ module bluefin_foundation::exchange {
         
         ctx: &mut TxContext        
         ){
-
+            // ensure perpetual is not delisted
+            assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+            
             // only settlement operators can trade
             roles::check_settlement_operator_validity(safe, cap);
 
+            
             let sender = tx_context::sender(ctx);
 
 
@@ -400,6 +403,9 @@ module bluefin_foundation::exchange {
         ctx: &mut TxContext        
 
     ){
+
+        // ensure perpetual is not delisted
+        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
 
         let sender = tx_context::sender(ctx);
 
@@ -503,6 +509,9 @@ module bluefin_foundation::exchange {
         ctx: &mut TxContext        
     ){
 
+        // ensure perpetual is not delisted
+        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+
         roles::check_delevearging_operator_validity(safe, cap);
 
         let sender = tx_context::sender(ctx);
@@ -545,6 +554,10 @@ module bluefin_foundation::exchange {
      * Allows caller to add margin to their position
      */
     entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, amount: u128, ctx: &mut TxContext){
+        
+        // ensure perpetual is not delisted
+        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
         let user = tx_context::sender(ctx);
 
@@ -584,6 +597,11 @@ module bluefin_foundation::exchange {
      * Allows caller to remove margin from their position
      */
     entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, amount: u128, ctx: &mut TxContext){
+        
+        // ensure perpetual is not delisted
+        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+
+
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
 
         let user = tx_context::sender(ctx);
@@ -642,6 +660,9 @@ module bluefin_foundation::exchange {
      * Allows caller to adjust their leverage
      */
     entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, leverage: u128, ctx: &mut TxContext){
+
+        // ensure perpetual is not delisted
+        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
 
         // get precise(whole number) leverage 1, 2, 3...n
         leverage = library::round_down(leverage);
@@ -716,4 +737,51 @@ module bluefin_foundation::exchange {
         position::emit_position_update_event(perpID, user, currBalance, ACTION_ADJUST_LEVERAGE);
     }
     
+
+    //===========================================================//
+    //                     CLOSE POSITION                        //
+    //===========================================================//
+
+
+    entry fun close_position(perp: &mut Perpetual, bank: &mut Bank, ctx: &mut TxContext){
+
+        // ensure perpetual is delisted before users can close their position
+        assert!(perpetual::delisted(perp), error::perpetual_is_not_delisted());
+
+        let user = tx_context::sender(ctx);
+        
+        assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
+        
+        let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpAddress = object::id_to_address(&perpID);
+        let delistingPrice = perpetual::delistingPrice(perp);
+
+        // TODO: apply funding rate and get updated position Balance
+        // initBalance will be returned by funding rate method
+        let userPos = table::borrow_mut(perpetual::positions(perp), user);
+        
+        assert!(position::qPos(*userPos) > 0, error::user_position_size_is_zero(2));
+
+        let perpBalance = margin_bank::get_balance(bank, perpAddress);
+
+        // get margin to be returned to user
+        let marginLeft = margin_math::get_margin_left(*userPos, delistingPrice, perpBalance);
+
+
+        // set user position to zero
+        position::set_qPos(userPos, 0);
+
+        // transfer margin to user account
+        margin_bank::transfer_margin_to_account(
+            bank,
+            perpAddress, 
+            user,
+            marginLeft,
+            2
+        );
+
+        position::emit_position_closed_event(perpID, user, marginLeft);
+        position::emit_position_update_event(perpID, user, *userPos, ACTION_FINAL_WITHDRAWAL);
+
+    }
 }

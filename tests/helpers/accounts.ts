@@ -23,6 +23,18 @@ export const TEST_WALLETS: wallet[] = [
     {
         phrase: "trim bicycle basket ticket penalty window tunnel fit insane orange virtual tennis",
         address: "0x839360602757bde481c821c489a6a14dd8042d08"
+    },
+    {
+        phrase: "bicycle trim basket ticket penalty window tunnel fit insane orange virtual tennis",
+        address: "0x994bcf2a1d7a695729f3458a42e94c0c5961b351"
+    },
+    {
+        phrase: "basket trim bicycle ticket penalty window tunnel fit insane orange virtual tennis",
+        address: "0xa43304e548808b8800977eb3fcd146c44130915b"
+    },
+    {
+        phrase: "penalty bicycle basket ticket trim window tunnel fit insane orange virtual tennis",
+        address: "0x13d65d3e50df131854d6dc8821953daac7a6efdb"
     }
 ];
 

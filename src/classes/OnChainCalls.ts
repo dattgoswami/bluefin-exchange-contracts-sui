@@ -860,6 +860,47 @@ export class OnChainCalls {
         );
     }
 
+    public async delistPerpetual(
+        args: {
+            price: string;
+            perpID?: string;
+            adminID?: string;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.adminID || this.getExchangeAdminCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
+        callArgs.push(args.price);
+
+        return this.signAndCall(
+            caller,
+            "delist_perpetual",
+            callArgs,
+            "perpetual"
+        );
+    }
+
+    public async closePosition(
+        args?: {
+            bankID?: string;
+            perpID?: string;
+        },
+        signer?: RawSigner
+    ) {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args?.perpID || this.getPerpetualID());
+        callArgs.push(args?.bankID || this.getBankID());
+
+        return this.signAndCall(caller, "close_position", callArgs, "exchange");
+    }
+
     public async mintUSDC(
         args: {
             amount: string;

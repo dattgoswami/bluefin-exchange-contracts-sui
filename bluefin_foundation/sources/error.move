@@ -134,6 +134,19 @@ module bluefin_foundation::error {
         return 50 + isTaker
     }
 
+    public fun perpetual_has_been_already_de_listed(): u64 {
+        return 60
+    }
+
+    public fun perpetual_is_delisted(): u64 {
+        return 61
+    }
+
+    public fun perpetual_is_not_delisted(): u64 {
+        return 62
+    }
+
+
     public fun user_already_has_position() : u64 {
         return 6
     }

@@ -10,7 +10,7 @@ module bluefin_foundation::perpetual {
     // custom modules
     use bluefin_foundation::position::{UserPosition};
     use bluefin_foundation::price_oracle::{PriceOracle};
-    use bluefin_foundation::evaluator::{TradeChecks};
+    use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::roles::{ExchangeAdminCap};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
@@ -59,6 +59,11 @@ module bluefin_foundation::perpetual {
         value: u128
     }
 
+    struct PerpetualDelistEvent has copy, drop {
+        id: ID,
+        delistingPrice: u128
+    }
+
     //===========================================================//
     //                           STORAGE                         //
     //===========================================================//
@@ -88,7 +93,11 @@ module bluefin_foundation::perpetual {
         /// table containing user positions for this market/perpetual
         positions: Table<address,UserPosition>,
         /// price oracle
-        priceOracle: PriceOracle
+        priceOracle: PriceOracle,
+        /// delist status
+        delisted: bool,
+        /// the price at which trades will be executed after delisting
+        delistingPrice: u128
     }
 
     //===========================================================//
@@ -126,7 +135,9 @@ module bluefin_foundation::perpetual {
             feePool,
             checks,
             positions,
-            priceOracle
+            priceOracle,
+            delisted: false,
+            delistingPrice: 0
         };
 
         emit(PerpetualCreationEvent {
@@ -210,6 +221,15 @@ module bluefin_foundation::perpetual {
         return perp.priceOracle
     }
 
+    public fun delisted(perp: &Perpetual): bool{
+        return perp.delisted
+    }
+
+    public fun delistingPrice(perp: &Perpetual): u128{
+        return perp.delistingPrice
+    }
+
+
 
     //===========================================================//
     //                         SETTERS                           //
@@ -258,4 +278,27 @@ module bluefin_foundation::perpetual {
             account
         });
     }
+
+    public entry fun delist_perpetual(_: &ExchangeAdminCap, perp: &mut Perpetual, price: u128){
+
+
+        assert!(!perp.delisted, error::perpetual_has_been_already_de_listed());
+
+        // TODO update global index over here
+
+        // verify that price conforms to tick size
+        evaluator::verify_price_checks(perp.checks, price);
+
+        perp.delisted = true;
+        perp.delistingPrice = price;
+
+        emit(PerpetualDelistEvent{
+            id: object::uid_to_inner(id(perp)),
+            delistingPrice: price
+        })
+
+
+    }
+
+
 }
