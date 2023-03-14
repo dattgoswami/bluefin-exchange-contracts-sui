@@ -130,8 +130,12 @@ module bluefin_foundation::error {
         return 47
     }
 
-    public fun sender_does_not_have_permission_for_account(isTaker: u64): u64 {
-        return 50 + isTaker
+    public fun sender_does_not_have_permission_for_account(offset: u64): u64 {
+       
+        // 50 + 0 = 50 for maker
+        // 50 + 1 = 51 for taker
+        // 50 + 2 = 52 for user
+        return 50 + offset
     }
 
     public fun perpetual_has_been_already_de_listed(): u64 {

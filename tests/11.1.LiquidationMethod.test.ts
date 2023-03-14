@@ -92,7 +92,7 @@ describe("Liquidation Trade Method", () => {
             quantity: 1
         });
 
-        // open a position at 10x leverage between
+        // open a position at 10x leverage between alice and bob
         const trade = await Trader.setupNormalTrade(
             provider,
             orderSigner,
@@ -427,5 +427,71 @@ describe("Liquidation Trade Method", () => {
 
         expect(liqPosition.qPos).to.be.equal(toBigNumberStr(1.5));
         expect(takerPosition.qPos).to.be.equal(toBigNumberStr(0.5));
+    });
+
+    it("should allow sub account to liquidate on parent's behalf", async () => {
+        // deploy market
+        const localDeployment = deployment;
+
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
+            await createMarket(localDeployment, ownerSigner, provider)
+        ).marketObjects;
+
+        const onChain = new OnChainCalls(ownerSigner, localDeployment);
+
+        await onChain.updateOraclePrice({
+            price: toBigNumberStr(100),
+            updateOPCapID: priceOracleCapID
+        });
+
+        const makerTaker = await getMakerTakerAccounts(provider, true);
+
+        await mintAndDeposit(onChain, makerTaker.maker.address);
+        await mintAndDeposit(onChain, makerTaker.taker.address);
+
+        const order = createOrder({
+            market: onChain.getPerpetualID(),
+            quantity: 2,
+            price: 100,
+            isBuy: true,
+            leverage: 10,
+            maker: makerTaker.maker.address
+        });
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            makerTaker.maker.keyPair,
+            makerTaker.taker.keyPair,
+            order
+        );
+
+        const tx = await onChain.trade({ ...trade, settlementCapID });
+        expectTxToSucceed(tx);
+
+        // ==================================================
+
+        // set oracle price to 115, taker becomes liquidate-able
+        await onChain.updateOraclePrice({
+            price: toBigNumberStr(115),
+            updateOPCapID: priceOracleCapID
+        });
+
+        const tester = getTestAccounts(provider)[0];
+
+        // ownerSigner sets tester as its sub account
+        await onChain.setSubAccount({ account: tester.address, status: true });
+
+        const txResponse = await onChain.liquidate(
+            {
+                liquidatee: makerTaker.taker.address,
+                quantity: toBigNumberStr(1.5), // liquidating 1.5 out of 2
+                leverage: toBigNumberStr(2),
+                liquidator: ownerAddress // owner is liquidator
+            },
+            tester.signer // testers is invokign the call
+        );
+
+        expectTxToSucceed(txResponse);
     });
 });

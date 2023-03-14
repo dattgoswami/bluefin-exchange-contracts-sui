@@ -2,6 +2,7 @@ module bluefin_foundation::roles {
     use sui::object::{Self, UID, ID};
     use sui::tx_context::{Self, TxContext};
     use sui::vec_set::{Self, VecSet};
+    use sui::table::{Self, Table};
     use sui::event::{emit};
     use sui::transfer;
 
@@ -44,6 +45,12 @@ module bluefin_foundation::roles {
         account:address
     }
 
+    struct SubAccountUpdateEvent has copy, drop {
+            account: address,
+            subAccount: address,
+            status: bool
+    }
+
     //===========================================================//
     //                           STORAGE                         //
     //===========================================================//
@@ -80,6 +87,11 @@ module bluefin_foundation::roles {
         settlementOperators: VecSet<ID>,
     }
 
+    struct SubAccounts has key {
+        id: UID,
+        map:Table<address,VecSet<address>>
+    }
+
     //===========================================================//
     //                      INITIALIZATION
     //===========================================================//
@@ -107,6 +119,11 @@ module bluefin_foundation::roles {
         };
 
         transfer::share_object(safe);
+
+
+        // create sub accounts map
+        let subAccounts = SubAccounts{id: object::new(ctx), map: table::new<address, VecSet<address>>(ctx)};
+        transfer::share_object(subAccounts);          
     }
    
     //===========================================================//
@@ -219,6 +236,42 @@ module bluefin_foundation::roles {
 
     }
 
+
+    /**
+     * Allows caller to set sub account (adds/removes)
+     */
+    entry fun set_sub_account(subAccounts: &mut SubAccounts, account: address, status: bool, ctx: &mut TxContext){
+
+        let caller = tx_context::sender(ctx);
+
+        let accountsMap = &mut subAccounts.map;
+
+        // if user does not have an entry in map, create it
+        if(!table::contains(accountsMap, caller)){
+            table::add(accountsMap, caller, vec_set::empty());
+        };
+
+        let accountsSet = table::borrow_mut(accountsMap, caller);
+        
+        // if asked to whitelist sub account
+        if(status){
+            if(!vec_set::contains(accountsSet, &account)){
+                vec_set::insert(accountsSet, account);
+            };
+        } else {
+            // if asked to remove sub account
+            if(vec_set::contains(accountsSet, &account)){
+                vec_set::remove(accountsSet, &account)
+            };
+        };
+
+        emit(SubAccountUpdateEvent{
+            account: caller,
+            subAccount: account,
+            status
+        });
+    }
+
     //===========================================================//
     //                      HELPER METHODS                       //
     //===========================================================//
@@ -316,5 +369,22 @@ module bluefin_foundation::roles {
         );       
     }
 
+    public fun is_sub_account(
+        subAccounts: &SubAccounts,
+        account: address,
+        sigMaker: address
+        ): bool{ 
+        
+        let accountsMap = &subAccounts.map;
+
+        // if account does not have key in table, it has no sub accounts
+        if(!table::contains(accountsMap, account)){
+            return false
+        };
+
+        let accountSet =  table::borrow(accountsMap, account);
+        
+        return vec_set::contains(accountSet, &sigMaker)
+    }
     
 }

@@ -1,12 +1,15 @@
 module bluefin_foundation::isolated_trading {
 
+    use sui::object::{Self, ID};
+    use sui::table::{Self, Table};
+    use sui::tx_context::{TxContext};
+    use sui::event::{emit};
     use std::vector;
     use std::hash;
     use sui::bcs;
-    use sui::event::{emit};
-    use sui::object::{Self, ID};
-    use sui::table::{Self, Table};
     use sui::ecdsa_k1;
+    use sui::transfer;
+
 
     // custom modules
     use bluefin_foundation::perpetual::{Self, Perpetual};
@@ -16,6 +19,7 @@ module bluefin_foundation::isolated_trading {
     use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
+    use bluefin_foundation::roles::{Self, SubAccounts};
 
     // friend modules
     friend bluefin_foundation::exchange;
@@ -27,6 +31,7 @@ module bluefin_foundation::isolated_trading {
     struct OrderFill has copy, drop {
         orderHash:vector<u8>,
         order: Order,
+        sigMaker: address,
         fill: u128,
         filledQuantity: u128        
     }
@@ -109,14 +114,25 @@ module bluefin_foundation::isolated_trading {
 
 
     //===========================================================//
+    //                      INITIALIZATION                       //
+    //===========================================================//
+
+    fun init(ctx: &mut TxContext) {        
+        // create orders filled quantity table
+        let orders = table::new<vector<u8>, OrderStatus>(ctx);
+        transfer::share_object(orders);   
+    }
+
+
+    //===========================================================//
     //                      TRADE METHOD
     //===========================================================//
 
     public (friend) fun trade(
         sender: address, 
-        perp: &mut Perpetual, 
-        ordersTable: &mut Table<vector<u8>, 
-        OrderStatus>, 
+        perp: &mut Perpetual,
+        ordersTable: &mut Table<vector<u8>,OrderStatus>,
+        subAccounts: &SubAccounts,
         data: TradeData):TradeResponse
         {
 
@@ -158,8 +174,8 @@ module bluefin_foundation::isolated_trading {
             let initTakerPos = *table::borrow(positionsTable, data.takerOrder.maker);
 
             // Validate orders are correct and can be executed for the trade
-            verify_order(initMakerPos, ordersTable, data.makerOrder, makerHash, data.makerSignature, data.fill, 0);
-            verify_order(initTakerPos, ordersTable, data.takerOrder, takerHash, data.takerSignature, data.fill, 1);
+            verify_order(initMakerPos, ordersTable, subAccounts, data.makerOrder, makerHash, data.makerSignature, data.fill, 0);
+            verify_order(initTakerPos, ordersTable, subAccounts, data.takerOrder, takerHash, data.takerSignature, data.fill, 1);
 
             // verify pre-trade checks
             evaluator::verify_price_checks(tradeChecks, data.fill.price);
@@ -389,11 +405,11 @@ module bluefin_foundation::isolated_trading {
     }
 
 
-    fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, order: Order, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
+    fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, order: Order, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
 
             verify_order_state(ordersTable, hash, isTaker);
 
-            verify_order_signature(order.maker, hash, signature, isTaker);
+            let sigMaker = verify_order_signature(subAccounts, order.maker, hash, signature, isTaker);
 
             verify_order_expiry(order, isTaker);
 
@@ -401,7 +417,7 @@ module bluefin_foundation::isolated_trading {
 
             verify_order_leverage(position, order, isTaker);
 
-            verify_and_fill_order_qty(ordersTable, order, hash, fill.quantity, isTaker);
+            verify_and_fill_order_qty(ordersTable, order, hash, fill.quantity, sigMaker, isTaker);
     }
 
     fun verify_order_state(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash:vector<u8>, isTaker:u64){        
@@ -409,7 +425,7 @@ module bluefin_foundation::isolated_trading {
         assert!(orderStatus.status != false, error::order_has_invalid_signature(isTaker));
     }
 
-    fun verify_and_fill_order_qty(ordersTable: &mut Table<vector<u8>, OrderStatus>, order:Order, orderHash:vector<u8>, fill:u128, isTaker:u64){
+    fun verify_and_fill_order_qty(ordersTable: &mut Table<vector<u8>, OrderStatus>, order:Order, orderHash:vector<u8>, fill:u128, sigMaker:address, isTaker:u64){
         
         let orderStatus = table::borrow_mut(ordersTable, orderHash);
         orderStatus.filledQty = orderStatus.filledQty + fill;
@@ -419,19 +435,22 @@ module bluefin_foundation::isolated_trading {
         emit(OrderFill{
                 orderHash,
                 order,
+                sigMaker,
                 fill,
                 filledQuantity: orderStatus.filledQty
             });
     }
 
 
-    fun verify_order_signature(maker:address, hash:vector<u8>, signature: vector<u8>, isTaker:u64){
+    fun verify_order_signature(subAccounts: &SubAccounts, maker:address, hash:vector<u8>, signature: vector<u8>, isTaker:u64):address{
 
         let publicKey = ecdsa_k1::ecrecover(&signature, &hash);
 
         let publicAddress = library::get_public_address(publicKey);
 
-        assert!(maker == publicAddress, error::order_has_invalid_signature(isTaker));
+        assert!(maker == publicAddress || roles::is_sub_account(subAccounts, maker, publicAddress), error::order_has_invalid_signature(isTaker));
+
+        return publicAddress
     }
 
     fun verify_order_expiry(order:Order, isTaker:u64){

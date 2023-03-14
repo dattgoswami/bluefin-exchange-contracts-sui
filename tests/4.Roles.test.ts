@@ -263,4 +263,79 @@ describe("Roles", () => {
             expect(event.fields.account).to.be.equal(alice.address);
         });
     });
+
+    describe("Sub Accounts", () => {
+        it("should allow alice to whitelist bob as its sub account", async () => {
+            const tx = await onChain.setSubAccount(
+                { account: bob.address, status: true },
+                alice.signer
+            );
+            expectTxToSucceed(tx);
+
+            const event = Transaction.getEvents(tx, "SubAccountUpdateEvent")[0];
+            expect(event.fields.account).to.be.equal(alice.address);
+            expect(event.fields.subAccount).to.be.equal(bob.address);
+            expect(event.fields.status).to.be.equal(true);
+        });
+
+        it("should allow alice to remove bob from its sub accounts", async () => {
+            const tx1 = await onChain.setSubAccount(
+                { account: bob.address, status: true },
+                alice.signer
+            );
+            expectTxToSucceed(tx1);
+
+            const tx2 = await onChain.setSubAccount(
+                { account: bob.address, status: false },
+                alice.signer
+            );
+            expectTxToSucceed(tx2);
+
+            const event = Transaction.getEvents(
+                tx2,
+                "SubAccountUpdateEvent"
+            )[0];
+
+            expect(event.fields.account).to.be.equal(alice.address);
+            expect(event.fields.subAccount).to.be.equal(bob.address);
+            expect(event.fields.status).to.be.equal(false);
+        });
+
+        it("should execute tx successfully even when alice tries to remove a non-existent sub account", async () => {
+            const tx = await onChain.setSubAccount(
+                { account: bob.address, status: false },
+                alice.signer
+            );
+            expectTxToSucceed(tx);
+
+            const event = Transaction.getEvents(tx, "SubAccountUpdateEvent")[0];
+
+            expect(event.fields.account).to.be.equal(alice.address);
+            expect(event.fields.subAccount).to.be.equal(bob.address);
+            expect(event.fields.status).to.be.equal(false);
+        });
+
+        it("should execute tx successfully even when alice tries to whitelist same account as sub account twice", async () => {
+            const tx1 = await onChain.setSubAccount(
+                { account: bob.address, status: true },
+                alice.signer
+            );
+            expectTxToSucceed(tx1);
+
+            const tx2 = await onChain.setSubAccount(
+                { account: bob.address, status: true },
+                alice.signer
+            );
+            expectTxToSucceed(tx2);
+
+            const event = Transaction.getEvents(
+                tx2,
+                "SubAccountUpdateEvent"
+            )[0];
+
+            expect(event.fields.account).to.be.equal(alice.address);
+            expect(event.fields.subAccount).to.be.equal(bob.address);
+            expect(event.fields.status).to.be.equal(true);
+        });
+    });
 });

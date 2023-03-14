@@ -495,6 +495,7 @@ export class OnChainCalls {
             perpID?: string;
             safeID?: string;
             bankID?: string;
+            subAccountsMapID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -506,6 +507,7 @@ export class OnChainCalls {
         callArgs.push(args.safeID || this.getSafeID());
         callArgs.push(args.settlementCapID);
 
+        callArgs.push(args.subAccountsMapID || this.getSubAccountsID());
         callArgs.push(this.getOrdersTableID());
 
         callArgs.push(args.makerOrder.isBuy);
@@ -553,6 +555,7 @@ export class OnChainCalls {
             leverage: string;
             liquidator?: string;
             allOrNothing?: boolean;
+            subAccountsMapID?: string;
         },
         signer?: RawSigner
     ): Promise<SuiExecuteTransactionResponse> {
@@ -561,6 +564,7 @@ export class OnChainCalls {
         const callArgs = [];
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
+        callArgs.push(args.subAccountsMapID || this.getSubAccountsID());
 
         callArgs.push(args.liquidatee);
         callArgs.push(args.liquidator || (await getAddressFromSigner(caller)));
@@ -602,7 +606,9 @@ export class OnChainCalls {
     public async addMargin(
         args: {
             amount: number;
+            account?: string;
             perpID?: string;
+            subAccountsMapID?: string;
         },
         signer?: RawSigner
     ) {
@@ -612,6 +618,9 @@ export class OnChainCalls {
 
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
+
+        callArgs.push(args.subAccountsMapID || this.getSubAccountsID());
+        callArgs.push(args.account || (await getAddressFromSigner(caller)));
         callArgs.push(toBigNumberStr(args.amount));
 
         return this.signAndCall(caller, "add_margin", callArgs, "exchange");
@@ -619,8 +628,10 @@ export class OnChainCalls {
 
     public async removeMargin(
         args: {
-            perpID?: string;
             amount: number;
+            account?: string;
+            perpID?: string;
+            subAccountsMapID?: string;
         },
         signer?: RawSigner
     ) {
@@ -630,6 +641,8 @@ export class OnChainCalls {
 
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
+        callArgs.push(args.subAccountsMapID || this.getSubAccountsID());
+        callArgs.push(args.account || (await getAddressFromSigner(caller)));
         callArgs.push(toBigNumberStr(args.amount));
 
         return this.signAndCall(caller, "remove_margin", callArgs, "exchange");
@@ -638,7 +651,9 @@ export class OnChainCalls {
     public async adjustLeverage(
         args: {
             leverage: number;
+            account?: string;
             perpID?: string;
+            subAccountsMapID?: string;
         },
         signer?: RawSigner
     ) {
@@ -648,6 +663,8 @@ export class OnChainCalls {
 
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(this.getBankID());
+        callArgs.push(args.subAccountsMapID || this.getSubAccountsID());
+        callArgs.push(args.account || (await getAddressFromSigner(caller)));
         callArgs.push(toBigNumberStr(args.leverage));
 
         return this.signAndCall(
@@ -732,6 +749,25 @@ export class OnChainCalls {
             callArgs,
             "roles"
         );
+    }
+
+    public async setSubAccount(
+        args: {
+            account: string;
+            status: boolean;
+            subAccountsMapID?: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.subAccountsMapID || this.getSubAccountsID());
+        callArgs.push(args.account);
+        callArgs.push(args.status);
+
+        return this.signAndCall(caller, "set_sub_account", callArgs, "roles");
     }
 
     public async updatePriceOracleMaxAllowedPriceDifference(
@@ -1078,6 +1114,10 @@ export class OnChainCalls {
 
     getExchangeAdminCap(): string {
         return this.deployment["objects"]["ExchangeAdminCap"].id as string;
+    }
+
+    getSubAccountsID(): string {
+        return this.deployment["objects"]["SubAccounts"].id as string;
     }
 
     getPriceOracleOperatorCap(): string {

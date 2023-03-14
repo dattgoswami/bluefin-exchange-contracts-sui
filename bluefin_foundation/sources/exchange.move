@@ -4,7 +4,6 @@ module bluefin_foundation::exchange {
     use sui::object::{Self};
     use sui::tx_context::{Self, TxContext};
     use sui::table::{Self, Table};
-    use sui::transfer;
 
     // custom modules
     use bluefin_foundation::position::{Self, UserPosition};
@@ -24,7 +23,8 @@ module bluefin_foundation::exchange {
         PriceOracleOperatorCap, 
         CapabilitiesSafe,
         SettlementCap,
-        DeleveragingCap
+        DeleveragingCap,
+        SubAccounts
         };
 
     // traders
@@ -42,15 +42,6 @@ module bluefin_foundation::exchange {
     const ACTION_ADJUST_LEVERAGE: u8 = 3;
     const ACTION_FINAL_WITHDRAWAL: u8 = 4;
      
-    //===========================================================//
-    //                      INITIALIZATION                       //
-    //===========================================================//
-
-    fun init(ctx: &mut TxContext) {        
-        // create orders filled quantity table
-        let orders = table::new<vector<u8>, OrderStatus>(ctx);
-        transfer::share_object(orders);   
-    }
 
     
     //===========================================================//
@@ -274,6 +265,7 @@ module bluefin_foundation::exchange {
         safe: &CapabilitiesSafe,
         cap: &SettlementCap,
 
+        subAccounts: &SubAccounts, 
         ordersTable: &mut Table<vector<u8>, OrderStatus>,
 
         // maker
@@ -355,7 +347,7 @@ module bluefin_foundation::exchange {
                 object::id_to_address(&perpID)
             );
 
-            let tradeResponse = isolated_trading::trade(sender, perp, ordersTable, data);
+            let tradeResponse = isolated_trading::trade(sender, perp, ordersTable, subAccounts, data);
 
 
              // transfer margins between perp and accounts
@@ -388,6 +380,7 @@ module bluefin_foundation::exchange {
     entry fun liquidate(
         perp: &mut Perpetual,
         bank: &mut Bank, 
+        subAccounts: &SubAccounts,
 
         // address of account to be liquidated
         liquidatee: address,
@@ -410,9 +403,8 @@ module bluefin_foundation::exchange {
         let sender = tx_context::sender(ctx);
 
         // check if caller has permission to trade on taker's behalf
-        // we can have sub accounts feature in future
         assert!(
-            sender == liquidator,
+            sender == liquidator || roles::is_sub_account(subAccounts, liquidator, sender),
             error::sender_does_not_have_permission_for_account(1));
 
         // TODO check if trading is allowed by guardian for given perpetual or not
@@ -553,13 +545,19 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to add margin to their position
      */
-    entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, amount: u128, ctx: &mut TxContext){
-        
+    entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user:address, amount: u128, ctx: &mut TxContext){
+
+        let caller = tx_context::sender(ctx);
+
+        // check if caller has permission for account
+        assert!(
+            caller == user || roles::is_sub_account(subAccounts, user, caller),
+            error::sender_does_not_have_permission_for_account(2)
+            );
+
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
-
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
-        let user = tx_context::sender(ctx);
 
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
@@ -596,15 +594,22 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to remove margin from their position
      */
-    entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, amount: u128, ctx: &mut TxContext){
+    entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, amount: u128, ctx: &mut TxContext){
         
+        let caller = tx_context::sender(ctx);
+
+        // check if caller has permission for account
+        assert!(
+            caller == user || roles::is_sub_account(subAccounts, user, caller),
+            error::sender_does_not_have_permission_for_account(2)
+            );
+
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
 
 
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
 
-        let user = tx_context::sender(ctx);
         let priceOracle = price_oracle::price(perpetual::priceOracle(perp));
 
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
@@ -659,7 +664,15 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to adjust their leverage
      */
-    entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, leverage: u128, ctx: &mut TxContext){
+    entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, leverage: u128, ctx: &mut TxContext){
+
+        let caller = tx_context::sender(ctx);
+
+        // check if caller has permission for account
+        assert!(
+            caller == user || roles::is_sub_account(subAccounts, user, caller),
+            error::sender_does_not_have_permission_for_account(2)
+            );
 
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
@@ -669,7 +682,6 @@ module bluefin_foundation::exchange {
 
         assert!(leverage > 0, error::leverage_can_not_be_set_to_zero());
 
-        let user = tx_context::sender(ctx);
         let priceOracle = price_oracle::price(perpetual::priceOracle(perp));
         let tradeChecks = perpetual::checks(perp);
         let perpID = object::uid_to_inner(perpetual::id(perp));

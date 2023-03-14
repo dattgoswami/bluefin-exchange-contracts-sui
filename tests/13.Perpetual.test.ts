@@ -27,7 +27,7 @@ describe("Perpetual", () => {
     let ownerAddress: string;
     let onChain: OnChainCalls;
 
-    const [alice, bob] = getTestAccounts(provider);
+    const [alice, bob, cat] = getTestAccounts(provider);
 
     before(async () => {
         // deploy market
@@ -276,6 +276,141 @@ describe("Perpetual", () => {
 
             const tx2 = await onChain.closePosition({}, alice.signer);
             expectTxToSucceed(tx2);
+        });
+    });
+
+    describe("Sub account adjusting parent's position", () => {
+        let priceOracleCapID: string;
+        let settlementCapID: string;
+
+        before(async () => {
+            // deploy market
+            deployment["markets"]["ETH-PERP"]["Objects"] = (
+                await createMarket(deployment, ownerSigner, provider, {
+                    tickSize: toBigNumberStr(0.1)
+                })
+            ).marketObjects;
+
+            onChain = new OnChainCalls(ownerSigner, deployment);
+
+            // make owner, the price oracle operator
+            const tx1 = await onChain.setPriceOracleOperator({
+                operator: ownerAddress
+            });
+
+            priceOracleCapID = (
+                Transaction.getObjects(
+                    tx1,
+                    "newObject",
+                    "PriceOracleOperatorCap"
+                )[0] as any
+            ).id as string;
+
+            // make admin operator
+            const tx2 = await onChain.createSettlementOperator(
+                { operator: ownerAddress },
+                ownerSigner
+            );
+
+            settlementCapID = (
+                Transaction.getObjects(
+                    tx2,
+                    "newObject",
+                    "SettlementCap"
+                )[0] as any
+            ).id as string;
+
+            // set oracle price
+            const priceTx = await onChain.updateOraclePrice({
+                price: toBigNumberStr(100),
+                updateOPCapID: priceOracleCapID
+            });
+
+            expectTxToSucceed(priceTx);
+
+            await mintAndDeposit(onChain, alice.address, 10000);
+            await mintAndDeposit(onChain, bob.address, 10000);
+
+            const orderSigner = new OrderSigner(alice.keyPair);
+
+            const order = createOrder({
+                market: onChain.getPerpetualID(),
+                maker: alice.address,
+                isBuy: true,
+                price: 100,
+                leverage: 10,
+                quantity: 1
+            });
+
+            // open a position at 10x leverage between alice and bob
+            const trade = await Trader.setupNormalTrade(
+                provider,
+                orderSigner,
+                alice.keyPair,
+                bob.keyPair,
+                order
+            );
+            const tx = await onChain.trade({ ...trade, settlementCapID });
+            expectTxToSucceed(tx);
+
+            // make cat sub account for alice
+            const tx3 = await onChain.setSubAccount(
+                { account: cat.address, status: true },
+                alice.signer
+            );
+            expectTxToSucceed(tx3);
+        });
+
+        it("should allow cat to add margin to alice's position", async () => {
+            const tx = await onChain.addMargin(
+                { amount: 10, account: alice.address },
+                cat.signer
+            );
+            expectTxToSucceed(tx);
+        });
+
+        it("should allow cat to remove margin from alice's position", async () => {
+            const tx = await onChain.removeMargin(
+                { amount: 10, account: alice.address },
+                cat.signer
+            );
+            expectTxToSucceed(tx);
+        });
+
+        it("should allow cat to adjust alice's leverage", async () => {
+            const tx = await onChain.adjustLeverage(
+                { leverage: 2, account: alice.address },
+                cat.signer
+            );
+            expectTxToSucceed(tx);
+        });
+
+        it("should revert while adjusting margin/leverage as cat is no longer alice's sub-account", async () => {
+            // alice remove's cat from sub account list
+            const tx = await onChain.setSubAccount(
+                { account: cat.address, status: false },
+                alice.signer
+            );
+            expectTxToSucceed(tx);
+
+            expectTxToFail(
+                await onChain.addMargin(
+                    { amount: 10, account: alice.address },
+                    cat.signer
+                )
+            );
+            expectTxToFail(
+                await onChain.removeMargin(
+                    { amount: 10, account: alice.address },
+                    cat.signer
+                )
+            );
+            expectTxToFail(
+                await onChain.adjustLeverage(
+                    { leverage: 2, account: alice.address },
+                    cat.signer
+                )
+            );
         });
     });
 });

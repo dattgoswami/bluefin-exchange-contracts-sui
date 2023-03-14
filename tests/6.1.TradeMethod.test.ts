@@ -485,4 +485,59 @@ describe("Regular Trade Method", () => {
         expectTxToFail(tx);
         expect(Transaction.getError(tx), ERROR_CODES[12]);
     });
+
+    it("should allow a sub account to trade on alice's behalf", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+        await mintAndDeposit(onChain, bob.address, 2000);
+
+        const tester = getTestAccounts(provider)[2];
+        await mintAndDeposit(onChain, tester.address, 2000);
+
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
+        });
+
+        expectTxToSucceed(priceTx);
+
+        // alice makes bob her sub account
+        const tx = await onChain.setSubAccount(
+            { account: bob.address, status: true },
+            alice.signer
+        );
+        expectTxToSucceed(tx);
+
+        defaultOrder.maker = tester.address;
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            tester.keyPair,
+            bob.keyPair,
+            defaultOrder,
+            {
+                takerOrder: {
+                    ...defaultOrder,
+                    maker: alice.address,
+                    isBuy: !defaultOrder.isBuy
+                }
+            } // taker order signed by bob for alice
+        );
+
+        const tx2 = await onChain.trade({ ...trade, settlementCapID });
+        expectTxToSucceed(tx2);
+
+        const TradeExecuted = Transaction.getEvents(tx2, "TradeExecuted")[0];
+
+        //taker of the trade was alice
+        expect(TradeExecuted.fields.taker).to.be.equal(alice.address);
+
+        const orderFill = Transaction.getEvents(tx2, "OrderFill").filter(
+            (event) => {
+                return event.fields.order.fields.maker == alice.address;
+            }
+        )[0];
+
+        expect(orderFill.fields.sigMaker).to.be.equal(bob.address);
+    });
 });
