@@ -54,8 +54,65 @@ export async function executeTests(
     let feePoolAddress: string;
     let insurancePoolAddress: string;
 
-    // described block is only made to have `before` method so that capabilities
-    // can be initialized
+    const setupTest = async () => {
+        lastOraclePrice = new BigNumber(0);
+        feePoolAddress = Wallet.generate().getAddressString();
+        insurancePoolAddress = Wallet.generate().getAddressString();
+
+        const marketData = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
+                ...marketConfig,
+                feePool: feePoolAddress,
+                insurancePool: insurancePoolAddress
+            }
+        );
+
+        // init state
+        deployment["markets"]["ETH-PERP"]["Objects"] = marketData.marketObjects;
+
+        deployment.bankAccounts = {
+            ...deployment.bankAccounts,
+            ...marketData.bankAccounts
+        };
+
+        onChain = new OnChainCalls(ownerSigner, deployment);
+
+        // empty all accounts
+        await onChain.withdrawAllMarginFromBank(alice.signer);
+        await onChain.withdrawAllMarginFromBank(bob.signer);
+        await onChain.withdrawAllMarginFromBank(cat.signer);
+        await onChain.withdrawAllMarginFromBank(dog.signer);
+        await onChain.withdrawAllMarginFromBank(liquidator.signer);
+
+        // provide maker/taker starting margin in margin bank
+        alice.bankAccountId = await mintAndDeposit(
+            onChain,
+            alice.address,
+            initialBalances?.traders || 2_000
+        );
+
+        bob.bankAccountId = await mintAndDeposit(
+            onChain,
+            bob.address,
+            initialBalances?.traders || 2_000
+        );
+
+        cat.bankAccountId = await mintAndDeposit(onChain, cat.address, 5_000);
+
+        dog.bankAccountId = await mintAndDeposit(onChain, dog.address, 5_000);
+
+        liquidator.bankAccountId = await mintAndDeposit(
+            onChain,
+            liquidator.address,
+            initialBalances?.liquidator || 5_000
+        );
+    };
+
+    // described block is being used here just to to have `before`
+    // method so that capabilities can be initialized
     describe("", () => {
         before(async () => {
             onChain = new OnChainCalls(ownerSigner, deployment);
@@ -102,76 +159,11 @@ export async function executeTests(
 
         Object.keys(testCases).forEach((testName) => {
             describe(testName, () => {
-                testCases[testName].forEach((testCase) => {
-                    before(async () => {
-                        lastOraclePrice = new BigNumber(0);
-                        feePoolAddress = Wallet.generate().getAddressString();
-                        insurancePoolAddress =
-                            Wallet.generate().getAddressString();
+                before(async () => {
+                    await setupTest();
+                });
 
-                        const marketData = await createMarket(
-                            deployment,
-                            ownerSigner,
-                            provider,
-                            {
-                                ...marketConfig,
-                                feePool: feePoolAddress,
-                                insurancePool: insurancePoolAddress
-                            }
-                        );
-
-                        // init state
-                        deployment["markets"]["ETH-PERP"]["Objects"] =
-                            marketData.marketObjects;
-
-                        deployment.bankAccounts = {
-                            ...deployment.bankAccounts,
-                            ...marketData.bankAccounts
-                        };
-
-                        onChain = new OnChainCalls(ownerSigner, deployment);
-
-                        // empty all accounts
-                        await onChain.withdrawAllMarginFromBank(alice.signer);
-                        await onChain.withdrawAllMarginFromBank(bob.signer);
-                        await onChain.withdrawAllMarginFromBank(cat.signer);
-                        await onChain.withdrawAllMarginFromBank(dog.signer);
-                        await onChain.withdrawAllMarginFromBank(
-                            liquidator.signer
-                        );
-
-                        // provide maker/taker starting margin in margin bank
-                        alice.bankAccountId = await mintAndDeposit(
-                            onChain,
-                            alice.address,
-                            initialBalances?.traders || 2_000
-                        );
-
-                        bob.bankAccountId = await mintAndDeposit(
-                            onChain,
-                            bob.address,
-                            initialBalances?.traders || 2_000
-                        );
-
-                        cat.bankAccountId = await mintAndDeposit(
-                            onChain,
-                            cat.address,
-                            5_000
-                        );
-
-                        dog.bankAccountId = await mintAndDeposit(
-                            onChain,
-                            dog.address,
-                            5_000
-                        );
-
-                        liquidator.bankAccountId = await mintAndDeposit(
-                            onChain,
-                            liquidator.address,
-                            initialBalances?.liquidator || 5_000
-                        );
-                    });
-
+                testCases[testName].forEach(async (testCase) => {
                     testCase.size = testCase.size as any as number;
 
                     const testCaseName =

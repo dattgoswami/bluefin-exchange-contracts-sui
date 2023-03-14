@@ -397,27 +397,8 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
     let lastOraclePrice: BigNumber;
 
     const getAccount = (name: string): Account => {
-        // TODO: can be hashed
-        switch (name) {
-            case "A":
-                return accounts[0];
-            case "B":
-                return accounts[1];
-            case "C":
-                return accounts[2];
-            case "D":
-                return accounts[3];
-            case "E":
-                return accounts[4];
-            case "F":
-                return accounts[5];
-            case "G":
-                return accounts[6];
-            case "H":
-                return accounts[7];
-            default:
-                return accounts[0];
-        }
+        // 65 is asci for `A`
+        return accounts[name == undefined ? 0 : name.charCodeAt(0) - 65];
     };
 
     async function executeTest(testCases: Array<any>) {
