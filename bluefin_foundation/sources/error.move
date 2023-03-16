@@ -150,6 +150,10 @@ module bluefin_foundation::error {
         return 62
     }
 
+    public fun perpetual_is_denied_trading(): u64 {
+        return 63
+    }
+
 
     public fun user_already_has_position() : u64 {
         return 6

@@ -2,6 +2,11 @@
 
 Repository containing bluefin core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.
 
+## Prerequisites:
+
+- SUI Node: v0.25.1
+- Node: v18.x.x
+
 ## How to
 
 - Install dependencies using `yarn`

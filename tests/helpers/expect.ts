@@ -76,12 +76,18 @@ export function expectPosition(
 export function expectTxToEmitEvent(
     txResponse: SuiExecuteTransactionResponse,
     eventName: string,
-    eventsCount = 1
+    eventsCount = 1,
+    emission?: any[]
 ) {
     const events = Transaction.getEvents(txResponse, eventName);
 
     expect(events?.length).to.equal(eventsCount);
     expect(events?.[0]).to.not.be.undefined;
+
+    if (emission) {
+        const eventObjects = events?.map((event) => event.fields);
+        expect(emission).to.deep.equal(eventObjects);
+    }
 }
 
 export async function evaluateSystemExpect(

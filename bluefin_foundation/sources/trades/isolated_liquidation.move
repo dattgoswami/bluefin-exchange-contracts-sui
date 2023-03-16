@@ -83,6 +83,7 @@ module bluefin_foundation::isolated_liquidation {
     //===========================================================//
     public fun trade(sender: address, perp: &mut Perpetual, data:TradeData): TradeResponse{
 
+        assert!(perpetual::isTradingPermitted(perp), error::perpetual_is_denied_trading());
         let perpID = object::uid_to_inner(perpetual::id(perp));
         let imr = perpetual::imr(perp);
         let mmr = perpetual::mmr(perp);

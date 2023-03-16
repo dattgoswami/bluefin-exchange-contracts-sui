@@ -824,7 +824,7 @@ export class OnChainCalls {
         );
     }
 
-    public async setIsWithdrawalAllowed(
+    public async setBankWithdrawalStatus(
         args: {
             isAllowed: boolean;
             bankID?: string;
@@ -846,7 +846,33 @@ export class OnChainCalls {
             caller,
             "set_withdrawal_status",
             callArgs,
-            "margin_bank"
+            "guardian"
+        );
+    }
+
+    public async setPerpetualTradingPermit(
+        args: {
+            isPermitted: boolean;
+            perpID?: string;
+            safeID?: string;
+            guardianCap?: string;
+        },
+        signer?: RawSigner
+    ): Promise<SuiExecuteTransactionResponse> {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.safeID || this.getSafeID());
+        callArgs.push(args.guardianCap || this.getGuardianCap());
+        callArgs.push(args.perpID || this.getPerpetualID());
+        callArgs.push(args.isPermitted);
+
+        return this.signAndCall(
+            caller,
+            "set_trading_permit",
+            callArgs,
+            "guardian"
         );
     }
 

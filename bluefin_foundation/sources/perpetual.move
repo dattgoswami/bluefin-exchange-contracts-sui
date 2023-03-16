@@ -16,6 +16,7 @@ module bluefin_foundation::perpetual {
     use bluefin_foundation::library::{Self};
 
     //friend modules
+    friend bluefin_foundation::guardian;
     friend bluefin_foundation::exchange;
     friend bluefin_foundation::isolated_trading;
     friend bluefin_foundation::isolated_liquidation;
@@ -64,6 +65,10 @@ module bluefin_foundation::perpetual {
         delistingPrice: u128
     }
 
+    struct TradingPermissionStatusUpdate has drop, copy {
+        status: bool
+    }
+
     //===========================================================//
     //                           STORAGE                         //
     //===========================================================//
@@ -97,7 +102,9 @@ module bluefin_foundation::perpetual {
         /// delist status
         delisted: bool,
         /// the price at which trades will be executed after delisting
-        delistingPrice: u128
+        delistingPrice: u128,
+        /// is trading allowed
+        isTradingPermitted:bool
     }
 
     //===========================================================//
@@ -137,7 +144,8 @@ module bluefin_foundation::perpetual {
             positions,
             priceOracle,
             delisted: false,
-            delistingPrice: 0
+            delistingPrice: 0,
+            isTradingPermitted:true
         };
 
         emit(PerpetualCreationEvent {
@@ -229,7 +237,9 @@ module bluefin_foundation::perpetual {
         return perp.delistingPrice
     }
 
-
+    public fun isTradingPermitted(perp: &Perpetual): bool{
+        return perp.isTradingPermitted
+    }
 
     //===========================================================//
     //                         SETTERS                           //
@@ -299,6 +309,22 @@ module bluefin_foundation::perpetual {
 
 
     }
+
+    //===========================================================//
+    //                      GUARDIAN METHODS
+    //===========================================================//
+
+    public (friend) fun set_trading_permit(perp: &mut Perpetual, isTradingPermitted: bool) {
+        // setting the withdrawal allowed flag
+        perp.isTradingPermitted = isTradingPermitted;
+
+        emit(TradingPermissionStatusUpdate{status: isTradingPermitted});
+    }
+
+    public fun is_trading_permitted(perp: &mut Perpetual) : bool {
+        perp.isTradingPermitted
+    }
+
 
 
 }

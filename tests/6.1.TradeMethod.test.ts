@@ -7,16 +7,23 @@ import {
     getAddressFromSigner,
     getSignerFromSeed,
     createOrder,
-    createMarket
+    createMarket,
+    publishPackageUsingClient,
+    getGenesisMap,
+    getDeploymentData
 } from "../src/utils";
 import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
-import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
+import {
+    expectTxToEmitEvent,
+    expectTxToFail,
+    expectTxToSucceed
+} from "./helpers/expect";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { bigNumber, toBigNumber, toBigNumberStr } from "../src/library";
 import { getTestAccounts } from "./helpers/accounts";
 import { Trader } from "../src/classes/Trader";
 import { network } from "../src/DeploymentConfig";
-import { mintAndDeposit } from "./helpers/utils";
+import { fundTestAccounts, mintAndDeposit } from "./helpers/utils";
 import { Order } from "../src/interfaces";
 
 chai.use(chaiAsPromised);
@@ -539,5 +546,109 @@ describe("Regular Trade Method", () => {
         )[0];
 
         expect(orderFill.fields.sigMaker).to.be.equal(bob.address);
+    });
+
+    describe("Guardian Tests", () => {
+        let onChain: OnChainCalls;
+        let ownerAddress: string;
+
+        before(async () => {
+            await fundTestAccounts();
+            ownerAddress = await getAddressFromSigner(ownerSigner);
+        });
+
+        beforeEach(async () => {
+            const publishTxn = await publishPackageUsingClient();
+            const objects = await getGenesisMap(provider, publishTxn);
+            const deployment = getDeploymentData(ownerAddress, objects);
+            const enrichedDeployment = {
+                ...deployment,
+                markets: {
+                    ["ETH-PERP"]: {
+                        Objects: (
+                            await createMarket(
+                                deployment,
+                                ownerSigner,
+                                provider
+                            )
+                        ).marketObjects
+                    }
+                }
+            };
+            onChain = new OnChainCalls(ownerSigner, enrichedDeployment);
+
+            // make owner, the price oracle operator
+            const tx = await onChain.setPriceOracleOperator({
+                operator: ownerAddress
+            });
+            priceOracleCapID = (
+                Transaction.getObjects(
+                    tx,
+                    "newObject",
+                    "PriceOracleOperatorCap"
+                )[0] as any
+            ).id as string;
+
+            // make admin operator
+            const tx2 = await onChain.createSettlementOperator(
+                { operator: ownerAddress },
+                ownerSigner
+            );
+            settlementCapID = (
+                Transaction.getObjects(
+                    tx2,
+                    "newObject",
+                    "SettlementCap"
+                )[0] as any
+            ).id as string;
+
+            defaultOrder = createOrder({
+                isBuy: true,
+                maker: alice.address,
+                market: onChain.getPerpetualID()
+            });
+        });
+
+        it("should allow guardian to toggle trading success", async () => {
+            const tx1 = await onChain.setPerpetualTradingPermit(
+                {
+                    isPermitted: false
+                },
+                ownerSigner
+            );
+            expectTxToSucceed(tx1);
+
+            await mintAndDeposit(onChain, alice.address, 2000);
+            await mintAndDeposit(onChain, bob.address, 2000);
+
+            const priceTx = await onChain.updateOraclePrice({
+                price: toBigNumberStr(1),
+                updateOPCapID: priceOracleCapID
+            });
+
+            expectTxToSucceed(priceTx);
+
+            const trade = await Trader.setupNormalTrade(
+                provider,
+                orderSigner,
+                alice.keyPair,
+                bob.keyPair,
+                defaultOrder
+            );
+
+            const txTrade = await onChain.trade({ ...trade, settlementCapID });
+            expectTxToFail(txTrade);
+
+            const tx3 = await onChain.setPerpetualTradingPermit(
+                {
+                    isPermitted: true
+                },
+                ownerSigner
+            );
+            expectTxToSucceed(tx3);
+
+            const txTrade2 = await onChain.trade({ ...trade, settlementCapID });
+            expectTxToSucceed(txTrade2);
+        });
     });
 });

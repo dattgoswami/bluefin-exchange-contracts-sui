@@ -102,7 +102,7 @@ describe("Roles", () => {
             expectTxToSucceed(tx1);
 
             // expect to fail as owner is no longer guardian
-            const tx2 = await onChain.setIsWithdrawalAllowed(
+            const tx2 = await onChain.setBankWithdrawalStatus(
                 { isAllowed: false },
                 ownerSigner
             );
@@ -116,7 +116,7 @@ describe("Roles", () => {
                 alice.address
             );
             expect(
-                onChain.setIsWithdrawalAllowed(
+                onChain.setBankWithdrawalStatus(
                     {
                         isAllowed: false,
                         guardianCap: onChain.getGuardianCap()
@@ -131,7 +131,7 @@ describe("Roles", () => {
                 "ExchangeGuardianCap"
             )[0];
 
-            const tx3 = await onChain.setIsWithdrawalAllowed(
+            const tx3 = await onChain.setBankWithdrawalStatus(
                 { isAllowed: false, guardianCap: (guardianCap as any).id },
                 alice.signer
             );
