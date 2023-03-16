@@ -3,27 +3,28 @@ module bluefin_foundation::perpetual {
 
     use sui::object::{Self, ID, UID};
     use std::string::{Self, String};
+    use sui::tx_context::{TxContext};
     use sui::table::{Table};
     use sui::event::{emit};
     use sui::transfer;
 
     // custom modules
     use bluefin_foundation::position::{UserPosition};
-    use bluefin_foundation::price_oracle::{PriceOracle};
+    use bluefin_foundation::price_oracle::{Self, PriceOracle};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
-    use bluefin_foundation::roles::{ExchangeAdminCap};
+    use bluefin_foundation::roles::{ExchangeAdminCap, PriceOracleOperatorCap, CapabilitiesSafe};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
 
     //friend modules
-    friend bluefin_foundation::guardian;
     friend bluefin_foundation::exchange;
     friend bluefin_foundation::isolated_trading;
     friend bluefin_foundation::isolated_liquidation;
     friend bluefin_foundation::isolated_adl;
+    friend bluefin_foundation::guardian;
     
     //===========================================================//
-    //                           EVENTS                         //
+    //                           EVENTS                          //
     //===========================================================//
 
     struct PerpetualCreationEvent has copy, drop {
@@ -33,7 +34,6 @@ module bluefin_foundation::perpetual {
         mmr: u128,
         makerFee: u128,
         takerFee: u128,
-        maxAllowedFR: u128,
         insurancePoolRatio: u128,
         insurancePool: address,
         feePool: address,
@@ -55,11 +55,6 @@ module bluefin_foundation::perpetual {
         account: address
     }
 
-    struct MaxAllowedFRUpdateEvent has copy, drop {
-        id: ID,
-        value: u128
-    }
-
     struct PerpetualDelistEvent has copy, drop {
         id: ID,
         delistingPrice: u128
@@ -68,6 +63,7 @@ module bluefin_foundation::perpetual {
     struct TradingPermissionStatusUpdate has drop, copy {
         status: bool
     }
+
 
     //===========================================================//
     //                           STORAGE                         //
@@ -85,26 +81,25 @@ module bluefin_foundation::perpetual {
         makerFee: u128,
         /// default taker order fee for this Perpetual
         takerFee: u128,
-        /// max allowed funding rate
-        maxAllowedFR: u128,
         /// percentage of liquidaiton premium goes to insurance pool
         insurancePoolRatio: u128, 
         /// address of insurance pool
         insurancePool: address,
         /// fee pool address
         feePool: address,
-        /// trade checks
-        checks: TradeChecks,
-        /// table containing user positions for this market/perpetual
-        positions: Table<address,UserPosition>,
-        /// price oracle
-        priceOracle: PriceOracle,
         /// delist status
         delisted: bool,
         /// the price at which trades will be executed after delisting
         delistingPrice: u128,
         /// is trading allowed
-        isTradingPermitted:bool
+        isTradingPermitted:bool,
+        /// trade checks
+        checks: TradeChecks,
+        /// table containing user positions for this market/perpetual
+        positions: Table<address, UserPosition>,
+        /// price oracle
+        priceOracle: PriceOracle,
+
     }
 
     //===========================================================//
@@ -112,22 +107,50 @@ module bluefin_foundation::perpetual {
     //===========================================================//
 
     public (friend) fun initialize(
-        id: UID,
         name:vector<u8>, 
         imr: u128,
         mmr: u128,
         makerFee: u128,
         takerFee: u128,
-        maxAllowedFR: u128,
         insurancePoolRatio: u128,
         insurancePool: address,
         feePool: address,
-        checks: TradeChecks,
+        minPrice: u128,
+        maxPrice: u128,
+        tickSize: u128,
+        minQty: u128,
+        maxQtyLimit: u128,
+        maxQtyMarket: u128,
+        stepSize: u128,
+        mtbLong: u128,
+        mtbShort: u128,
+        maxAllowedPriceDiffInOP: u128, 
+        maxAllowedOIOpen: vector<u128>,
         positions: Table<address,UserPosition>,
-        priceOracle: PriceOracle
-        ){
+
+        ctx: &mut TxContext
+        ): ID{
         
-        let perpID = object::uid_to_inner(&id);
+        let id = object::new(ctx);
+        let perpID =  object::uid_to_inner(&id);
+
+        let checks = evaluator::initialize(
+            minPrice,
+            maxPrice,
+            tickSize,
+            minQty,
+            maxQtyLimit,
+            maxQtyMarket,
+            stepSize,
+            mtbLong,
+            mtbShort,
+            maxAllowedOIOpen
+        );
+
+        let priceOracle = price_oracle::initialize(
+            perpID, 
+            maxAllowedPriceDiffInOP,
+        );
 
         let perp = Perpetual {
             id,
@@ -136,16 +159,15 @@ module bluefin_foundation::perpetual {
             mmr,
             makerFee,
             takerFee,
-            maxAllowedFR,
             insurancePoolRatio,
             insurancePool,
             feePool,
-            checks,
-            positions,
-            priceOracle,
             delisted: false,
             delistingPrice: 0,
-            isTradingPermitted:true
+            isTradingPermitted:true,
+            checks,
+            positions,
+            priceOracle
         };
 
         emit(PerpetualCreationEvent {
@@ -155,26 +177,27 @@ module bluefin_foundation::perpetual {
             mmr,
             makerFee,
             takerFee,
-            maxAllowedFR, 
             insurancePoolRatio,
             insurancePool,
             feePool,
-            checks,  
+            checks
         });
         
         transfer::share_object(perp);
+
+        return perpID
     }
 
     public (friend) fun positions(perp:&mut Perpetual):&mut Table<address,UserPosition>{
         return &mut perp.positions
     }
 
-    public (friend) fun mut_checks(perp:&mut Perpetual):&mut TradeChecks{
-        return &mut perp.checks
-    }
 
-    public (friend) fun mut_priceOracle(perp:&mut Perpetual):&mut PriceOracle{
-        return &mut perp.priceOracle
+    public (friend) fun set_trading_permit(perp: &mut Perpetual, isTradingPermitted: bool) {
+        // setting the withdrawal allowed flag
+        perp.isTradingPermitted = isTradingPermitted;
+
+        emit(TradingPermissionStatusUpdate{status: isTradingPermitted});
     }
 
     //===========================================================//
@@ -209,10 +232,6 @@ module bluefin_foundation::perpetual {
         return perp.takerFee
     }
 
-    public fun maxAllowedFR(perp:&Perpetual):u128{
-        return perp.maxAllowedFR
-    }
-
     public fun poolPercentage(perp:&Perpetual): u128{
         return perp.insurancePoolRatio
     }
@@ -229,6 +248,14 @@ module bluefin_foundation::perpetual {
         return perp.priceOracle
     }
 
+    public fun oraclePrice(perp:&Perpetual):u128{
+        return price_oracle::price(perp.priceOracle)
+    }
+
+    public fun is_trading_permitted(perp: &mut Perpetual) : bool {
+        perp.isTradingPermitted
+    }
+    
     public fun delisted(perp: &Perpetual): bool{
         return perp.delisted
     }
@@ -237,9 +264,6 @@ module bluefin_foundation::perpetual {
         return perp.delistingPrice
     }
 
-    public fun isTradingPermitted(perp: &Perpetual): bool{
-        return perp.isTradingPermitted
-    }
 
     //===========================================================//
     //                         SETTERS                           //
@@ -253,17 +277,6 @@ module bluefin_foundation::perpetual {
         emit(InsurancePoolRatioUpdateEvent {
             id: perpID,
             ratio: percentage
-        });
-    }
-
-    public entry fun set_max_allowed_funding_rate(_: &ExchangeAdminCap, perp: &mut Perpetual,  maxAllowedFR: u128){
-        assert!(maxAllowedFR <= library::base_uint(), error::can_not_be_greater_than_hundred_percent());
-        let perpID = object::uid_to_inner(id(perp));
-        perp.maxAllowedFR = maxAllowedFR;
-        
-        emit(MaxAllowedFRUpdateEvent {
-            id: perpID,
-            value: maxAllowedFR
         });
     }
 
@@ -289,6 +302,7 @@ module bluefin_foundation::perpetual {
         });
     }
 
+
     public entry fun delist_perpetual(_: &ExchangeAdminCap, perp: &mut Perpetual, price: u128){
 
 
@@ -310,21 +324,109 @@ module bluefin_foundation::perpetual {
 
     }
 
-    //===========================================================//
-    //                      GUARDIAN METHODS
-    //===========================================================//
+     /**
+     * Updates minimum price of the perpetual 
+     * Only Admin can update price
+     */
+    public entry fun set_min_price( _: &ExchangeAdminCap, perp: &mut Perpetual, minPrice: u128){
+        evaluator::set_min_price(
+            object::uid_to_inner(&perp.id), 
+            &mut perp.checks, 
+            minPrice);
+    }   
 
-    public (friend) fun set_trading_permit(perp: &mut Perpetual, isTradingPermitted: bool) {
-        // setting the withdrawal allowed flag
-        perp.isTradingPermitted = isTradingPermitted;
+    /** Updates maximum price of the perpetual 
+     * Only Admin can update price
+     */
+    public entry fun set_max_price( _: &ExchangeAdminCap, perp: &mut Perpetual, maxPrice: u128){
+        evaluator::set_max_price(object::uid_to_inner(&perp.id), &mut perp.checks, maxPrice);
+    }   
 
-        emit(TradingPermissionStatusUpdate{status: isTradingPermitted});
+    /**
+     * Updates step size of the perpetual 
+     * Only Admin can update size
+     */
+    public entry fun set_step_size( _: &ExchangeAdminCap, perp: &mut Perpetual, stepSize: u128){
+        evaluator::set_step_size(object::uid_to_inner(&perp.id), &mut perp.checks, stepSize);
+    }   
+
+    /**
+     * Updates tick size of the perpetual 
+     * Only Admin can update size
+     */
+    public entry fun set_tick_size( _: &ExchangeAdminCap, perp: &mut Perpetual, tickSize: u128){
+        evaluator::set_tick_size(object::uid_to_inner(&perp.id), &mut perp.checks, tickSize);
+    }   
+
+    /**
+     * Updates market take bound (long) of the perpetual 
+     * Only Admin can update MTB long
+     */
+    public entry fun set_mtb_long( _: &ExchangeAdminCap, perp: &mut Perpetual, mtbLong: u128){
+        evaluator::set_mtb_long(object::uid_to_inner(&perp.id), &mut perp.checks, mtbLong);
+    }  
+
+    /**
+     * Updates market take bound (short) of the perpetual 
+     * Only Admin can update MTB short
+     */
+    public entry fun set_mtb_short( _: &ExchangeAdminCap, perp: &mut Perpetual, mtbShort: u128){
+        evaluator::set_mtb_short(object::uid_to_inner(&perp.id), &mut perp.checks, mtbShort);
+    }   
+
+    /**
+     * Updates maximum quantity for limit orders of the perpetual 
+     * Only Admin can update max qty
+     */
+    public entry fun set_max_qty_limit( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
+        evaluator::set_max_qty_limit(object::uid_to_inner(&perp.id), &mut perp.checks, quantity);
+    }   
+
+    /**
+     * Updates maximum quantity for market orders of the perpetual 
+     * Only Admin can update max qty
+     */
+    public entry fun set_max_qty_market( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
+        evaluator::set_max_qty_market(object::uid_to_inner(&perp.id), &mut perp.checks, quantity);
+    }  
+
+    /**
+     * Updates minimum quantity of the perpetual 
+     * Only Admin can update max qty
+     */
+    public entry fun set_min_qty( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
+        evaluator::set_min_qty(object::uid_to_inner(&perp.id), &mut perp.checks, quantity);
+    }   
+
+    /**
+     * updates max allowed oi open for selected mro
+     * Only Admin can update max allowed OI open
+     */
+    public entry fun set_max_oi_open( _: &ExchangeAdminCap, perp: &mut Perpetual, maxLimit: vector<u128>){
+        evaluator::set_max_oi_open(object::uid_to_inner(&perp.id), &mut perp.checks, maxLimit);
     }
 
-    public fun is_trading_permitted(perp: &mut Perpetual) : bool {
-        perp.isTradingPermitted
+    /*
+     * Sets PriceOracle  
+     */
+    public entry fun set_oracle_price(safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, perp: &mut Perpetual, price: u128){
+        let perpID = object::uid_to_inner(&perp.id);
+        price_oracle::set_oracle_price(
+            safe,
+            cap, 
+            &mut perp.priceOracle,
+            perpID, 
+            price
+            );
     }
 
-
-
+    /*
+     * Sets Max difference allowed in percentage between New Oracle Price & Old Oracle Price
+     */
+    public entry fun set_oracle_price_max_allowed_diff(_: &ExchangeAdminCap, perp: &mut Perpetual, maxAllowedPriceDifference: u128){
+        price_oracle::set_oracle_price_max_allowed_diff(
+            object::uid_to_inner(&perp.id),
+            &mut perp.priceOracle,
+            maxAllowedPriceDifference);
+    }
 }

@@ -116,7 +116,8 @@ export class OnChainCalls {
 
         callArgs.push(args.makerFee || toBigNumberStr(0.001));
         callArgs.push(args.takerFee || toBigNumberStr(0.0045));
-        callArgs.push(args.maxAllowedFR || toBigNumberStr(0.001));
+        // TODO un comment when FR is implemented
+        // callArgs.push(args.maxAllowedFR || toBigNumberStr(0.001));
 
         callArgs.push(args.maxAllowedPriceDiffInOP || toBigNumberStr(1));
 
@@ -156,7 +157,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minPrice));
 
-        return this.signAndCall(caller, "set_min_price", callArgs, "exchange");
+        return this.signAndCall(caller, "set_min_price", callArgs, "perpetual");
     }
 
     public async setMaxPrice(
@@ -175,7 +176,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.maxPrice));
 
-        return this.signAndCall(caller, "set_max_price", callArgs, "exchange");
+        return this.signAndCall(caller, "set_max_price", callArgs, "perpetual");
     }
 
     public async setStepSize(
@@ -194,7 +195,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.stepSize));
 
-        return this.signAndCall(caller, "set_step_size", callArgs, "exchange");
+        return this.signAndCall(caller, "set_step_size", callArgs, "perpetual");
     }
 
     public async setTickSize(
@@ -213,7 +214,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.tickSize));
 
-        return this.signAndCall(caller, "set_tick_size", callArgs, "exchange");
+        return this.signAndCall(caller, "set_tick_size", callArgs, "perpetual");
     }
 
     public async setMTBLong(
@@ -232,7 +233,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbLong));
 
-        return this.signAndCall(caller, "set_mtb_long", callArgs, "exchange");
+        return this.signAndCall(caller, "set_mtb_long", callArgs, "perpetual");
     }
 
     public async setMTBShort(
@@ -251,7 +252,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.mtbShort));
 
-        return this.signAndCall(caller, "set_mtb_short", callArgs, "exchange");
+        return this.signAndCall(caller, "set_mtb_short", callArgs, "perpetual");
     }
 
     public async setMaxQtyLimit(
@@ -274,7 +275,7 @@ export class OnChainCalls {
             caller,
             "set_max_qty_limit",
             callArgs,
-            "exchange"
+            "perpetual"
         );
     }
 
@@ -298,7 +299,7 @@ export class OnChainCalls {
             caller,
             "set_max_qty_market",
             callArgs,
-            "exchange"
+            "perpetual"
         );
     }
 
@@ -318,7 +319,7 @@ export class OnChainCalls {
         callArgs.push(args.perpID || this.getPerpetualID());
         callArgs.push(toBigNumberStr(args.minQty));
 
-        return this.signAndCall(caller, "set_min_qty", callArgs, "exchange");
+        return this.signAndCall(caller, "set_min_qty", callArgs, "perpetual");
     }
 
     public async setMaxAllowedOIOpen(
@@ -341,7 +342,7 @@ export class OnChainCalls {
             caller,
             "set_max_oi_open",
             callArgs,
-            "exchange"
+            "perpetual"
         );
     }
 
@@ -468,6 +469,8 @@ export class OnChainCalls {
         },
         signer?: RawSigner
     ) {
+        // TODO, the method has been removed from exchange
+        // remove it
         const caller = signer || this.signer;
         const callArgs = [];
 
@@ -697,7 +700,7 @@ export class OnChainCalls {
             caller,
             "set_oracle_price",
             callArgs,
-            "exchange"
+            "perpetual"
         );
     }
 
@@ -790,7 +793,7 @@ export class OnChainCalls {
             caller,
             "set_oracle_price_max_allowed_diff",
             callArgs,
-            "exchange"
+            "perpetual"
         );
     }
 

@@ -53,14 +53,14 @@ describe("Perpetual", () => {
         expect(Transaction.getErrorCode(txResult)).to.be.equal(104);
     });
 
-    it("should successfully update max allowed FR", async () => {
+    xit("should successfully update max allowed FR", async () => {
         const txResult = await onChain.setMaxAllowedFundingRate({
             maxAllowedFR: 1
         });
         expectTxToSucceed(txResult);
     });
 
-    it("should not update max allowed FR if greater than 100%", async () => {
+    xit("should not update max allowed FR if greater than 100%", async () => {
         const txResult = await onChain.setMaxAllowedFundingRate({
             maxAllowedFR: 1.000001
         });

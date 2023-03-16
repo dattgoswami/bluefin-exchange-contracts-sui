@@ -9,7 +9,7 @@ module bluefin_foundation::evaluator {
     use bluefin_foundation::error::{Self};
 
     // friend modules
-    friend bluefin_foundation::exchange;
+    friend bluefin_foundation::perpetual;
 
     //===========================================================//
     //                           EVENTS                          //

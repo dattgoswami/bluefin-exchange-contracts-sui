@@ -8,11 +8,11 @@ import {
     SuiMoveObject,
     SuiExecuteTransactionResponse,
     OwnedObjectRef,
-    Base64DataBuffer,
     Secp256k1Keypair,
     SignatureScheme,
     Ed25519Keypair,
-    SignerWithProvider
+    SignerWithProvider,
+    Connection
 } from "@mysten/sui.js";
 import { OBJECT_OWNERSHIP_STATUS } from "../src/enums";
 import {
@@ -53,7 +53,10 @@ export function getProvider(
     rpcURL: string,
     faucetURL: string
 ): JsonRpcProvider {
-    return new JsonRpcProvider(rpcURL, { faucetURL: faucetURL });
+    // return new JsonRpcProvider(rpcURL, { faucetURL: faucetURL });
+    return new JsonRpcProvider(
+        new Connection({ fullnode: rpcURL, faucet: faucetURL })
+    );
 }
 
 export function getKeyPairFromSeed(
@@ -227,23 +230,6 @@ export async function getGenesisMap(
     }
 
     return map;
-}
-
-export async function publishPackage(
-    signer: RawSigner
-): Promise<SuiExecuteTransactionResponse> {
-    const pkgPath = path.join(process.cwd(), `/${packageName}`);
-    const compiledModules = Client.buildPackage(pkgPath);
-
-    const modulesInBytes = compiledModules.map((m: any) =>
-        Array.from(new Base64DataBuffer(m).getData())
-    );
-
-    // publish package
-    return signer.publish({
-        compiledModules: modulesInBytes,
-        gasBudget: 10000
-    });
 }
 
 export async function publishPackageUsingClient(): Promise<SuiExecuteTransactionResponse> {

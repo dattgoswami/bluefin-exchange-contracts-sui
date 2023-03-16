@@ -1,14 +1,14 @@
-import { Base64DataBuffer, Keypair, Secp256k1PublicKey } from "@mysten/sui.js";
+import { Keypair, Secp256k1PublicKey } from "@mysten/sui.js";
 import { Order, SignedOrder } from "../interfaces/order";
-import { sha256 } from "@noble/hashes/sha256";
-import { recoverPublicKey } from "@noble/secp256k1";
 import { bnToHex, hexToBuffer } from "../library";
+import * as secp from "@noble/secp256k1";
+import { sha256 } from "@noble/hashes/sha256";
 
 export class OrderSigner {
     constructor(private keypair: Keypair) {}
 
-    public getSignedOrder(order: Order): SignedOrder {
-        const typedSignature = this.signOrder(order);
+    public async getSignedOrder(order: Order): Promise<SignedOrder> {
+        const typedSignature = await this.signOrder(order);
         return {
             ...order,
             typedSignature
@@ -19,14 +19,7 @@ export class OrderSigner {
         const signer = keypair || this.keypair;
 
         return Buffer.from(
-            signer
-                .signData(
-                    new Base64DataBuffer(
-                        hexToBuffer(this.getSerializedOrder(order))
-                    ),
-                    true
-                )
-                .getData()
+            signer.signData(hexToBuffer(this.getSerializedOrder(order)), true)
         ).toString("hex");
     }
 
@@ -61,7 +54,7 @@ export class OrderSigner {
             const rByte = signatureWithR[64];
             const hash = hexToBuffer(orderHash);
 
-            const publicKey = recoverPublicKey(hash, sig, rByte, true);
+            const publicKey = secp.recoverPublicKey(hash, sig, rByte, true);
 
             const secp256k1PK = new Secp256k1PublicKey(publicKey);
 

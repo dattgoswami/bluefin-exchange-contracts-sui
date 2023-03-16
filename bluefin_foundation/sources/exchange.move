@@ -20,7 +20,6 @@ module bluefin_foundation::exchange {
     use bluefin_foundation::roles::{
         Self, 
         ExchangeAdminCap, 
-        PriceOracleOperatorCap, 
         CapabilitiesSafe,
         SettlementCap,
         DeleveragingCap,
@@ -73,7 +72,6 @@ module bluefin_foundation::exchange {
         mmr: u128,
         makerFee: u128,
         takerFee: u128,
-        maxAllowedFR: u128,
         maxAllowedPriceDiffInOP: u128,
         insurancePoolRatio: u128,
         insurancePool: address,
@@ -82,12 +80,18 @@ module bluefin_foundation::exchange {
         ){
         
 
-        let id = object::new(ctx);
-        let perpID =  object::uid_to_inner(&id);
-
         let positions = table::new<address, UserPosition>(ctx);
-
-        let checks = evaluator::initialize(
+            
+        // creates perpetual and shares it
+        let perpID = perpetual::initialize(
+            name,
+            imr,
+            mmr,
+            makerFee,
+            takerFee,
+            insurancePoolRatio,
+            insurancePool,
+            feePool,
             minPrice,
             maxPrice,
             tickSize,
@@ -97,30 +101,10 @@ module bluefin_foundation::exchange {
             stepSize,
             mtbLong,
             mtbShort,
-            maxAllowedOIOpen
-            );
-
-        
-        let priceOracle = price_oracle::initialize(
-            perpID, 
             maxAllowedPriceDiffInOP,
-        );
-
-        // creates perpetual and shares it
-        perpetual::initialize(
-            id,
-            name,
-            imr,
-            mmr,
-            makerFee,
-            takerFee,
-            maxAllowedFR,
-            insurancePoolRatio,
-            insurancePool,
-            feePool,
-            checks,
+            maxAllowedOIOpen,
             positions,
-            priceOracle
+            ctx
         );
 
         // create bank account for perpetual
@@ -144,112 +128,6 @@ module bluefin_foundation::exchange {
             ctx
         );
 
-    }
-
-    /**
-     * Updates minimum price of the perpetual 
-     * Only Admin can update price
-     */
-    entry fun set_min_price( _: &ExchangeAdminCap, perp: &mut Perpetual, minPrice: u128){
-        evaluator::set_min_price(
-            object::uid_to_inner(perpetual::id(perp)), 
-            perpetual::mut_checks(perp), 
-            minPrice);
-    }   
-
-    /** Updates maximum price of the perpetual 
-     * Only Admin can update price
-     */
-    entry fun set_max_price( _: &ExchangeAdminCap, perp: &mut Perpetual, maxPrice: u128){
-        evaluator::set_max_price(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), maxPrice);
-    }   
-
-    /**
-     * Updates step size of the perpetual 
-     * Only Admin can update size
-     */
-    entry fun set_step_size( _: &ExchangeAdminCap, perp: &mut Perpetual, stepSize: u128){
-        evaluator::set_step_size(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), stepSize);
-    }   
-
-    /**
-     * Updates tick size of the perpetual 
-     * Only Admin can update size
-     */
-    entry fun set_tick_size( _: &ExchangeAdminCap, perp: &mut Perpetual, tickSize: u128){
-        evaluator::set_tick_size(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), tickSize);
-    }   
-
-    /**
-     * Updates market take bound (long) of the perpetual 
-     * Only Admin can update MTB long
-     */
-    entry fun set_mtb_long( _: &ExchangeAdminCap, perp: &mut Perpetual, mtbLong: u128){
-        evaluator::set_mtb_long(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), mtbLong);
-    }  
-
-    /**
-     * Updates market take bound (short) of the perpetual 
-     * Only Admin can update MTB short
-     */
-    entry fun set_mtb_short( _: &ExchangeAdminCap, perp: &mut Perpetual, mtbShort: u128){
-        evaluator::set_mtb_short(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), mtbShort);
-    }   
-
-    /**
-     * Updates maximum quantity for limit orders of the perpetual 
-     * Only Admin can update max qty
-     */
-    entry fun set_max_qty_limit( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
-        evaluator::set_max_qty_limit(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), quantity);
-    }   
-
-    /**
-     * Updates maximum quantity for market orders of the perpetual 
-     * Only Admin can update max qty
-     */
-    entry fun set_max_qty_market( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
-        evaluator::set_max_qty_market(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), quantity);
-    }  
-
-    /**
-     * Updates minimum quantity of the perpetual 
-     * Only Admin can update max qty
-     */
-    entry fun set_min_qty( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
-        evaluator::set_min_qty(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), quantity);
-    }   
-
-    /**
-     * updates max allowed oi open for selected mro
-     * Only Admin can update max allowed OI open
-     */
-    entry fun set_max_oi_open( _: &ExchangeAdminCap, perp: &mut Perpetual, maxLimit: vector<u128>){
-        evaluator::set_max_oi_open(object::uid_to_inner(perpetual::id(perp)), perpetual::mut_checks(perp), maxLimit);
-    }
-
-    /*
-     * Sets PriceOracle  
-     */
-    entry fun set_oracle_price(safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, perp: &mut Perpetual, price: u128){
-        let perpID = object::uid_to_inner(perpetual::id(perp));
-        price_oracle::set_oracle_price(
-            safe,
-            cap, 
-            perpetual::mut_priceOracle(perp),
-            perpID, 
-            price
-            );
-    }
-
-    /*
-     * Sets Max difference allowed in percentage between New Oracle Price & Old Oracle Price
-     */
-    entry fun set_oracle_price_max_allowed_diff(_: &ExchangeAdminCap, perp: &mut Perpetual, maxAllowedPriceDifference: u128){
-        price_oracle::set_oracle_price_max_allowed_diff(
-            object::uid_to_inner(perpetual::id(perp)),
-            perpetual::mut_priceOracle(perp),
-            maxAllowedPriceDifference);
     }
 
     //===========================================================//

@@ -9,7 +9,7 @@ module bluefin_foundation::price_oracle {
     use bluefin_foundation::roles::{Self, CapabilitiesSafe, PriceOracleOperatorCap};
 
     // friend module
-    friend bluefin_foundation::exchange;
+    friend bluefin_foundation::perpetual;
 
     //===========================================================//
     //                           EVENTS                          //
