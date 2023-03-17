@@ -124,7 +124,7 @@ describe("Liquidation Trade Method", () => {
         ); // caller is owner
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[51]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[51]);
     });
 
     it("should revert as account(maker) being liquidated has no position", async () => {
@@ -139,7 +139,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[510]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[510]);
     });
 
     it("should revert as quantity to be liquidated < min allowed quantity ", async () => {
@@ -154,7 +154,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[19]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[19]);
     });
 
     it("should revert as quantity to be liquidated > max allowed limit quantity", async () => {
@@ -169,7 +169,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[20]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[20]);
     });
 
     it("should revert as quantity to be liquidated > max allowed market order size", async () => {
@@ -184,7 +184,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[21]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[21]);
     });
 
     it("should revert as liquidatee(maker) has zero sized position", async () => {
@@ -227,7 +227,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[510]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[510]);
     });
 
     it("should revert as liquidatee(alice) is above mmr - can not be liquidated", async () => {
@@ -242,7 +242,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[703]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[703]);
     });
 
     it("should revert as all or nothing flag is set and liquidatee's qPos < liquidation quantity", async () => {
@@ -264,7 +264,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[701]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[701]);
     });
 
     it("should revert as liquidator's leverage is different from leverage being used for liquidation trade", async () => {
@@ -318,7 +318,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[702]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[702]);
     });
 
     it("should successfully completely liquidate alice/maker", async () => {

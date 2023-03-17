@@ -277,6 +277,80 @@ describe("Perpetual", () => {
             const tx2 = await onChain.closePosition({}, alice.signer);
             expectTxToSucceed(tx2);
         });
+
+        it("should allow guardian to toggle trading on a perpetual", async () => {
+            // make owner, the price oracle operator
+            const tx = await onChain.setPriceOracleOperator({
+                operator: ownerAddress
+            });
+
+            const priceOracleCapID = (
+                Transaction.getObjects(
+                    tx,
+                    "newObject",
+                    "PriceOracleOperatorCap"
+                )[0] as any
+            ).id as string;
+
+            // make admin operator
+            const tx2 = await onChain.createSettlementOperator(
+                { operator: ownerAddress },
+                ownerSigner
+            );
+            const settlementCapID = (
+                Transaction.getObjects(
+                    tx2,
+                    "newObject",
+                    "SettlementCap"
+                )[0] as any
+            ).id as string;
+
+            const defaultOrder = createOrder({
+                isBuy: true,
+                maker: alice.address,
+                market: onChain.getPerpetualID()
+            });
+
+            const tx1 = await onChain.setPerpetualTradingPermit(
+                {
+                    isPermitted: false
+                },
+                ownerSigner
+            );
+            expectTxToSucceed(tx1);
+
+            await mintAndDeposit(onChain, alice.address, 2000);
+            await mintAndDeposit(onChain, bob.address, 2000);
+
+            const priceTx = await onChain.updateOraclePrice({
+                price: toBigNumberStr(1),
+                updateOPCapID: priceOracleCapID
+            });
+
+            expectTxToSucceed(priceTx);
+
+            const trade = await Trader.setupNormalTrade(
+                provider,
+                new OrderSigner(alice.keyPair),
+                alice.keyPair,
+                bob.keyPair,
+                defaultOrder
+            );
+
+            const txTrade = await onChain.trade({ ...trade, settlementCapID });
+            expectTxToFail(txTrade);
+
+            const tx3 = await onChain.setPerpetualTradingPermit(
+                {
+                    isPermitted: true
+                },
+                ownerSigner
+            );
+            expectTxToSucceed(tx3);
+
+            const txTrade2 = await onChain.trade({ ...trade, settlementCapID });
+            expectTxToSucceed(txTrade2);
+        });
     });
 
     describe("Sub account adjusting parent's position", () => {

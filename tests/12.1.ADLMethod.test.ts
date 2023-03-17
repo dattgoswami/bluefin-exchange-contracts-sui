@@ -136,7 +136,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[505]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[505]);
     });
 
     it("should revert as owner is no longer deleveraging operator", async () => {
@@ -168,7 +168,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[113]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[113]);
     });
 
     it("should revert as taker account being deleveraged has no position object", async () => {
@@ -182,7 +182,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[505]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[506]);
     });
 
     it("should revert as maker of adl trade has zero sized position", async () => {
@@ -224,7 +224,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[510]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[510]);
     });
 
     it("should revert as taker of adl trade has zero sized position", async () => {
@@ -268,7 +268,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[511]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[511]);
     });
 
     it("should revert as all or nothing flag is set and maker qPos < deleveraging quantity", async () => {
@@ -283,7 +283,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[803]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[803]);
     });
 
     it("should revert as all or nothing flag is set and taker qPos < deleveraging quantity", async () => {
@@ -318,7 +318,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[804]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[804]);
     });
 
     it("should revert as quantity being deleverage < min allowed quantity ", async () => {
@@ -332,7 +332,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[19]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[19]);
     });
 
     it("should revert as quantity to be deleveraged > max allowed limit quantity", async () => {
@@ -346,7 +346,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[20]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[20]);
     });
 
     it("should revert as quantity to be deleveraged > max allowed market order size", async () => {
@@ -360,7 +360,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[21]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[21]);
     });
 
     it("should revert as maker(alice) is above mmr - can not be deleveraged", async () => {
@@ -374,7 +374,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[800]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[800]);
     });
 
     it("should revert as maker(alice) is above under water - can not be deleveraged", async () => {
@@ -392,7 +392,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[800]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[800]);
     });
 
     it("should revert as taker(bob) is under water - can not be taker of deleveraging trade", async () => {
@@ -431,7 +431,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[801]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[801]);
     });
 
     it("should revert as maker and taker of an adl trade must have opposite side positions", async () => {
@@ -471,7 +471,7 @@ describe("Deleveraging Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse), ERROR_CODES[802]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[802]);
     });
 
     it("should successfully completely deleverage alice against cat", async () => {

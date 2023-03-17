@@ -11,7 +11,11 @@ export class Trader {
         maker: Keypair,
         taker: Keypair,
         makerOrder: Order,
-        options?: { takerOrder?: Order; quantity?: BigNumber }
+        options?: {
+            takerOrder?: Order;
+            quantity?: BigNumber;
+            price?: BigNumber;
+        }
     ) {
         const takerAddress = await getAddressFromSigner(
             getSignerFromKeyPair(taker, provider)
@@ -23,18 +27,18 @@ export class Trader {
             isBuy: !makerOrder.isBuy
         };
 
-        const makerSignature = await orderSigner.signOrder(makerOrder, maker);
-        const takerSignature = await orderSigner.signOrder(takerOrder, taker);
+        const makerSignature = orderSigner.signOrder(makerOrder, maker);
+        const takerSignature = orderSigner.signOrder(takerOrder, taker);
 
         return {
             makerOrder,
             makerSignature,
-            takerOrder: takerOrder,
+            takerOrder,
             takerSignature,
             fillQuantity:
                 options?.quantity ||
                 BigNumber.min(makerOrder.quantity, takerOrder.quantity),
-            fillPrice: makerOrder.price
+            fillPrice: options?.price || makerOrder.price
         };
     }
 }

@@ -7,8 +7,8 @@ import { sha256 } from "@noble/hashes/sha256";
 export class OrderSigner {
     constructor(private keypair: Keypair) {}
 
-    public async getSignedOrder(order: Order): Promise<SignedOrder> {
-        const typedSignature = await this.signOrder(order);
+    public getSignedOrder(order: Order): SignedOrder {
+        const typedSignature = this.signOrder(order);
         return {
             ...order,
             typedSignature

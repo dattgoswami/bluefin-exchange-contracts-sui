@@ -421,8 +421,8 @@ module bluefin_foundation::isolated_trading {
     }
 
     fun verify_order_state(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash:vector<u8>, isTaker:u64){        
-        let orderStatus = table::borrow(ordersTable, hash);
-        assert!(orderStatus.status != false, error::order_has_invalid_signature(isTaker));
+        let order = table::borrow(ordersTable, hash);
+        assert!(order.status, error::order_is_canceled(isTaker));
     }
 
     fun verify_and_fill_order_qty(ordersTable: &mut Table<vector<u8>, OrderStatus>, order:Order, orderHash:vector<u8>, fill:u128, sigMaker:address, isTaker:u64){
@@ -455,7 +455,7 @@ module bluefin_foundation::isolated_trading {
 
     fun verify_order_expiry(order:Order, isTaker:u64){
         // TODO compare with chain time
-        assert!(order.expiration == 0 || order.expiration > 1, error::order_has_expired(isTaker));
+        assert!(order.expiration == 0 || order.expiration > 1, error::order_expired(isTaker));
     }
 
     fun verify_order_fills(userPosition: UserPosition, order:Order, fill:Fill, isTaker:u64){

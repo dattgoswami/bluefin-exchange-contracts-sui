@@ -71,12 +71,12 @@ describe("Roles", () => {
             ).to.eventually.rejectedWith(expectedError);
         });
 
-        it("should revert when trying to transfer ownership of exchange admin ot existing admin", async () => {
+        it("should revert when trying to transfer ownership of exchange admin to existing admin", async () => {
             const tx = await onChain.setExchangeAdmin(
                 { address: ownerAddress },
                 ownerSigner
             );
-            expect(Transaction.getError(tx), ERROR_CODES[900]);
+            expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[900]);
         });
     });
 

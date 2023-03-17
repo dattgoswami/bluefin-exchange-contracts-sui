@@ -90,7 +90,7 @@ module bluefin_foundation::error {
         return isTakerInvalid + 25
     }
 
-    public fun order_was_already_canceled(isTakerInvalid : u64) : u64 {
+    public fun order_is_canceled(isTakerInvalid : u64) : u64 {
         return isTakerInvalid + 28
     }
 
@@ -98,7 +98,7 @@ module bluefin_foundation::error {
         return isTakerInvalid + 30
     }
 
-    public fun order_has_expired(isTakerInvalid : u64) : u64 {
+    public fun order_expired(isTakerInvalid : u64) : u64 {
         return isTakerInvalid + 32
     }
 
@@ -127,7 +127,7 @@ module bluefin_foundation::error {
     }
 
     public fun order_cannot_be_of_same_side() : u64 {
-        return 47
+        return 48
     }
 
     public fun sender_does_not_have_permission_for_account(offset: u64): u64 {
