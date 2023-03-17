@@ -139,7 +139,7 @@ describe("Liquidation Trade Method", () => {
         );
 
         expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[510]);
+        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[505]);
     });
 
     it("should revert as quantity to be liquidated < min allowed quantity ", async () => {
