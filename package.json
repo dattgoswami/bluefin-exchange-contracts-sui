@@ -1,7 +1,7 @@
 {
   "name": "bluefin-exchange-contracts-sui",
   "description": "Repository containing Bluefin core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "scripts": {
     "build": "sui move build --path bluefin_foundation --skip-fetch-latest-git-deps",
     "deploy": "ts-node ./scripts/deploy/full.ts",
