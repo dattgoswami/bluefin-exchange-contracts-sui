@@ -1,0 +1,4 @@
+*       @fireflyprotocol/eng-quant
+environment-stack/*   @fireflyprotocol/platform
+.github/*   @fireflyprotocol/platform
+
