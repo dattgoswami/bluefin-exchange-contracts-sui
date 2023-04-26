@@ -287,8 +287,13 @@ module bluefin_foundation::isolated_adl {
 
         let pnlPerUnit = position::compute_pnl_per_unit(*balance, bankruptcyPrice);
 
+        // current position - quantity
         let newQPos = qPos - quantity;
+
+        // margin / current position size
         let marginPerUnit = signed_number::from(library::base_div(margin, qPos), true);
+        
+        // margin per unit + pnl per unit
         let equityPerUnit = signed_number::add(marginPerUnit, pnlPerUnit);
 
         // Cannot trade when loss exceeds margin
@@ -299,20 +304,27 @@ module bluefin_foundation::isolated_adl {
             error::loss_exceeds_margin(isTaker)
         );
 
+        // (-pnl per unit * deleveraging quantity) 
+        // - ((margin * quantity) / current position size)
         let fundsFlow = signed_number::sub_uint( 
                     signed_number::mul_uint(
                         signed_number::negate(pnlPerUnit), 
                         quantity),
                     (margin * quantity) / qPos);
 
+        // negate funds flow
         fundsFlow = signed_number::negative_number(fundsFlow);
 
             
         // this pnl is no longer per unit now
         pnlPerUnit = signed_number::mul_uint(pnlPerUnit, quantity);
 
+        // (current margin * new pos size) / old pos size
         position::set_margin(balance, (margin * newQPos) / qPos);
+
+        // (current oi open * new pos size) / old pos size
         position::set_oiOpen(balance, (oiOpen * newQPos) / qPos);
+
         position::set_qPos(balance, newQPos);
    
         return IMResponse {

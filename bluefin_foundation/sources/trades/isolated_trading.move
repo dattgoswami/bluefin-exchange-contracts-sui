@@ -510,12 +510,22 @@ module bluefin_foundation::isolated_trading {
 
         // case 1: Opening position or adding to position size
         if (qPos == 0 || isBuy == isPosPositive) {
+            
+            // price * mro
             marginPerUnit = library::base_mul(fill.price, mro);
+
+            // quantity *  ((price * mro) + fee per unit )
             fundsFlow = signed_number::from(library::base_mul(fill.quantity, marginPerUnit + feePerUnit), true);
 
+            // current oi open + quantity * price
             position::set_oiOpen(balance, oiOpen + library::base_mul(fill.quantity, fill.price));
+
+            // current position size + fill quantity
             position::set_qPos(balance, qPos + fill.quantity);
-            position::set_margin(balance, margin + library::base_mul(library::base_mul(fill.quantity, fill.price), mro));
+
+            // current margin + (quantity * (price * mro)) 
+            position::set_margin(balance, margin + library::base_mul(fill.quantity, marginPerUnit));
+
             position::set_isPosPositive(balance, isBuy);
 
             // verify that oi open checks still hold                       
@@ -530,15 +540,23 @@ module bluefin_foundation::isolated_trading {
         } 
         // case 2: Reduce only order
         else if (order.reduceOnly || ( isBuy != isPosPositive && fill.quantity <= qPos)){
+            // current position - fill quantity
             let newQPos = qPos - fill.quantity;
+
+            // current margin / current position size
             marginPerUnit = library::base_div(margin, qPos);
+
+            // equityPerUnit + marginPerUnit
             equityPerUnit = signed_number::add_uint(pnlPerUnit, marginPerUnit);            
+
             assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
             
             // Max(0, equityPerUnit);
             let posValue = signed_number::positive_value(equityPerUnit);
             feePerUnit = if ( feePerUnit > posValue ) { posValue } else { feePerUnit };
 
+            // ((-pnl per unit + fee per unit) * fill quantity) 
+            // - ((current user margin * fill quantity) / current user position size)  
             fundsFlow = signed_number::sub_uint( 
                 signed_number::mul_uint(
                     signed_number::add_uint(
@@ -549,21 +567,32 @@ module bluefin_foundation::isolated_trading {
 
 
             fundsFlow = signed_number::negative_number(fundsFlow);
+
             // this pnl is no longer per unit now
             pnlPerUnit = signed_number::mul_uint(pnlPerUnit, fill.quantity);
             
+            // (current margin * new pos size) / old pos size
             position::set_margin(balance, (margin * newQPos) / qPos);
+
+            // (current oi open * new pos size) / old pos size
             position::set_oiOpen(balance, (oiOpen * newQPos) / qPos);
+
             position::set_qPos(balance, newQPos);
 
         } 
         // case 3: flipping position side
         else {
             
+            // fill quantity - current position size
             let newQPos = fill.quantity - qPos;
+
+            // new position size * fill price
             let updatedOIOpen = library::base_mul(newQPos, fill.price);
 
+            // current margin / current position size
             marginPerUnit = library::base_div(margin, qPos);
+
+            // pnl per unit + margin per unit
             equityPerUnit = signed_number::add_uint(pnlPerUnit, marginPerUnit);            
 
             assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
@@ -575,6 +604,8 @@ module bluefin_foundation::isolated_trading {
             let closingFeePerUnit = if ( feePerUnit > posValue ) { posValue } else { feePerUnit };
             
 
+            // (((-pnl per unit + closing fee per unit) * current position size) - margin)
+            // + (new user position size * ((fill price * mro) + fee per unit)) 
             fundsFlow = signed_number::add_uint(
                             signed_number::sub_uint( 
                                 signed_number::mul_uint(
@@ -591,6 +622,7 @@ module bluefin_foundation::isolated_trading {
                                 + feePerUnit)
                         );
 
+            // ((current position size * closing fee) + (new position size * fee per unit)) / fill quantity
             feePerUnit = library::base_div(
                 library::base_mul(qPos, closingFeePerUnit) +
                 library::base_mul(newQPos,feePerUnit),
@@ -608,8 +640,13 @@ module bluefin_foundation::isolated_trading {
             );
 
             position::set_qPos(balance, newQPos);
+            
+            // (new position size * fill price)
             position::set_oiOpen(balance, updatedOIOpen);
+            
+            // (new position size * fill price) * mro
             position::set_margin(balance, library::base_mul(updatedOIOpen, mro));
+            
             position::set_isPosPositive(balance, !isPosPositive);
 
         };

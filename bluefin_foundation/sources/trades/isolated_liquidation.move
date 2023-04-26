@@ -317,11 +317,22 @@ module bluefin_foundation::isolated_liquidation {
 
         // case 1: Opening position or adding to position size
         if (qPos == 0 || isBuy == isPosPositive) {
+
+            // oracle price * mro
             marginPerUnit = library::base_mul(oraclePrice, mro);
+
+            // quantity *  ((oracle price * mro))
             fundsFlow = signed_number::from(library::base_mul(quantity, marginPerUnit), true);
+
+            // current oi open + quantity * oracle price
             position::set_oiOpen(balance, oiOpen + library::base_mul(quantity, oraclePrice));
+
+            // current position size + fill quantity
             position::set_qPos(balance, qPos + quantity);
-            position::set_margin(balance, margin + library::base_mul(library::base_mul(quantity, oraclePrice), mro));
+
+            // current margin + (quantity * (price * mro)) 
+            position::set_margin(balance, margin + library::base_mul(quantity, marginPerUnit));
+            
             position::set_isPosPositive(balance, isBuy);
 
             // verify that oi open checks still hold                       
@@ -336,15 +347,23 @@ module bluefin_foundation::isolated_liquidation {
         }
         // case 2: Reduce only order
         else if (isBuy != isPosPositive && quantity <= qPos){
+            // current position - fill quantity
             let newQPos = qPos - quantity;
+
+            // current margin / current position size
             marginPerUnit = library::base_div(margin, qPos);
 
             // if liquidator
             if(isTaker == 1){
+                // equityPerUnit + marginPerUnit
                 equityPerUnit = signed_number::add_uint(pnlPerUnit, marginPerUnit);
+
                 assert!(
                     signed_number::gte_uint(equityPerUnit, 0),
                     error::loss_exceeds_margin(isTaker));
+
+                // (-pnl per unit * fill quantity) 
+                // - ((current user margin * fill quantity) / current user position size)  
 
                 fundsFlow = signed_number::sub_uint( 
                             signed_number::mul_uint(
@@ -352,7 +371,9 @@ module bluefin_foundation::isolated_liquidation {
                                 quantity),
                             (margin * quantity) / qPos);
 
+                // negate fundsflow
                 fundsFlow = signed_number::negative_number(fundsFlow);
+
             } else {
                 // pnl for maker/liquidatee is based on bankruptcy price
                 pnlPerUnit = position::compute_pnl_per_unit(*balance, bankruptcyPrice);
@@ -363,21 +384,33 @@ module bluefin_foundation::isolated_liquidation {
             // this pnl is no longer per unit now
             pnlPerUnit = signed_number::mul_uint(pnlPerUnit, quantity);
 
+            // (current margin * new pos size) / old pos size
             position::set_margin(balance, (margin * newQPos) / qPos);
+
+            // (current oi open * new pos size) / old pos size
             position::set_oiOpen(balance, (oiOpen * newQPos) / qPos);
+
             position::set_qPos(balance, newQPos);
-
-
 
         }
         // case 3: flipping position side
         else {
+            // fill quantity - current position size
             let newQPos = quantity - qPos;
+
+            // new position size * oracle price
             let updatedOIOpen = library::base_mul(newQPos, oraclePrice);
+
+            // current margin / current position size
             marginPerUnit = library::base_div(margin, qPos);
+
+            // pnl per unit + margin per unit
             equityPerUnit = signed_number::add_uint(pnlPerUnit, marginPerUnit);
+
             assert!(signed_number::gte_uint(equityPerUnit, 0), error::loss_exceeds_margin(isTaker));
 
+            // ((-pnl per unit * current position size) - margin) 
+            // + new position size * oracle price * mro
             fundsFlow =  signed_number::add_uint(
                     signed_number::sub_uint(
                         signed_number::mul_uint(
