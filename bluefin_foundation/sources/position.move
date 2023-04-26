@@ -167,7 +167,7 @@ module bluefin_foundation::position {
             }
     }
 
-    public fun create_position(perpID:ID, positions: &mut Table<address, UserPosition>, addr: address){
+    public (friend) fun create_position(perpID:ID, positions: &mut Table<address, UserPosition>, addr: address){
         
         if(!table::contains(positions, addr)){
             table::add(positions, addr, initialize(perpID, addr));
