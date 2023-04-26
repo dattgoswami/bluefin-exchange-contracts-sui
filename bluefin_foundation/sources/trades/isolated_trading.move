@@ -128,6 +128,7 @@ module bluefin_foundation::isolated_trading {
     //                      TRADE METHOD
     //===========================================================//
 
+    // @dev only exchange module can invoke this
     public (friend) fun trade(
         sender: address, 
         perp: &mut Perpetual,

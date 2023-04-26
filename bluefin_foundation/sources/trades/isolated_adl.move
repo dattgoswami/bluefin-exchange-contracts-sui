@@ -73,6 +73,8 @@ module bluefin_foundation::isolated_adl {
     //===========================================================//
     //                      TRADE METHOD                         //
     //===========================================================//
+
+    // @dev only exchange module can invoke this
     public (friend) fun trade(sender: address, perp: &mut Perpetual, data:TradeData): TradeResponse{
 
         assert!(perpetual::is_trading_permitted(perp), error::perpetual_is_denied_trading());
