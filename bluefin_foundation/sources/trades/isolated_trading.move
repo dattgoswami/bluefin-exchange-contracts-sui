@@ -493,6 +493,10 @@ module bluefin_foundation::isolated_trading {
 
     }
 
+    /*
+     * @notice applies isolated margin logic for settling trade to the maker/taker of the trade
+     * All fees are rounded down, in favor of the user.
+     */
     fun apply_isolated_margin(checks:TradeChecks, balance: &mut UserPosition, order:Order, fill:Fill, feePerUnit: u128, isTaker: u64): IMResponse {
         
         let fundsFlow: Number;
