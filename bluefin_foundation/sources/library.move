@@ -72,6 +72,12 @@ module bluefin_foundation::library {
     }
 
 
+    /**
+     * @dev given an amount in 6 decimal places, converts it to base(9) decimals 
+     */
+    public fun convert_usdc_to_base_decimals(amount: u128): u128 {
+        return amount * 1000
+    }
 
     public fun get_public_address(public_key: vector<u8>):address {
         let buff = vector::empty<u8>();

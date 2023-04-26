@@ -13,6 +13,7 @@ module bluefin_foundation::margin_bank {
     use sui::tx_context::{Self, TxContext};
 
     // custom modules
+    use bluefin_foundation::library::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::roles::{Self, ExchangeGuardianCap, CapabilitiesSafe};
@@ -133,10 +134,10 @@ module bluefin_foundation::margin_bank {
         let destBalance = &mut table::borrow_mut(accounts, destination).balance;
 
         // convert 6 decimal unit amount to 9 decimals
-        amount = amount * 1000;
+        let baseAmount = library::convert_usdc_to_base_decimals((amount as u128));
 
         // updating the balance
-        *destBalance = (amount as u128) + *destBalance;
+        *destBalance = baseAmount + *destBalance;
 
         // emitting the balance balance update event
         emit(
@@ -144,15 +145,17 @@ module bluefin_foundation::margin_bank {
                 action: ACTION_DEPOSIT,
                 srcAddress: sender,
                 destAddress: destination,
-                amount: (amount as u128),
+                amount: baseAmount,
                 srcBalance: table::borrow(accounts, sender).balance,
                 destBalance: table::borrow(accounts, destination).balance,
             }
         );
     }
+    
 
     /**
      * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
+     * @dev withdrawal amount is expected to be in 6 decimal units as the collateral token is USDC
      */
     entry fun withdraw_from_bank(bank: &mut Bank, destination: address, amount: u128, ctx: &mut TxContext) {
         
@@ -168,17 +171,17 @@ module bluefin_foundation::margin_bank {
         // checking if the account exists
         assert!(table::contains(accounts, sender), error::user_has_no_bank_account());
 
-        // @dev convert amount to 9 decimal places
-        let e9Amount = amount * (1000 as u128);
+        // convert amount to 9 decimal places
+        let baseAmount = library::convert_usdc_to_base_decimals(amount);
 
         // getting the mut ref of balance of the src_account
         let srcBalance = &mut table::borrow_mut(accounts, sender).balance;
 
         // checking if the sender has enough balance
-        assert!(*srcBalance >= e9Amount, error::not_enough_balance_in_margin_bank(3));
+        assert!(*srcBalance >= baseAmount, error::not_enough_balance_in_margin_bank(3));
 
         // updating the balance
-        *srcBalance = *srcBalance - e9Amount;   
+        *srcBalance = *srcBalance - baseAmount;   
 
         // withdrawing the coin from the bank
         let coin = coin::take(&mut bank.coinBalance, (amount as u64), ctx);
@@ -195,7 +198,7 @@ module bluefin_foundation::margin_bank {
                 action: ACTION_WITHDRAW,
                 srcAddress: sender,
                 destAddress: destination,
-                amount: e9Amount,
+                amount: baseAmount,
                 srcBalance: table::borrow(accounts, sender).balance,
                 destBalance: table::borrow(accounts, destination).balance,
             }
