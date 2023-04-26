@@ -73,7 +73,7 @@ module bluefin_foundation::isolated_trading {
         salt: u128
     }
 
-    struct OrderStatus has store, drop {
+    struct OrderStatus has store {
         status: bool,
         filledQty: u128
     }
@@ -91,7 +91,7 @@ module bluefin_foundation::isolated_trading {
         price: u128
     }
 
-    struct IMResponse has store, drop {
+    struct IMResponse has drop {
         fundsFlow: Number,
         pnl: Number,
         fee: u128

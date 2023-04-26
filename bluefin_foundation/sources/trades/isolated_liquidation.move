@@ -52,7 +52,7 @@ module bluefin_foundation::isolated_liquidation {
         allOrNothing: bool
     }
 
-    struct IMResponse has store, drop {
+    struct IMResponse has drop {
         fundsFlow: Number,
         pnl: Number
     }

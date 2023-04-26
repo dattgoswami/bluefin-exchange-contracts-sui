@@ -50,12 +50,12 @@ module bluefin_foundation::isolated_adl {
         allOrNothing: bool
     }
 
-    struct IMResponse has store, drop {
+    struct IMResponse has drop {
         fundsFlow: Number,
         pnl: Number
     }
 
-    struct TradeResponse has copy, store, drop {
+    struct TradeResponse has copy, drop {
         makerFundsFlow: Number,
         takerFundsFlow: Number
     }
