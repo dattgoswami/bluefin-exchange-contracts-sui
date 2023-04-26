@@ -15,11 +15,11 @@ module bluefin_foundation::margin_bank {
     // custom modules
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::error::{Self};
+    use bluefin_foundation::roles::{Self, ExchangeGuardianCap, CapabilitiesSafe};
     use bluefin_foundation::tusdc::{TUSDC};
 
     // friend modules
     friend bluefin_foundation::exchange;
-    friend bluefin_foundation::guardian;
 
     //================================================================//
     //                      EVENTS
@@ -85,7 +85,11 @@ module bluefin_foundation::margin_bank {
     //                      GUARDIAN METHODS
     //===========================================================//
 
-    public (friend) fun set_withdrawal_status(bank: &mut Bank, isWithdrawalAllowed: bool) {
+    public entry fun set_withdrawal_status(safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, bank: &mut Bank, isWithdrawalAllowed: bool) {
+
+        // validate guardian
+        roles::check_guardian_validity(safe, guardian);
+
         // setting the withdrawal allowed flag
         bank.isWithdrawalAllowed = isWithdrawalAllowed;
 

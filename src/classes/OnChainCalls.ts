@@ -849,7 +849,7 @@ export class OnChainCalls {
             caller,
             "set_withdrawal_status",
             callArgs,
-            "guardian"
+            "margin_bank"
         );
     }
 
@@ -875,7 +875,7 @@ export class OnChainCalls {
             caller,
             "set_trading_permit",
             callArgs,
-            "guardian"
+            "perpetual"
         );
     }
 

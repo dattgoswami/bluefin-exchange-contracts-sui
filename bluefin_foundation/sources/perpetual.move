@@ -12,7 +12,7 @@ module bluefin_foundation::perpetual {
     use bluefin_foundation::position::{UserPosition};
     use bluefin_foundation::price_oracle::{Self, PriceOracle};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
-    use bluefin_foundation::roles::{ExchangeAdminCap, PriceOracleOperatorCap, CapabilitiesSafe};
+    use bluefin_foundation::roles::{Self, ExchangeAdminCap, PriceOracleOperatorCap, ExchangeGuardianCap, CapabilitiesSafe};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
 
@@ -21,7 +21,6 @@ module bluefin_foundation::perpetual {
     friend bluefin_foundation::isolated_trading;
     friend bluefin_foundation::isolated_liquidation;
     friend bluefin_foundation::isolated_adl;
-    friend bluefin_foundation::guardian;
     
     //===========================================================//
     //                           EVENTS                          //
@@ -193,7 +192,15 @@ module bluefin_foundation::perpetual {
     }
 
 
-    public (friend) fun set_trading_permit(perp: &mut Perpetual, isTradingPermitted: bool) {
+    //===========================================================//
+    //                      GUARDIAN METHODS
+    //===========================================================//
+
+    public entry fun set_trading_permit(safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, perp: &mut Perpetual, isTradingPermitted: bool) {
+
+        // validate guardian
+        roles::check_guardian_validity(safe, guardian);
+
         // setting the withdrawal allowed flag
         perp.isTradingPermitted = isTradingPermitted;
 
