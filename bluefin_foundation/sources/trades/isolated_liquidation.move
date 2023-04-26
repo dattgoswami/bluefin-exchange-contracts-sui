@@ -402,6 +402,10 @@ module bluefin_foundation::isolated_liquidation {
 
             // new position size * oracle price
             let updatedOIOpen = library::base_mul(newQPos, oraclePrice);
+            
+            // new position size * oracle price * mro
+            let newMargin = library::base_mul(updatedOIOpen, mro);
+
 
             // current margin / current position size
             marginPerUnit = library::base_div(margin, qPos);
@@ -419,7 +423,7 @@ module bluefin_foundation::isolated_liquidation {
                             signed_number::negate(pnlPerUnit),
                             qPos),
                         margin),
-                    library::base_mul(library::base_mul(newQPos, oraclePrice), mro)
+                    newMargin
                 );
 
             // verify that oi open checks still hold                       
@@ -435,7 +439,7 @@ module bluefin_foundation::isolated_liquidation {
 
             position::set_qPos(balance, newQPos);
             position::set_oiOpen(balance, updatedOIOpen);
-            position::set_margin(balance, library::base_mul(updatedOIOpen, mro));
+            position::set_margin(balance, newMargin);
             position::set_isPosPositive(balance, !isPosPositive);
 
 

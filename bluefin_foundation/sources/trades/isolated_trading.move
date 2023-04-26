@@ -620,7 +620,7 @@ module bluefin_foundation::isolated_trading {
                                     qPos),
                                 margin),
                             library::base_mul(
-                                newQPos, 
+                                newQPos,
                                 library::base_mul(
                                     fill.price, 
                                     mro) 
@@ -648,10 +648,10 @@ module bluefin_foundation::isolated_trading {
             
             // (new position size * fill price)
             position::set_oiOpen(balance, updatedOIOpen);
-            
-            // (new position size * fill price) * mro
-            position::set_margin(balance, library::base_mul(updatedOIOpen, mro));
-            
+
+            // margin = (quantity - qPos) * (price * mro)
+            position::set_margin(balance, library::base_mul(newQPos, library::base_mul(fill.price, mro)));
+                        
             position::set_isPosPositive(balance, !isPosPositive);
 
         };
