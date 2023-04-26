@@ -65,6 +65,7 @@ module bluefin_foundation::isolated_trading {
         maker: address,
         isBuy: bool,
         reduceOnly: bool,
+        postOnly: bool,
         price: u128,
         quantity: u128,
         leverage: u128,
@@ -271,6 +272,7 @@ module bluefin_foundation::isolated_trading {
     public (friend) fun pack_trade_data(
          // maker
         makerIsBuy: bool,
+        makerPostOnly: bool,
         makerPrice: u128,
         makerQuantity: u128,
         makerLeverage: u128,
@@ -282,6 +284,7 @@ module bluefin_foundation::isolated_trading {
 
         // taker
         takerIsBuy: bool,
+        takerPostOnly: bool,
         takerPrice: u128,
         takerQuantity: u128,
         takerLeverage: u128,
@@ -299,8 +302,8 @@ module bluefin_foundation::isolated_trading {
         perpetual:address
 
     ): TradeData{
-        let makerOrder = pack_order(perpetual, makerIsBuy, makerPrice, makerQuantity, makerLeverage, makerReduceOnly, makerAddress, makerExpiration, makerSalt);
-        let takerOrder = pack_order(perpetual, takerIsBuy, takerPrice, takerQuantity, takerLeverage, takerReduceOnly, takerAddress, takerExpiration, takerSalt);
+        let makerOrder = pack_order(perpetual, makerIsBuy, makerPostOnly, makerPrice, makerQuantity, makerLeverage, makerReduceOnly, makerAddress, makerExpiration, makerSalt);
+        let takerOrder = pack_order(perpetual, takerIsBuy, takerPostOnly, takerPrice, takerQuantity, takerLeverage, takerReduceOnly, takerAddress, takerExpiration, takerSalt);
         let fill = Fill{quantity, price};
         return TradeData{makerOrder, takerOrder, fill, makerSignature, takerSignature}
 
@@ -330,6 +333,7 @@ module bluefin_foundation::isolated_trading {
     fun pack_order(
         market: address,
         isBuy: bool,
+        postOnly:bool,
         price: u128,
         quantity: u128,
         leverage: u128,
@@ -342,6 +346,7 @@ module bluefin_foundation::isolated_trading {
                 market,
                 maker,
                 isBuy,
+                postOnly,
                 price,
                 quantity,
                 leverage,
@@ -364,6 +369,7 @@ module bluefin_foundation::isolated_trading {
          [100,119]   => market     (160 bits = 20 bytes)
          [120,120]  => reduceOnly       (1 byte)
          [121,121]  => isBuy            (1 byte)
+         [122,122]  => postOnly            (1 byte)
         */
 
         let serialized_order = vector::empty<u8>();
@@ -376,6 +382,7 @@ module bluefin_foundation::isolated_trading {
         let salt_b = bcs::to_bytes(&order.salt);
         let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
         let is_buy_b = bcs::to_bytes(&order.isBuy);
+        let post_only_b = bcs::to_bytes(&order.postOnly);
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
@@ -392,6 +399,7 @@ module bluefin_foundation::isolated_trading {
         vector::append(&mut serialized_order, market_address_b);
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
+        vector::append(&mut serialized_order, post_only_b);
 
 
         return hash::sha2_256(serialized_order)
@@ -407,6 +415,10 @@ module bluefin_foundation::isolated_trading {
 
 
     fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, order: Order, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
+
+            // if a taker order, must have post only false else
+            // it can only be a maker order
+            assert!(isTaker == 0 || !order.postOnly, error::taker_order_can_not_be_post_only());       
 
             verify_order_state(ordersTable, hash, isTaker);
 

@@ -24,7 +24,8 @@ export class Trader {
         const takerOrder = options?.takerOrder || {
             ...makerOrder,
             maker: takerAddress,
-            isBuy: !makerOrder.isBuy
+            isBuy: !makerOrder.isBuy,
+            postOnly: false
         };
 
         const makerSignature = orderSigner.signOrder(makerOrder, maker);

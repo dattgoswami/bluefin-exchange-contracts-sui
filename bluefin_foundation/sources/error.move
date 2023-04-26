@@ -130,6 +130,10 @@ module bluefin_foundation::error {
         return 48
     }
 
+    public fun taker_order_can_not_be_post_only() : u64 {
+        return 49
+    }
+
     public fun sender_does_not_have_permission_for_account(offset: u64): u64 {
        
         // 50 + 0 = 50 for maker

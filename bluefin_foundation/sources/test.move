@@ -47,6 +47,7 @@ module bluefin_foundation::test {
         maker: address,
         isBuy: bool,
         reduceOnly: bool,
+        postOnly: bool,
         price: u128,
         quantity: u128,
         leverage: u128,
@@ -65,6 +66,7 @@ module bluefin_foundation::test {
             leverage: 1000000000,
             isBuy: true,
             reduceOnly: false,
+            postOnly: false,
             expiration: 3655643731,
             salt: 1668690862116,
             maker: maker
@@ -81,6 +83,7 @@ module bluefin_foundation::test {
          [100,119]   => market     (160 bits = 20 bytes)
          [120,120]  => reduceOnly       (1 byte)
          [121,121]  => isBuy            (1 byte)
+         [122,122]  => postOnly            (1 byte)
         */
     
         let serialized_order = vector::empty<u8>();
@@ -93,6 +96,7 @@ module bluefin_foundation::test {
         let salt_b = bcs::to_bytes(&order.salt);
         let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
         let is_buy_b = bcs::to_bytes(&order.isBuy);
+        let post_only_b = bcs::to_bytes(&order.postOnly);
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
@@ -109,6 +113,7 @@ module bluefin_foundation::test {
         vector::append(&mut serialized_order, market_address_b);
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
+        vector::append(&mut serialized_order, post_only_b);
 
         event::emit(OrderSerializedEvent {serialized_order});
         event::emit(HashGeneratedEvent {hash:hash::sha2_256(serialized_order)});

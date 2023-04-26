@@ -24,7 +24,7 @@ export class OrderSigner {
     }
 
     public getSerializedOrder(order: Order): string {
-        const buffer = Buffer.alloc(122);
+        const buffer = Buffer.alloc(123);
         buffer.set(hexToBuffer(bnToHex(order.price)), 0);
         buffer.set(hexToBuffer(bnToHex(order.quantity)), 16);
         buffer.set(hexToBuffer(bnToHex(order.leverage)), 32);
@@ -34,6 +34,8 @@ export class OrderSigner {
         buffer.set(hexToBuffer(order.market), 100);
         buffer.set([order.reduceOnly ? 1 : 0], 120);
         buffer.set([order.isBuy ? 1 : 0], 121);
+        buffer.set([order.postOnly ? 1 : 0], 122);
+
         return buffer.toString("hex");
     }
 

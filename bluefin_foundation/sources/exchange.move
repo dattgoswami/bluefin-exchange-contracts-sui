@@ -148,6 +148,7 @@ module bluefin_foundation::exchange {
 
         // maker
         makerIsBuy: bool,
+        makerPostOnly: bool,
         makerPrice: u128,
         makerQuantity: u128,
         makerLeverage: u128,
@@ -159,6 +160,7 @@ module bluefin_foundation::exchange {
 
         // taker
         takerIsBuy: bool,
+        takerPostOnly: bool,
         takerPrice: u128,
         takerQuantity: u128,
         takerLeverage: u128,
@@ -193,10 +195,10 @@ module bluefin_foundation::exchange {
             let perpID = object::uid_to_inner(perpetual::id(perp));
             let perpAddress = object::id_to_address(&perpID);
 
-
             let data = isolated_trading::pack_trade_data(
                  // maker
-                makerIsBuy, 
+                makerIsBuy,
+                makerPostOnly, 
                 makerPrice, 
                 makerQuantity, 
                 makerLeverage, 
@@ -207,7 +209,8 @@ module bluefin_foundation::exchange {
                 makerSignature,
 
                 // taker
-                takerIsBuy, 
+                takerIsBuy,
+                takerPostOnly, 
                 takerPrice, 
                 takerQuantity, 
                 takerLeverage, 
@@ -224,6 +227,7 @@ module bluefin_foundation::exchange {
                 // perp id/address
                 object::id_to_address(&perpID)
             );
+            
 
             let tradeResponse = isolated_trading::trade(sender, perp, ordersTable, subAccounts, data);
 

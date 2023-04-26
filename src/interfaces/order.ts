@@ -6,6 +6,7 @@ export interface Order {
     maker: SuiAddress;
     isBuy: boolean;
     reduceOnly: boolean;
+    postOnly: boolean;
     quantity: BigNumber;
     price: BigNumber;
     leverage: BigNumber;

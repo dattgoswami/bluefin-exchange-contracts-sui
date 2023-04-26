@@ -293,6 +293,7 @@ export function createOrder(params: {
     quantity?: number;
     leverage?: number;
     reduceOnly?: boolean;
+    postOnly?: boolean;
     expiration?: number;
     salt?: number;
 }): Order {
@@ -301,6 +302,7 @@ export function createOrder(params: {
         maker: params.maker || DEFAULT.ORDER.maker,
         isBuy: params.isBuy == true,
         reduceOnly: params.reduceOnly == true,
+        postOnly: params.postOnly == true,
         price: params.price ? toBigNumber(params.price) : DEFAULT.ORDER.price,
         quantity: params.quantity
             ? toBigNumber(params.quantity)

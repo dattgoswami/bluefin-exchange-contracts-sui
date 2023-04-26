@@ -53,6 +53,7 @@ export const ERROR_CODES: { [key: string]: string } = {
     "46": "Maker: Cannot trade when loss exceeds margin. Please add margin",
     "47": "Taker: Cannot trade when loss exceeds margin. Please add margin",
     "48": "Taker: Order can not be of the same side as Maker",
+    "49": "Invalid taker order, as post only is set to true",
     "50": "Sender does not have permission on maker's behalf",
     "51": "Sender does not have permission on taker's behalf",
     "60": "Perpetual has been already de-listed",

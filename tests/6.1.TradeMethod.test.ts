@@ -7,10 +7,7 @@ import {
     getAddressFromSigner,
     getSignerFromSeed,
     createOrder,
-    createMarket,
-    publishPackageUsingClient,
-    getGenesisMap,
-    getDeploymentData
+    createMarket
 } from "../src/utils";
 import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
@@ -19,7 +16,7 @@ import { bigNumber, toBigNumber, toBigNumberStr } from "../src/library";
 import { getTestAccounts } from "./helpers/accounts";
 import { Trader } from "../src/classes/Trader";
 import { network } from "../src/DeploymentConfig";
-import { fundTestAccounts, mintAndDeposit } from "./helpers/utils";
+import { mintAndDeposit } from "./helpers/utils";
 import { Order } from "../src/interfaces";
 
 chai.use(chaiAsPromised);
@@ -197,6 +194,62 @@ describe("Regular Trade Method", () => {
         });
         expectTxToFail(tx);
         expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[48]);
+    });
+
+    it("should successfully trade when maker order has post only true", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+        await mintAndDeposit(onChain, bob.address, 2000);
+
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
+        });
+
+        expectTxToSucceed(priceTx);
+
+        const makerOrder = createOrder({
+            maker: alice.address,
+            market: onChain.getPerpetualID(),
+            price: 1,
+            postOnly: true
+        });
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            makerOrder
+        );
+
+        const tx = await onChain.trade({ ...trade, settlementCapID });
+        expectTxToSucceed(tx);
+    });
+
+    it("should revert as only a maker order can have post only flag set to true", async () => {
+        const makerOrder = createOrder({
+            maker: alice.address,
+            isBuy: true,
+            market: onChain.getPerpetualID(),
+            postOnly: false
+        });
+
+        const tradeData = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            makerOrder,
+            { takerOrder: { ...makerOrder, isBuy: false, postOnly: true } }
+        );
+
+        const tx = await onChain.trade({
+            ...tradeData,
+            settlementCapID
+        });
+
+        expectTxToFail(tx);
+        expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[49]);
     });
 
     it("should revert as maker and taker are both going short", async () => {
