@@ -163,6 +163,17 @@ module bluefin_foundation::signed_number {
         }
     }
 
+    public fun gt(a:Number, b: Number): bool {
+        if(a.sign && b.sign){
+            return a.value > b.value
+        } else if(!a.sign && !b.sign){
+            return a.value < b.value
+        } else {
+            return a.sign
+        }
+    }
+
+
     public fun from_subtraction(a:u128, b:u128):Number {
         
         return if ( a > b ){

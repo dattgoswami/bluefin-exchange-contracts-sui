@@ -215,7 +215,7 @@ module bluefin_foundation::position {
 
             // Case III: For MR <= MMR require qPos to go down or stay the same
             assert!(
-                signed_number::gte_uint(currentMarginRatio, mmr)
+                signed_number::gt_uint(currentMarginRatio, mmr)
                 ||
                 (
                     initialPosition.qPos >= currentPosition.qPos
