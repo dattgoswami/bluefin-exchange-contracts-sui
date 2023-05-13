@@ -4,9 +4,8 @@ import {
     RawSigner,
     Keypair,
     JsonRpcProvider,
-    SuiObject,
-    SuiMoveObject,
-    SuiExecuteTransactionResponse,
+    getSuiObjectData,
+    SuiTransactionBlockResponse,
     OwnedObjectRef,
     Secp256k1Keypair,
     SignatureScheme,
@@ -67,7 +66,7 @@ export function getKeyPairFromSeed(
         case "ED25519":
             return Ed25519Keypair.deriveKeypair(seed);
         case "Secp256k1":
-            return Secp256k1Keypair.deriveKeypair("m/54'/784'/0'/0/0", seed);
+            return Secp256k1Keypair.deriveKeypair(seed);
         default:
             throw new Error("Provided scheme is invalid");
     }
@@ -85,12 +84,6 @@ export function getSignerFromSeed(
     provider: JsonRpcProvider
 ): RawSigner {
     return getSignerFromKeyPair(getKeyPairFromSeed(seed), provider);
-}
-
-export async function getAddressFromSigner(
-    signer: RawSigner | SignerWithProvider
-): Promise<string> {
-    return `0x${await signer.getAddress()}`;
 }
 
 export async function requestGas(address: string) {
@@ -116,13 +109,12 @@ export async function requestGas(address: string) {
 
 export async function getGenesisMap(
     provider: JsonRpcProvider,
-    txResponse: SuiExecuteTransactionResponse
+    txResponse: SuiTransactionBlockResponse
 ): Promise<DeploymentObjectMap> {
     const map: DeploymentObjectMap = {};
 
-    const createdObjects = (txResponse as any).effects.created
-        ? ((txResponse as any).effects.created as OwnedObjectRef[])
-        : ((txResponse as any).effects.effects.created as OwnedObjectRef[]);
+    const createdObjects = (txResponse as any).effects
+        .created as OwnedObjectRef[];
 
     // iterate over each object
     for (const itr in createdObjects) {
@@ -131,110 +123,59 @@ export async function getGenesisMap(
         // get object id
         const id = obj.reference.objectId;
 
-        const txn = await provider.getObject(obj.reference.objectId);
-        const objDetails = txn.details as SuiObject;
+        const suiObjectResponse = await provider.getObject({
+            id: obj.reference.objectId,
+            options: { showType: true, showOwner: true, showContent: true }
+        });
+
+        const objDetails = getSuiObjectData(suiObjectResponse);
 
         // get object type
-        const objectType = objDetails.data.dataType;
+        const objectType = objDetails?.type as string;
         // get object owner
         const owner =
-            objDetails.owner == OBJECT_OWNERSHIP_STATUS.IMMUTABLE
+            objDetails?.owner == OBJECT_OWNERSHIP_STATUS.IMMUTABLE
                 ? OBJECT_OWNERSHIP_STATUS.IMMUTABLE
-                : Object.keys(objDetails.owner).indexOf("Shared") >= 0
+                : Object.keys(objDetails?.owner as any).indexOf("Shared") >= 0
                 ? OBJECT_OWNERSHIP_STATUS.SHARED
                 : OBJECT_OWNERSHIP_STATUS.OWNED;
 
         // get data type
         let dataType = "package";
-        if (objectType == "moveObject") {
-            const type = (objDetails.data as SuiMoveObject).type;
-            const tableIdx = type.lastIndexOf("Table");
+        if (objectType != "package") {
+            const tableIdx = objectType.lastIndexOf("Table");
             if (tableIdx >= 0) {
-                dataType = type.slice(tableIdx);
+                dataType = objectType.slice(tableIdx);
+            } else if (objectType.indexOf("TreasuryCap") > 0) {
+                dataType = "TreasuryCap";
+            } else if (objectType.indexOf("TUSDC") > 0) {
+                dataType = "Currency";
             } else {
-                dataType = type.slice(type.lastIndexOf("::") + 2);
+                dataType = objectType.slice(objectType.lastIndexOf("::") + 2);
             }
 
             if (dataType.endsWith(">") && dataType.indexOf("<") == -1) {
                 dataType = dataType.slice(0, dataType.length - 1);
             }
         }
-
         map[dataType] = {
             id,
             owner,
-            dataType
+            dataType: dataType
         };
     }
 
-    const events = (txResponse as any).effects.events
-        ? ((txResponse as any).effects.events as any[])
-        : [];
-
-    for (const itr in events) {
-        const obj = events[itr];
-
-        let event: DeploymentObjects | undefined;
-
-        if (obj["moveEvent"] !== undefined) {
-            const moveEvent = obj["moveEvent"];
-
-            const type = moveEvent["type"];
-
-            // check if it is a coin creation event
-            if (/^0x2::coin::CurrencyCreated/.test(type)) {
-                const coinType =
-                    /^0x2::coin::CurrencyCreated<(?<type>[\w:]+)>$/.exec(type)
-                        ?.groups?.type;
-
-                if (coinType) {
-                    event = {
-                        id: coinType,
-                        owner: OBJECT_OWNERSHIP_STATUS.IMMUTABLE,
-                        dataType: "Currency"
-                    };
-                }
-            }
-        } else if (obj["newObject"] !== undefined) {
-            const newObject = obj["newObject"];
-
-            const type = newObject["objectType"];
-
-            // check if it is a TreasuryCap object
-            if (/^0x2::coin::TreasuryCap/.test(type)) {
-                event = {
-                    id: newObject["objectId"],
-                    owner: OBJECT_OWNERSHIP_STATUS.IMMUTABLE,
-                    dataType: "TreasuryCap"
-                };
-            }
-        }
-
-        if (event) {
-            if (
-                event.dataType.endsWith(">") &&
-                event.dataType.indexOf("<") == -1
-            ) {
-                event.dataType = event.dataType.slice(
-                    0,
-                    event.dataType.length - 1
-                );
-            }
-
-            map[event.dataType] = {
-                id: event.id,
-                owner: event.owner,
-                dataType: event.dataType
-            };
-        }
+    // if the test currency was deployed, update its data type
+    if (map["Currency"]) {
+        map["Currency"].dataType = map["package"].id + "::tusdc::TUSDC";
     }
 
     return map;
 }
 
-export async function publishPackageUsingClient(): Promise<SuiExecuteTransactionResponse> {
+export async function publishPackageUsingClient(): Promise<SuiTransactionBlockResponse> {
     const pkgPath = `"${path.join(process.cwd(), `/${packageName}`)}"`;
-    return Client.publishPackage(pkgPath) as SuiExecuteTransactionResponse;
+    return Client.publishPackage(pkgPath) as SuiTransactionBlockResponse;
 }
 
 export async function createMarket(
@@ -254,11 +195,13 @@ export async function createMarket(
 
     // get account details for insurance pool, perpetual and fee pool
     const bankAccounts: BankAccountMap = {};
-    const bankAccountIDs = Transaction.getAllBankAccounts(txResult);
-    for (const acctID of bankAccountIDs) {
-        const id = (acctID as any).id as string;
+    const createdObjects = Transaction.getCreatedObjectIDs(txResult);
+
+    for (const id of createdObjects) {
         const acctDetails = await onChain.getBankAccountDetails(id);
-        bankAccounts[acctDetails.address] = id;
+        if (acctDetails != undefined) {
+            bankAccounts[acctDetails.address] = id;
+        }
     }
 
     return {

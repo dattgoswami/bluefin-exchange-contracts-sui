@@ -3,16 +3,21 @@ import { network, DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     createMarket,
     createOrder,
-    getAddressFromSigner,
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
     readFile
 } from "../src/utils";
 import { BASE_DECIMALS, toBigNumber, toBigNumberStr } from "../src/library";
-import { OnChainCalls, OrderSigner, Trader, Transaction } from "../src";
+import {
+    BankAccountDetails,
+    OnChainCalls,
+    OrderSigner,
+    Trader,
+    Transaction
+} from "../src";
 import { expect, expectTxToSucceed } from "./helpers/expect";
-import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
+import { SuiTransactionBlockResponse } from "@mysten/sui.js";
 import { config } from "dotenv";
 import { mintAndDeposit } from "./helpers/utils";
 import BigNumber from "bignumber.js";
@@ -393,7 +398,7 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
     let priceOracleCapID: string;
     const accounts = getTestAccounts(provider);
 
-    let tx: SuiExecuteTransactionResponse;
+    let tx: SuiTransactionBlockResponse;
     let lastOraclePrice: BigNumber;
 
     const getAccount = (name: string): Account => {
@@ -510,9 +515,10 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
                 expectTxToSucceed(tx);
 
                 if (testCase.expect) {
-                    const bankAcctDetails = await onChain.getBankAccountDetails(
-                        account.bankAccountId as string
-                    );
+                    const bankAcctDetails =
+                        (await onChain.getBankAccountDetails(
+                            account.bankAccountId as string
+                        )) as BankAccountDetails;
 
                     expect(
                         bankAcctDetails.balance
@@ -527,7 +533,7 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
     }
 
     before(async () => {
-        ownerAddress = await getAddressFromSigner(ownerSigner);
+        ownerAddress = await await ownerSigner.getAddress();
         onChain = new OnChainCalls(ownerSigner, deployment);
 
         const tx = await onChain.createSettlementOperator({
@@ -536,22 +542,14 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
 
         expectTxToSucceed(tx);
 
-        settlementCapID = (
-            Transaction.getObjects(tx, "newObject", "SettlementCap")[0] as any
-        ).id as string;
+        settlementCapID = Transaction.getCreatedObjectIDs(tx)[0];
 
         // make owner, the price oracle operator
         const tx1 = await onChain.setPriceOracleOperator({
             operator: ownerAddress
         });
 
-        priceOracleCapID = (
-            Transaction.getObjects(
-                tx1,
-                "newObject",
-                "PriceOracleOperatorCap"
-            )[0] as any
-        ).id as string;
+        priceOracleCapID = Transaction.getCreatedObjectIDs(tx1)[0];
     });
 
     const setupTest = async () => {
@@ -575,7 +573,10 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
 
         // deposit 6K to all accounts
         for (let i = 0; i < accounts.length; i++) {
-            await onChain.withdrawAllMarginFromBank(accounts[i].signer);
+            await onChain.withdrawAllMarginFromBank(
+                accounts[i].signer,
+                10000000
+            );
             accounts[i].bankAccountId = await mintAndDeposit(
                 onChain,
                 accounts[i].address,

@@ -6,35 +6,43 @@ import { getKeyPairFromSeed, getSignerFromSeed } from "../../src/utils";
 export const TEST_WALLETS: wallet[] = [
     {
         phrase: "trim bicycle fit ticket penalty basket window tunnel insane orange virtual tennis",
-        address: "0x9e61bd8cac66d89b78ebd145d6bbfbdd6ff550cf"
+        address:
+            "0x80c3d285c2fe5ccacd1a2fbc1fc757cbeab5134f1ef1e97803fe653e041c88aa"
     },
     {
         phrase: "trim basket bicycle fit ticket penalty window tunnel insane orange virtual tennis",
-        address: "0x9a363a0780493d20cd42dd7db9a99d3132d8f764"
+        address:
+            "0x2183df5aaf6366e5445c95fa238fc223dbbda54b7c363680578b435f657f1a29"
     },
     {
         phrase: "trim basket bicycle ticket penalty window tunnel fit insane orange virtual tennis",
-        address: "0xb0d6401d9190b438af6b14969d9b43c5bc49bc28"
+        address:
+            "0xed2bb2ae1330a3abee7794e659add176b827e13532b31074ad01330df2d5c843"
     },
     {
         phrase: "trim basket bicycle ticket penalty window tunnel fit insane orange tennis virtual",
-        address: "0x4dcee3924d8f7e62e66140bdd539d7fe2184d2fb"
+        address:
+            "0x7f1c6310bb9224dc18e2e9943979b25250e38bf450b0c685e6242da4e083a657"
     },
     {
         phrase: "trim bicycle basket ticket penalty window tunnel fit insane orange virtual tennis",
-        address: "0x839360602757bde481c821c489a6a14dd8042d08"
+        address:
+            "0x49387e35ea98b0866ca7eced5dca8d6ca47124a4eaf815f54c7083afcb3ea980"
     },
     {
         phrase: "bicycle trim basket ticket penalty window tunnel fit insane orange virtual tennis",
-        address: "0x994bcf2a1d7a695729f3458a42e94c0c5961b351"
+        address:
+            "0x01b51fb67313ae92f57418bc16aebd6134a6f39c388a77092cfdc4c639863d68"
     },
     {
         phrase: "basket trim bicycle ticket penalty window tunnel fit insane orange virtual tennis",
-        address: "0xa43304e548808b8800977eb3fcd146c44130915b"
+        address:
+            "0xced4404d440912889b1e7484773fc10a8174d56baf260a6879eba29eb72df55a"
     },
     {
         phrase: "penalty bicycle basket ticket trim window tunnel fit insane orange virtual tennis",
-        address: "0x13d65d3e50df131854d6dc8821953daac7a6efdb"
+        address:
+            "0x8ca4d4d7d5adcbd77423852bc2c868c57893a470699e7a6e13aa45d15014fc2d"
     }
 ];
 

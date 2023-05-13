@@ -1,5 +1,4 @@
 import {
-    getAddressFromSigner,
     writeFile,
     getGenesisMap,
     getSignerFromSeed,
@@ -23,7 +22,7 @@ async function main() {
     console.log(
         `Performing full deployment on: ${DeploymentConfigs.network.rpc}`
     );
-    const deployerAddress = await getAddressFromSigner(signer);
+    const deployerAddress = await signer.getAddress();
 
     console.log(`Deployer SUI address: ${deployerAddress}`);
 
@@ -46,6 +45,7 @@ async function main() {
     if (status == "success") {
         // fetch created objects
         const objects = await getGenesisMap(provider, publishTxn);
+
         const deploymentData = getDeploymentData(deployerAddress, objects);
 
         // create perpetual

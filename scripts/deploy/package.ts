@@ -1,5 +1,4 @@
 import {
-    getAddressFromSigner,
     writeFile,
     getGenesisMap,
     getSignerFromSeed,
@@ -7,20 +6,28 @@ import {
     publishPackageUsingClient,
     getDeploymentData
 } from "../../src/utils";
-import { Transaction } from "../../src/classes";
 import { DeploymentConfigs } from "../../src/DeploymentConfig";
+import { Client, Transaction } from "../../src/classes";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
     DeploymentConfigs.network.faucet
 );
 const signer = getSignerFromSeed(DeploymentConfigs.deployer, provider);
-
 async function main() {
     // info
     console.log(`Publishing package on: ${DeploymentConfigs.network.rpc}`);
-    const deployerAddress = await getAddressFromSigner(signer);
+
+    const deployerAddress = await signer.getAddress();
     console.log(`Deployer SUI address: ${deployerAddress}`);
+
+    if (!Client.switchEnv(DeploymentConfigs.network.name)) {
+        process.exit(1);
+    }
+
+    if (!Client.switchAccount(deployerAddress)) {
+        process.exit(1);
+    }
 
     // public package
     const publishTxn = await publishPackageUsingClient();

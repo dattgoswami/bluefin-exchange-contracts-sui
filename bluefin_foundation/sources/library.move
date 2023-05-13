@@ -1,7 +1,7 @@
 module bluefin_foundation::library {
     use std::vector;
     use sui::address;
-    use std::hash;
+    use sui::hash;
     
     const BASE_UINT : u128 = 1000000000;
     const HALF_BASE_UINT : u128 = 500000000;
@@ -79,21 +79,21 @@ module bluefin_foundation::library {
         return amount * 1000
     }
 
-    public fun get_public_address(public_key: vector<u8>):address {
+    public fun get_public_address(public_key: vector<u8>): address{
         let buff = vector::empty<u8>();
 
         vector::append(&mut buff, vector[1]); // signature scheme for secp256k1
         vector::append(&mut buff, public_key);
 
-        let address_ex = hash::sha3_256(buff);
-        let addr = vector::empty<u8>();
+        let address_ex = hash::blake2b256(&buff);
+        let address = vector::empty<u8>();
         let i = 0;
-        while (i < 20) {
+        while (i < 32) {
             let byte = vector::borrow(&address_ex, i);
-            vector::push_back(&mut addr, *byte);
+            vector::push_back(&mut address, *byte);
             i = i + 1;
         };
 
-        return address::from_bytes(addr)
+        return address::from_bytes(address)
     }
 }

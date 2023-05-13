@@ -121,7 +121,7 @@ module bluefin_foundation::isolated_trading {
     fun init(ctx: &mut TxContext) {        
         // create orders filled quantity table
         let orders = table::new<vector<u8>, OrderStatus>(ctx);
-        transfer::share_object(orders);   
+        transfer::public_share_object(orders);   
     }
 
 
@@ -156,8 +156,11 @@ module bluefin_foundation::isolated_trading {
             position::create_position(perpID, positionsTable, data.takerOrder.maker);
 
             // // get order hashes
-            let makerHash = get_hash(data.makerOrder);
-            let takerHash = get_hash(data.takerOrder);
+            let makerOrderSerialized = get_serialized_order(data.makerOrder);
+            let takerOrderSerialized = get_serialized_order(data.takerOrder);
+
+            let makerHash = get_hash(makerOrderSerialized);
+            let takerHash = get_hash(takerOrderSerialized);
 
             // if maker/taker orders are coming on-chain for first time, add them to order table
             create_order(ordersTable, makerHash);
@@ -176,8 +179,8 @@ module bluefin_foundation::isolated_trading {
             let initTakerPos = *table::borrow(positionsTable, data.takerOrder.maker);
 
             // Validate orders are correct and can be executed for the trade
-            verify_order(initMakerPos, ordersTable, subAccounts, data.makerOrder, makerHash, data.makerSignature, data.fill, 0);
-            verify_order(initTakerPos, ordersTable, subAccounts, data.takerOrder, takerHash, data.takerSignature, data.fill, 1);
+            verify_order(initMakerPos, ordersTable, subAccounts, data.makerOrder, makerOrderSerialized, makerHash, data.makerSignature, data.fill, 0);
+            verify_order(initTakerPos, ordersTable, subAccounts, data.takerOrder, takerOrderSerialized, takerHash, data.takerSignature, data.fill, 1);
 
             // verify pre-trade checks
             evaluator::verify_price_checks(tradeChecks, data.fill.price);
@@ -356,7 +359,7 @@ module bluefin_foundation::isolated_trading {
         }
     }
 
-    fun get_hash(order:Order): vector<u8>{
+    fun get_serialized_order(order:Order): vector<u8>{
         
         /*
         serializedOrder
@@ -365,11 +368,11 @@ module bluefin_foundation::isolated_trading {
          [32,47]    => leverage         (128 bits = 16 bytes)
          [48,63]    => expiration       (128 bits = 16 bytes)
          [64,79]    => salt             (128 bits = 16 bytes)
-         [80,99]   => maker     (160 bits = 20 bytes)
-         [100,119]   => market     (160 bits = 20 bytes)
-         [120,120]  => reduceOnly       (1 byte)
-         [121,121]  => isBuy            (1 byte)
-         [122,122]  => postOnly            (1 byte)
+         [80,111]   => maker            (160 bits = 32 bytes)
+         [112,143]   => market          (160 bits = 32 bytes)
+         [144,144]  => reduceOnly       (1 byte)
+         [145,145]  => isBuy            (1 byte)
+         [146,146]  => postOnly         (1 byte)
         */
 
         let serialized_order = vector::empty<u8>();
@@ -401,9 +404,12 @@ module bluefin_foundation::isolated_trading {
         vector::append(&mut serialized_order, is_buy_b);
         vector::append(&mut serialized_order, post_only_b);
 
+        return serialized_order
 
-        return hash::sha2_256(serialized_order)
+    }
 
+    fun get_hash(serialized_order: vector<u8>): vector<u8>{
+            return hash::sha2_256(serialized_order)        
     }
 
     fun create_order(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash: vector<u8>){
@@ -414,7 +420,7 @@ module bluefin_foundation::isolated_trading {
     }
 
 
-    fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, order: Order, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
+    fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, order: Order, orderSerialized: vector<u8>, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
 
             // if a taker order, must have post only false else
             // it can only be a maker order
@@ -422,7 +428,7 @@ module bluefin_foundation::isolated_trading {
 
             verify_order_state(ordersTable, hash, isTaker);
 
-            let sigMaker = verify_order_signature(subAccounts, order.maker, hash, signature, isTaker);
+            let sigMaker = verify_order_signature(subAccounts, order.maker, orderSerialized, signature, isTaker);
 
             verify_order_expiry(order, isTaker);
 
@@ -455,9 +461,19 @@ module bluefin_foundation::isolated_trading {
     }
 
 
-    fun verify_order_signature(subAccounts: &SubAccounts, maker:address, hash:vector<u8>, signature: vector<u8>, isTaker:u64):address{
+    fun verify_order_signature(subAccounts: &SubAccounts, maker:address, orderSerialized: vector<u8>, signature: vector<u8>, isTaker:u64):address{
 
-        let publicKey = ecdsa_k1::ecrecover(&signature, &hash);
+        let v = vector::borrow_mut(&mut signature, 64);
+        
+        if (*v == 27) {
+            *v = 0;
+        } else if (*v == 28) {
+            *v = 1;
+        } else if (*v > 35) {
+            *v = (*v - 1) % 2;
+        };
+
+        let publicKey = ecdsa_k1::secp256k1_ecrecover(&signature, &orderSerialized, 1);
 
         let publicAddress = library::get_public_address(publicKey);
 

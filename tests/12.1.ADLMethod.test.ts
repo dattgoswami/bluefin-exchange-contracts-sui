@@ -3,7 +3,6 @@ import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     getProvider,
-    getAddressFromSigner,
     getSignerFromSeed,
     createOrder,
     createMarket,
@@ -57,16 +56,14 @@ describe("Deleveraging Trade Method", () => {
         onChain = new OnChainCalls(ownerSigner, deploymentData);
 
         // will be using owner as liquidator
-        ownerAddress = await getAddressFromSigner(ownerSigner);
+        ownerAddress = await ownerSigner.getAddress();
 
         // make owner, the settlement operator
         const txs = await onChain.createSettlementOperator(
             { operator: ownerAddress },
             ownerSigner
         );
-        settlementCapID = (
-            Transaction.getObjects(txs, "newObject", "SettlementCap")[0] as any
-        ).id as string;
+        settlementCapID = Transaction.getCreatedObjectIDs(txs)[0];
 
         // set oracle price
         const priceTx = await onChain.updateOraclePrice({
@@ -130,7 +127,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: DEFAULT.RANDOM_ACCOUNT_ADDRESS, // a random account with no position
                 taker: bob.address,
-                quantity: toBigNumberStr(1)
+                quantity: toBigNumberStr(1),
+                gasBudget: 1000000
             },
             ownerSigner
         );
@@ -162,7 +160,8 @@ describe("Deleveraging Trade Method", () => {
                 maker: DEFAULT.RANDOM_ACCOUNT_ADDRESS, // a random account with no position
                 taker: bob.address,
                 quantity: toBigNumberStr(1),
-                deleveragingCapID: onChainCaller.getDeleveragingCapID() // no longer the deleveraging operator
+                deleveragingCapID: onChainCaller.getDeleveragingCapID(), // no longer the deleveraging operator
+                gasBudget: 1000000
             },
             ownerSigner
         );
@@ -176,7 +175,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: alice.address,
                 taker: DEFAULT.RANDOM_ACCOUNT_ADDRESS, // a random account with no position
-                quantity: toBigNumberStr(1)
+                quantity: toBigNumberStr(1),
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -218,7 +218,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: accounts.maker.address,
                 taker: accounts.taker.address,
-                quantity: toBigNumberStr(1)
+                quantity: toBigNumberStr(1),
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -262,7 +263,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: accounts.maker.address,
                 taker: accounts.taker.address, // taker has no position
-                quantity: toBigNumberStr(1)
+                quantity: toBigNumberStr(1),
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -277,7 +279,8 @@ describe("Deleveraging Trade Method", () => {
                 maker: alice.address,
                 taker: bob.address,
                 quantity: toBigNumberStr(2), // alice has only got 1 quantity
-                allOrNothing: true
+                allOrNothing: true,
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -312,7 +315,8 @@ describe("Deleveraging Trade Method", () => {
                 maker: accounts.maker.address,
                 taker: bob.address,
                 quantity: toBigNumberStr(2), // bob has only got 1 quantity
-                allOrNothing: true
+                allOrNothing: true,
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -326,7 +330,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: alice.address,
                 taker: bob.address,
-                quantity: toBigNumberStr(0.01) // min quantity tradeable is 0.1
+                quantity: toBigNumberStr(0.01), // min quantity tradeable is 0.1
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -340,7 +345,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: alice.address,
                 taker: bob.address,
-                quantity: toBigNumberStr(500000) // max quantity tradeable for limit order is 100000
+                quantity: toBigNumberStr(500000), // max quantity tradeable for limit order is 100000
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -354,7 +360,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: alice.address,
                 taker: bob.address,
-                quantity: toBigNumberStr(2000) // max quantity tradeable for market order is 1000
+                quantity: toBigNumberStr(2000), // max quantity tradeable for market order is 1000
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -368,7 +375,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: alice.address,
                 taker: bob.address,
-                quantity: toBigNumberStr(1)
+                quantity: toBigNumberStr(1),
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -386,7 +394,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: alice.address,
                 taker: bob.address,
-                quantity: toBigNumberStr(1)
+                quantity: toBigNumberStr(1),
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -425,7 +434,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: accounts.taker.address, // under water, can be maker
                 taker: bob.address, // under water, can note be taker
-                quantity: toBigNumberStr(1)
+                quantity: toBigNumberStr(1),
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -465,7 +475,8 @@ describe("Deleveraging Trade Method", () => {
             {
                 maker: bob.address, // under water, can be maker - has short position
                 taker: accounts.taker.address, // above water so can be taker but has short position
-                quantity: toBigNumberStr(1)
+                quantity: toBigNumberStr(1),
+                gasBudget: 10000000
             },
             ownerSigner
         );
@@ -545,9 +556,7 @@ describe("Deleveraging Trade Method", () => {
             { operator: ownerAddress },
             ownerSigner
         );
-        const settlementCapID = (
-            Transaction.getObjects(txs, "newObject", "SettlementCap")[0] as any
-        ).id as string;
+        const settlementCapID = Transaction.getCreatedObjectIDs(txs)[0];
 
         await mintAndDeposit(onChainCaller, alice.address);
         await mintAndDeposit(onChainCaller, bob.address);

@@ -3,11 +3,11 @@ import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     getProvider,
-    getAddressFromSigner,
     getSignerFromSeed,
     getGenesisMap,
     publishPackageUsingClient,
-    getDeploymentData
+    getDeploymentData,
+    requestGas
 } from "../src/utils";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { OnChainCalls, Transaction } from "../src/classes";
@@ -32,10 +32,11 @@ describe("Roles", () => {
 
     before(async () => {
         await fundTestAccounts();
-        ownerAddress = await getAddressFromSigner(ownerSigner);
+        ownerAddress = await ownerSigner.getAddress();
     });
 
     beforeEach(async () => {
+        await requestGas(ownerAddress);
         const publishTxn = await publishPackageUsingClient();
         const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = await getDeploymentData(ownerAddress, objects);
@@ -53,7 +54,7 @@ describe("Roles", () => {
                 tx,
                 "ExchangeAdminUpdateEvent"
             )[0];
-            expect(event.fields.account).to.be.equal(alice.address);
+            expect(event.account).to.be.equal(alice.address);
         });
 
         it("should revert when non-admin tries to transfer Exchange Admin role to someone", async () => {
@@ -73,7 +74,7 @@ describe("Roles", () => {
 
         it("should revert when trying to transfer ownership of exchange admin to existing admin", async () => {
             const tx = await onChain.setExchangeAdmin(
-                { address: ownerAddress },
+                { address: ownerAddress, gasBudget: 10000000 },
                 ownerSigner
             );
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[900]);
@@ -89,7 +90,7 @@ describe("Roles", () => {
             );
             await expect(
                 onChain.setExchangeGuardian(
-                    { address: alice.address },
+                    { address: alice.address, gasBudget: 100000 },
                     bob.signer
                 )
             ).to.be.eventually.rejectedWith(error);
@@ -101,9 +102,11 @@ describe("Roles", () => {
             });
             expectTxToSucceed(tx1);
 
+            const guardianCap = Transaction.getCreatedObjectIDs(tx1)[0];
+
             // expect to fail as owner is no longer guardian
             const tx2 = await onChain.setBankWithdrawalStatus(
-                { isAllowed: false },
+                { isAllowed: false, gasBudget: 10000000 },
                 ownerSigner
             );
             expectTxToFail(tx2);
@@ -115,6 +118,7 @@ describe("Roles", () => {
                 onChain.getDeployerAddress(),
                 alice.address
             );
+
             expect(
                 onChain.setBankWithdrawalStatus(
                     {
@@ -125,14 +129,8 @@ describe("Roles", () => {
                 )
             ).to.be.eventually.rejectedWith(error);
 
-            const guardianCap = Transaction.getObjects(
-                tx1,
-                "newObject",
-                "ExchangeGuardianCap"
-            )[0];
-
             const tx3 = await onChain.setBankWithdrawalStatus(
-                { isAllowed: false, guardianCap: (guardianCap as any).id },
+                { isAllowed: false, guardianCap },
                 alice.signer
             );
             expectTxToSucceed(tx3);
@@ -153,13 +151,7 @@ describe("Roles", () => {
             });
             expectTxToSucceed(tx1);
 
-            const capID = (
-                Transaction.getObjects(
-                    tx1,
-                    "newObject",
-                    "SettlementCap"
-                )[0] as any
-            ).id;
+            const capID = Transaction.getCreatedObjectIDs(tx1)[0];
 
             const tx2 = await onChain.removeSettlementOperator({
                 capID: capID
@@ -174,13 +166,7 @@ describe("Roles", () => {
             });
             expectTxToSucceed(tx1);
 
-            const capID = (
-                Transaction.getObjects(
-                    tx1,
-                    "newObject",
-                    "SettlementCap"
-                )[0] as any
-            ).id;
+            const capID = Transaction.getCreatedObjectIDs(tx1)[0];
 
             const tx2 = await onChain.removeSettlementOperator({
                 capID: capID
@@ -189,7 +175,8 @@ describe("Roles", () => {
             expectTxToSucceed(tx2);
 
             const tx3 = await onChain.removeSettlementOperator({
-                capID: capID
+                capID: capID,
+                gasBudget: 10000000
             });
 
             expectTxToFail(tx3);
@@ -227,7 +214,7 @@ describe("Roles", () => {
                 "PriceOracleOperatorUpdate"
             )[0];
 
-            expect(event.fields.account).to.be.equal(alice.address);
+            expect(event.account).to.be.equal(alice.address);
         });
     });
 
@@ -260,7 +247,7 @@ describe("Roles", () => {
                 "DelevergingOperatorUpdate"
             )[0];
 
-            expect(event.fields.account).to.be.equal(alice.address);
+            expect(event.account).to.be.equal(alice.address);
         });
     });
 
@@ -273,9 +260,9 @@ describe("Roles", () => {
             expectTxToSucceed(tx);
 
             const event = Transaction.getEvents(tx, "SubAccountUpdateEvent")[0];
-            expect(event.fields.account).to.be.equal(alice.address);
-            expect(event.fields.subAccount).to.be.equal(bob.address);
-            expect(event.fields.status).to.be.equal(true);
+            expect(event.account).to.be.equal(alice.address);
+            expect(event.subAccount).to.be.equal(bob.address);
+            expect(event.status).to.be.equal(true);
         });
 
         it("should allow alice to remove bob from its sub accounts", async () => {
@@ -296,9 +283,9 @@ describe("Roles", () => {
                 "SubAccountUpdateEvent"
             )[0];
 
-            expect(event.fields.account).to.be.equal(alice.address);
-            expect(event.fields.subAccount).to.be.equal(bob.address);
-            expect(event.fields.status).to.be.equal(false);
+            expect(event.account).to.be.equal(alice.address);
+            expect(event.subAccount).to.be.equal(bob.address);
+            expect(event.status).to.be.equal(false);
         });
 
         it("should execute tx successfully even when alice tries to remove a non-existent sub account", async () => {
@@ -310,9 +297,9 @@ describe("Roles", () => {
 
             const event = Transaction.getEvents(tx, "SubAccountUpdateEvent")[0];
 
-            expect(event.fields.account).to.be.equal(alice.address);
-            expect(event.fields.subAccount).to.be.equal(bob.address);
-            expect(event.fields.status).to.be.equal(false);
+            expect(event.account).to.be.equal(alice.address);
+            expect(event.subAccount).to.be.equal(bob.address);
+            expect(event.status).to.be.equal(false);
         });
 
         it("should execute tx successfully even when alice tries to whitelist same account as sub account twice", async () => {
@@ -333,9 +320,9 @@ describe("Roles", () => {
                 "SubAccountUpdateEvent"
             )[0];
 
-            expect(event.fields.account).to.be.equal(alice.address);
-            expect(event.fields.subAccount).to.be.equal(bob.address);
-            expect(event.fields.status).to.be.equal(true);
+            expect(event.account).to.be.equal(alice.address);
+            expect(event.subAccount).to.be.equal(bob.address);
+            expect(event.status).to.be.equal(true);
         });
     });
 });

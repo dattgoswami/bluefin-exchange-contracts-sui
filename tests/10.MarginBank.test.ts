@@ -3,16 +3,15 @@ import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     getProvider,
-    getAddressFromSigner,
     getSignerFromSeed,
     getGenesisMap,
     publishPackageUsingClient
 } from "../src/utils";
 import { OnChainCalls, Transaction } from "../src/classes";
 import { fundTestAccounts } from "./helpers/utils";
-import { getTestAccounts, TEST_WALLETS } from "./helpers/accounts";
+import { TEST_WALLETS } from "./helpers/accounts";
 import { toBigNumberStr } from "../src/library";
-import { expectTxToEmitEvent, expectTxToSucceed } from "./helpers/expect";
+import { expectTxToSucceed } from "./helpers/expect";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -31,7 +30,7 @@ describe("Margin Bank", () => {
 
     before(async () => {
         await fundTestAccounts();
-        ownerAddress = await getAddressFromSigner(ownerSigner);
+        ownerAddress = await ownerSigner.getAddress();
     });
 
     beforeEach(async () => {
@@ -66,23 +65,23 @@ describe("Margin Bank", () => {
                 alice
             );
 
+            expectTxToSucceed(txResult);
+
             const bankBalanceUpdateEvent = Transaction.getEvents(
                 txResult,
                 "BankBalanceUpdate"
             )[0];
 
             expect(bankBalanceUpdateEvent).to.not.be.undefined;
-            expect(bankBalanceUpdateEvent?.fields?.srcAddress).to.be.equal(
+            expect(bankBalanceUpdateEvent.srcAddress).to.be.equal(aliceAddress);
+            expect(bankBalanceUpdateEvent.destAddress).to.be.equal(
                 aliceAddress
             );
-            expect(bankBalanceUpdateEvent?.fields?.destAddress).to.be.equal(
-                aliceAddress
-            );
-            expect(bankBalanceUpdateEvent?.fields?.action).to.be.equal("0");
-            expect(bankBalanceUpdateEvent?.fields?.amount).to.be.equal(
+            expect(bankBalanceUpdateEvent.action).to.be.equal("0");
+            expect(bankBalanceUpdateEvent.amount).to.be.equal(
                 toBigNumberStr("10000")
             );
-            expect(bankBalanceUpdateEvent?.fields?.destBalance).to.be.equal(
+            expect(bankBalanceUpdateEvent.destBalance).to.be.equal(
                 toBigNumberStr("10000")
             );
         });
@@ -97,7 +96,6 @@ describe("Margin Bank", () => {
                 expectTxToSucceed(tx);
                 coins = await onChain.getUSDCCoins({ address: aliceAddress });
             }
-
             const coin = coins.data.pop();
 
             const depositReceipt = await onChain.depositToBank(
@@ -115,21 +113,19 @@ describe("Margin Bank", () => {
 
             const coinValue = toBigNumberStr((coin as any).balance, 3); // converting a 6 decimal coin to 9 decimal value
             expect(depositBankBalanceUpdateEvent).to.not.be.undefined;
-            expect(
-                depositBankBalanceUpdateEvent?.fields?.destAddress
-            ).to.be.equal(aliceAddress);
-            expect(
-                depositBankBalanceUpdateEvent?.fields?.srcAddress
-            ).to.be.equal(aliceAddress);
-            expect(depositBankBalanceUpdateEvent?.fields?.action).to.be.equal(
-                "0"
+            expect(depositBankBalanceUpdateEvent?.destAddress).to.be.equal(
+                aliceAddress
             );
-            expect(depositBankBalanceUpdateEvent?.fields?.amount).to.be.equal(
+            expect(depositBankBalanceUpdateEvent?.srcAddress).to.be.equal(
+                aliceAddress
+            );
+            expect(depositBankBalanceUpdateEvent?.action).to.be.equal("0");
+            expect(depositBankBalanceUpdateEvent?.amount).to.be.equal(
                 coinValue
             );
-            expect(
-                depositBankBalanceUpdateEvent?.fields?.srcBalance
-            ).to.be.equal(coinValue);
+            expect(depositBankBalanceUpdateEvent?.srcBalance).to.be.equal(
+                coinValue
+            );
 
             const txResult = await onChain.withdrawFromBank(
                 {
@@ -138,28 +134,28 @@ describe("Margin Bank", () => {
                 alice
             );
 
+            expectTxToSucceed(txResult);
+
             const bankBalanceUpdateEvent = Transaction.getEvents(
                 txResult,
                 "BankBalanceUpdate"
             )[0];
 
             expect(bankBalanceUpdateEvent).to.not.be.undefined;
-            expect(bankBalanceUpdateEvent?.fields?.destAddress).to.be.equal(
+            expect(bankBalanceUpdateEvent?.destAddress).to.be.equal(
                 aliceAddress
             );
-            expect(bankBalanceUpdateEvent?.fields?.srcAddress).to.be.equal(
+            expect(bankBalanceUpdateEvent?.srcAddress).to.be.equal(
                 aliceAddress
             );
-            expect(bankBalanceUpdateEvent?.fields?.action).to.be.equal("1");
-            expect(bankBalanceUpdateEvent?.fields?.amount).to.be.equal(
-                coinValue
-            );
-            expect(bankBalanceUpdateEvent?.fields?.srcBalance).to.be.equal("0");
+            expect(bankBalanceUpdateEvent?.action).to.be.equal("1");
+            expect(bankBalanceUpdateEvent?.amount).to.be.equal(coinValue);
+            expect(bankBalanceUpdateEvent?.srcBalance).to.be.equal("0");
         });
 
         it("should revert alice does not have enough funds to withdraw", async () => {
             // empty alice's account
-            await onChain.withdrawAllMarginFromBank(alice);
+            await onChain.withdrawAllMarginFromBank(alice, 1000000);
 
             let coins = { data: [] };
             while (coins.data.length == 0) {
@@ -184,7 +180,8 @@ describe("Margin Bank", () => {
 
             const txResult = await onChain.withdrawFromBank(
                 {
-                    amount: toBigNumberStr("50000", 6)
+                    amount: toBigNumberStr("50000", 6),
+                    gasBudget: 10000000
                 },
                 alice
             );
@@ -196,7 +193,8 @@ describe("Margin Bank", () => {
         it("should revert as alice has no bank account", async () => {
             const txResult = await onChain.withdrawFromBank(
                 {
-                    amount: toBigNumberStr("10000", 6)
+                    amount: toBigNumberStr("10000", 6),
+                    gasBudget: 10000000
                 },
                 alice
             );

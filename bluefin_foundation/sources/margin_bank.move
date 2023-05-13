@@ -187,7 +187,7 @@ module bluefin_foundation::margin_bank {
         let coin = coin::take(&mut bank.coinBalance, (amount as u64), ctx);
 
         // transferring the coin to the destination account
-        transfer::transfer(
+        transfer::public_transfer(
             coin,
             destination
         );
@@ -238,7 +238,7 @@ module bluefin_foundation::margin_bank {
         let coin = coin::take(&mut bank.coinBalance, (amount as u64), ctx);
 
         // transferring the coin to the destination account
-        transfer::transfer(
+        transfer::public_transfer(
             coin,
             destination
         );
@@ -267,7 +267,7 @@ module bluefin_foundation::margin_bank {
         // checking if the account exists
         if(!table::contains(accounts, addr)){
 
-            // initializing the account of the sender
+            // initializing the account
             table::add(accounts, addr, BankAccount {
                 id: object::new(ctx),
                 balance: 0u128,

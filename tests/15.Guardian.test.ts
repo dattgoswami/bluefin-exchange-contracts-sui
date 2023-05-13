@@ -3,7 +3,6 @@ import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfigs } from "../src/DeploymentConfig";
 import {
     getProvider,
-    getAddressFromSigner,
     getSignerFromSeed,
     getGenesisMap,
     publishPackageUsingClient,
@@ -30,7 +29,7 @@ describe("Guardian", () => {
 
     before(async () => {
         await fundTestAccounts();
-        ownerAddress = await getAddressFromSigner(ownerSigner);
+        ownerAddress = await ownerSigner.getAddress();
     });
 
     beforeEach(async () => {
@@ -110,7 +109,8 @@ describe("Guardian", () => {
 
         const txResult = await onChain.withdrawFromBank(
             {
-                amount: toBigNumberStr("1000")
+                amount: toBigNumberStr("1000"),
+                gasBudget: 1000000
             },
             alice
         );
@@ -137,18 +137,13 @@ describe("Guardian", () => {
         const tx2 = await onChain.setExchangeGuardian({
             address: alice.address
         });
-        const aliceGuardCap = (
-            Transaction.getObjects(
-                tx2,
-                "newObject",
-                "ExchangeGuardianCap"
-            )[0] as any
-        ).id as string;
+        const aliceGuardCap = Transaction.getCreatedObjectIDs(tx2)[0];
 
         // old guardian trying to turn on withdrawal
         const tx3 = await onChain.setBankWithdrawalStatus(
             {
-                isAllowed: true
+                isAllowed: true,
+                gasBudget: 1000000
             },
             ownerSigner
         );
@@ -209,18 +204,13 @@ describe("Guardian", () => {
         const tx2 = await onChain.setExchangeGuardian({
             address: alice.address
         });
-        const aliceGuardCap = (
-            Transaction.getObjects(
-                tx2,
-                "newObject",
-                "ExchangeGuardianCap"
-            )[0] as any
-        ).id as string;
+        const aliceGuardCap = Transaction.getCreatedObjectIDs(tx2)[0];
 
         // old guardian trying to turn off trading
         const tx3 = await onChain.setPerpetualTradingPermit(
             {
-                isPermitted: false
+                isPermitted: false,
+                gasBudget: 1000000
             },
             ownerSigner
         );

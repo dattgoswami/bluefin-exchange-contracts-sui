@@ -1,5 +1,4 @@
 import {
-    getAddressFromSigner,
     writeFile,
     getSignerFromSeed,
     getProvider,
@@ -21,7 +20,7 @@ async function main() {
     console.log(
         `Deploying market ${market} on : ${DeploymentConfigs.network.rpc}`
     );
-    const deployerAddress = await getAddressFromSigner(signer);
+    const deployerAddress = await signer.getAddress();
 
     console.log(`Deployer SUI address: ${deployerAddress}`);
 

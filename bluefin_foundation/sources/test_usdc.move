@@ -16,8 +16,8 @@ module bluefin_foundation::tusdc {
     fun init(witness: TUSDC, ctx: &mut TxContext) {
         // Get a treasury cap for the coin and give it to the transaction sender
         let (treasury_cap, metadata) = coin::create_currency<TUSDC>(witness, 6, b"TUSDC", b"Test USDC", b"USDC for testing", option::none(), ctx);
-        transfer::freeze_object(metadata);
-        transfer::transfer(treasury_cap, tx_context::sender(ctx))
+        transfer::public_freeze_object(metadata);
+        transfer::public_transfer(treasury_cap, tx_context::sender(ctx))
     }
 
     /// Manager can mint new coins

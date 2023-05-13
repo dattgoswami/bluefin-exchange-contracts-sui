@@ -35,17 +35,13 @@ export class Client {
     static publishPackage(pkgPath: string) {
         return JSON.parse(
             execCommand(
-                `sui client publish --gas-budget 30000 --json ${pkgPath} --skip-dependency-verification --skip-fetch-latest-git-deps`
+                `sui client publish --gas-budget 500000000 --json ${pkgPath} --skip-dependency-verification --skip-fetch-latest-git-deps`
             )
         );
     }
 
     static buildPackage(pkgPath: string) {
-        return JSON.parse(
-            execCommand(
-                `sui move build --dump-bytecode-as-base64 --path ${pkgPath}`
-            )
-        );
+        execCommand(`sui move build --path "${pkgPath}"`);
     }
 
     static switchAccount(address: string): boolean {

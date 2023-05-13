@@ -6,14 +6,13 @@ import {
     getProvider,
     getSignerFromSeed,
     createMarket,
-    createOrder,
-    getAddressFromSigner
+    createOrder
 } from "../src/utils";
 import { OnChainCalls, OrderSigner, Trader, Transaction } from "../src/classes";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { getTestAccounts } from "./helpers/accounts";
 import { network } from "../src/DeploymentConfig";
-import { toBigNumberStr } from "../src/library";
+import { ADDRESSES, toBigNumberStr } from "../src/library";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
 import { mintAndDeposit } from "./helpers/utils";
 
@@ -35,7 +34,7 @@ describe("Perpetual", () => {
             await createMarket(deployment, ownerSigner, provider)
         ).marketObjects;
         onChain = new OnChainCalls(ownerSigner, deployment);
-        ownerAddress = await getAddressFromSigner(ownerSigner);
+        ownerAddress = await ownerSigner.getAddress();
     });
 
     it("should successfully update insurance pool percentage", async () => {
@@ -47,7 +46,8 @@ describe("Perpetual", () => {
 
     it("should not update insurance pool percentage if greater than 1", async () => {
         const txResult = await onChain.setInsurancePoolPercentage({
-            percentage: 1.000001
+            percentage: 1.000001,
+            gasBudget: 1000000
         });
         expectTxToFail(txResult);
         expect(Transaction.getErrorCode(txResult)).to.be.equal(104);
@@ -77,7 +77,8 @@ describe("Perpetual", () => {
 
     it("should not update insurance pool address if zero", async () => {
         const txResult = await onChain.setInsurancePoolAddress({
-            address: "0x0000000000000000000000000000000000000000"
+            address: ADDRESSES.ZERO,
+            gasBudget: 10000000
         });
         expectTxToFail(txResult);
         expect(Transaction.getErrorCode(txResult)).to.be.equal(105);
@@ -92,7 +93,8 @@ describe("Perpetual", () => {
 
     it("should not update fee pool address if zero", async () => {
         const txResult = await onChain.setFeePoolAddress({
-            address: "0x0000000000000000000000000000000000000000"
+            address: ADDRESSES.ZERO,
+            gasBudget: 10000000
         });
         expectTxToFail(txResult);
         expect(Transaction.getErrorCode(txResult)).to.be.equal(105);
@@ -124,7 +126,8 @@ describe("Perpetual", () => {
             expectTxToSucceed(tx1);
 
             const tx2 = await onChain.delistPerpetual({
-                price: toBigNumberStr(100)
+                price: toBigNumberStr(100),
+                gasBudget: 10000000
             });
             expectTxToFail(tx2);
 
@@ -133,7 +136,8 @@ describe("Perpetual", () => {
 
         it("should revert as de-listing price does not conform to tick size", async () => {
             const tx = await onChain.delistPerpetual({
-                price: toBigNumberStr(100.234)
+                price: toBigNumberStr(100.234),
+                gasBudget: 10000000
             });
             expectTxToFail(tx);
 
@@ -168,13 +172,7 @@ describe("Perpetual", () => {
                 ownerSigner
             );
 
-            const settlementCapID = (
-                Transaction.getObjects(
-                    txs,
-                    "newObject",
-                    "SettlementCap"
-                )[0] as any
-            ).id as string;
+            const settlementCapID = Transaction.getCreatedObjectIDs(txs)[0];
 
             const order = createOrder({
                 market: onChain.getPerpetualID(),
@@ -193,14 +191,18 @@ describe("Perpetual", () => {
                 bob.keyPair,
                 order
             );
-            const tx2 = await onChain.trade({ ...trade, settlementCapID });
+            const tx2 = await onChain.trade({
+                ...trade,
+                settlementCapID,
+                gasBudget: 10000000
+            });
             expectTxToFail(tx2);
 
             expect(Transaction.getError(tx2)).to.be.equal(ERROR_CODES[61]);
         });
 
         it("should revert as position can only be closed once perpetual is de-listed", async () => {
-            const tx = await onChain.closePosition({});
+            const tx = await onChain.closePosition({ gasBudget: 1000000 });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[62]);
         });
@@ -208,7 +210,10 @@ describe("Perpetual", () => {
         it("should revert as alice has no position to close", async () => {
             await onChain.delistPerpetual({ price: toBigNumberStr(100) });
 
-            const tx = await onChain.closePosition({}, alice.signer);
+            const tx = await onChain.closePosition(
+                { gasBudget: 10000000 },
+                alice.signer
+            );
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[507]);
         });
@@ -223,25 +228,13 @@ describe("Perpetual", () => {
                 ownerSigner
             );
 
-            const settlementCapID = (
-                Transaction.getObjects(
-                    txs,
-                    "newObject",
-                    "SettlementCap"
-                )[0] as any
-            ).id as string;
+            const settlementCapID = Transaction.getCreatedObjectIDs(txs)[0];
 
             const tx = await onChain.setPriceOracleOperator({
                 operator: ownerAddress
             });
 
-            const priceOracleCapID = (
-                Transaction.getObjects(
-                    tx,
-                    "newObject",
-                    "PriceOracleOperatorCap"
-                )[0] as any
-            ).id as string;
+            const priceOracleCapID = Transaction.getCreatedObjectIDs(tx)[0];
 
             const priceTx = await onChain.updateOraclePrice({
                 price: toBigNumberStr(100),
@@ -284,26 +277,14 @@ describe("Perpetual", () => {
                 operator: ownerAddress
             });
 
-            const priceOracleCapID = (
-                Transaction.getObjects(
-                    tx,
-                    "newObject",
-                    "PriceOracleOperatorCap"
-                )[0] as any
-            ).id as string;
+            const priceOracleCapID = Transaction.getCreatedObjectIDs(tx)[0];
 
             // make admin operator
             const tx2 = await onChain.createSettlementOperator(
                 { operator: ownerAddress },
                 ownerSigner
             );
-            const settlementCapID = (
-                Transaction.getObjects(
-                    tx2,
-                    "newObject",
-                    "SettlementCap"
-                )[0] as any
-            ).id as string;
+            const settlementCapID = Transaction.getCreatedObjectIDs(tx2)[0];
 
             const defaultOrder = createOrder({
                 isBuy: true,
@@ -337,7 +318,11 @@ describe("Perpetual", () => {
                 defaultOrder
             );
 
-            const txTrade = await onChain.trade({ ...trade, settlementCapID });
+            const txTrade = await onChain.trade({
+                ...trade,
+                settlementCapID,
+                gasBudget: 10000000
+            });
             expectTxToFail(txTrade);
 
             const tx3 = await onChain.setPerpetualTradingPermit(
@@ -372,13 +357,7 @@ describe("Perpetual", () => {
                 operator: ownerAddress
             });
 
-            priceOracleCapID = (
-                Transaction.getObjects(
-                    tx1,
-                    "newObject",
-                    "PriceOracleOperatorCap"
-                )[0] as any
-            ).id as string;
+            priceOracleCapID = Transaction.getCreatedObjectIDs(tx1)[0];
 
             // make admin operator
             const tx2 = await onChain.createSettlementOperator(
@@ -386,13 +365,7 @@ describe("Perpetual", () => {
                 ownerSigner
             );
 
-            settlementCapID = (
-                Transaction.getObjects(
-                    tx2,
-                    "newObject",
-                    "SettlementCap"
-                )[0] as any
-            ).id as string;
+            settlementCapID = Transaction.getCreatedObjectIDs(tx2)[0];
 
             // set oracle price
             const priceTx = await onChain.updateOraclePrice({
@@ -469,19 +442,23 @@ describe("Perpetual", () => {
 
             expectTxToFail(
                 await onChain.addMargin(
-                    { amount: 10, account: alice.address },
+                    { amount: 10, account: alice.address, gasBudget: 10000000 },
                     cat.signer
                 )
             );
             expectTxToFail(
                 await onChain.removeMargin(
-                    { amount: 10, account: alice.address },
+                    { amount: 10, account: alice.address, gasBudget: 10000000 },
                     cat.signer
                 )
             );
             expectTxToFail(
                 await onChain.adjustLeverage(
-                    { leverage: 2, account: alice.address },
+                    {
+                        leverage: 2,
+                        account: alice.address,
+                        gasBudget: 10000000
+                    },
                     cat.signer
                 )
             );

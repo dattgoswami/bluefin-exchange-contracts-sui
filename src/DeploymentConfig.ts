@@ -58,8 +58,10 @@ export const DeploymentConfigs: DeploymentConfig = {
             maxAllowedFR: toBigNumberStr(0.001),
             maxAllowedPriceDiffInOP: toBigNumberStr(1),
             insurancePoolRatio: toBigNumberStr(0.3),
-            insurancePool: "0x95121F2aa15647bfEC8e5375615cda1CA01b7acC",
-            feePool: "0x7a6809BE15F4686cfE01EcC17ee1BC711C05D36E"
+            insurancePool:
+                "0x90c55f2a388a0e31ebca93cbf87fdd08e9716be082ca8a3c479bb14bcb5e1b88",
+            feePool:
+                "0x05ada716962dec8788b53ddad34827ffe46acfe16bfe9d7d064838fcda285073"
         },
         {
             name: "BTC-PERP",
@@ -101,8 +103,10 @@ export const DeploymentConfigs: DeploymentConfig = {
             maxAllowedFR: toBigNumberStr(0.001),
             maxAllowedPriceDiffInOP: toBigNumberStr(1),
             insurancePoolRatio: toBigNumberStr(0.3),
-            insurancePool: "0x95121F2aa15647bfEC8e5375615cda1CA01b7acC",
-            feePool: "0x7a6809BE15F4686cfE01EcC17ee1BC711C05D36E"
+            insurancePool:
+                "0x90c55f2a388a0e31ebca93cbf87fdd08e9716be082ca8a3c479bb14bcb5e1b88",
+            feePool:
+                "0x05ada716962dec8788b53ddad34827ffe46acfe16bfe9d7d064838fcda285073"
         }
     ]
 };

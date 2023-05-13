@@ -1,5 +1,5 @@
 import {
-    SuiExecuteTransactionResponse,
+    SuiTransactionBlockResponse,
     getExecutionStatusError
 } from "@mysten/sui.js";
 import { UserPositionExtended } from "../interfaces";
@@ -8,48 +8,50 @@ import BigNumber from "bignumber.js";
 import { SignedNumberToBigNumber } from "../library";
 
 export class Transaction {
-    static getStatus(txResponse: SuiExecuteTransactionResponse) {
-        return (txResponse as any)["effects"]["status"] == undefined
-            ? (txResponse as any)["effects"]["effects"]["status"]["status"]
-            : (txResponse as any)["effects"]["status"]["status"];
+    static getStatus(tx: SuiTransactionBlockResponse) {
+        return tx.effects?.status.status;
     }
 
     // if no error returns error code as 0
-    static getErrorCode(tx: SuiExecuteTransactionResponse): number {
+    static getErrorCode(tx: SuiTransactionBlockResponse): number | undefined {
         if (Transaction.getStatus(tx) == "failure") {
-            const error = getExecutionStatusError(tx) as string;
-            return Number(
-                error.slice(error.lastIndexOf(",") + 1, error.length - 1)
-            );
+            const error = tx.effects?.status.error as string;
+
+            return error.lastIndexOf(",") > 0
+                ? Number(
+                      error.slice(
+                          error.lastIndexOf(",") + 2,
+                          error.lastIndexOf(")")
+                      )
+                  )
+                : undefined;
         }
         return 0;
     }
 
-    static getError(tx: SuiExecuteTransactionResponse): string {
+    static getError(tx: SuiTransactionBlockResponse): string {
         const code = Transaction.getErrorCode(tx);
-        if (code > 0) {
-            return (ERROR_CODES as any)[code];
+        if ((code as number) > 0) {
+            return (ERROR_CODES as any)[code as number];
+        } else if (code == undefined) {
+            return tx.effects?.status.error as string;
         } else {
             return "";
         }
     }
 
     static getEvents(
-        tx: SuiExecuteTransactionResponse | any,
+        tx: SuiTransactionBlockResponse,
         eventName?: string
     ): Array<any> {
         let events = [];
 
-        if (tx?.effects) {
-            events = tx?.effects?.effects?.events as any;
+        if (tx?.events) {
             if (eventName != "") {
-                events = events
-                    ?.filter(
-                        (x: any) =>
-                            x["moveEvent"]?.type?.indexOf(eventName) >= 0
-                    )
+                events = tx?.events
+                    ?.filter((x: any) => x.type.indexOf(eventName) >= 0)
                     .map((x: any) => {
-                        return x["moveEvent"];
+                        return x.parsedJson;
                     });
             }
         }
@@ -57,54 +59,58 @@ export class Transaction {
         return events;
     }
 
-    static getCreatedObjects(
-        tx: SuiExecuteTransactionResponse,
-        objectType = ""
-    ): object[] {
-        const objects: object[] = [];
-
-        const events = (tx as any).EffectsCert
-            ? (tx as any).EffectsCert.effects.effects.events
-            : (tx as any).effects.effects.events;
-
-        for (const ev of events) {
-            const obj = ev["newObject"];
-            if (obj !== undefined) {
-                const objType = obj["objectType"]
-                    .slice(obj["objectType"].lastIndexOf("::") + 2)
-                    .replace(/[^a-zA-Z ]/g, "");
-                if (objectType == "" || objType == objectType) {
-                    objects.push({
-                        id: obj["objectId"],
-                        dataType: objType
-                    } as object);
-                }
-            }
+    static getCreatedObjectIDs(tx: SuiTransactionBlockResponse): string[] {
+        const ids: string[] = [];
+        const objects = tx.effects?.created as any[];
+        for (const itr in objects) {
+            ids.push(objects[itr].reference.objectId);
         }
-        return objects;
+        return ids;
     }
 
-    static getObjects(
-        tx: SuiExecuteTransactionResponse,
+    static getAllMutatedObjectIDs(tx: SuiTransactionBlockResponse): string[] {
+        const ids: string[] = [];
+        const objects = tx.objectChanges as any[];
+        for (const itr in objects) {
+            ids.push(objects[itr].objectId);
+        }
+        return ids;
+    }
+
+    static getMutatedObjectsUsingType(
+        tx: SuiTransactionBlockResponse,
+        type: string
+    ): string[] {
+        const objects = tx.objectChanges as any[];
+        const ids: string[] = [];
+        for (const itr in objects) {
+            if (objects[itr].objectType.indexOf(type) > 0) {
+                ids.push(objects[itr].objectId);
+            }
+        }
+        return ids;
+    }
+
+    static getObjectsFromEvents(
+        tx: SuiTransactionBlockResponse,
         list: string,
         objectType: string
     ): object[] {
         const objects: object[] = [];
 
-        const events = (tx as any).EffectsCert
-            ? (tx as any).EffectsCert.effects.effects.events
-            : (tx as any).effects.effects.events;
+        const events = tx.events as any;
 
         for (const ev of events) {
             const obj = ev[list];
             if (obj !== undefined) {
-                const objType = obj["objectType"]
-                    .slice(obj["objectType"].lastIndexOf("::") + 2)
+                const objType = obj["type"]
+                    .slice(obj["type"].lastIndexOf("::") + 2)
                     .replace(/[^a-zA-Z ]/g, "");
                 if (objectType == "" || objType == objectType) {
                     objects.push({
-                        id: obj["objectId"],
-                        dataType: objType
+                        id: obj["id"],
+                        dataType: objType,
+                        data: obj["parsedJson"]
                     } as object);
                 }
             }
@@ -113,16 +119,15 @@ export class Transaction {
     }
 
     static getAccountPositionFromEvent(
-        tx: SuiExecuteTransactionResponse,
+        tx: SuiTransactionBlockResponse,
         address: string
     ): UserPositionExtended {
         const events = Transaction.getEvents(tx, "AccountPositionUpdateEvent");
         let userPosition: UserPositionExtended;
 
-        if (events[0].fields.account == address)
-            userPosition = events[0].fields.position.fields;
-        else if (events[1].fields.account == address)
-            userPosition = events[1].fields.position.fields;
+        if (events[0].account == address) userPosition = events[0].position;
+        else if (events[1].account == address)
+            userPosition = events[1].position;
         else
             throw `AccountPositionUpdate event not found for address: ${address}`;
 
@@ -130,7 +135,7 @@ export class Transaction {
     }
 
     static getAccountPNL(
-        tx: SuiExecuteTransactionResponse,
+        tx: SuiTransactionBlockResponse,
         address: string
     ): BigNumber {
         const events = Transaction.getEvents(tx, "TradeExecuted");
@@ -139,17 +144,17 @@ export class Transaction {
             throw "No TradeExecuted event found in tx";
         }
 
-        if (address == events[0].fields.maker) {
-            return SignedNumberToBigNumber(events[0].fields.makerPnl.fields);
-        } else if (address == events[0].fields.taker) {
-            return SignedNumberToBigNumber(events[0].fields.takerPnl.fields);
+        if (address == events[0].maker) {
+            return SignedNumberToBigNumber(events[0].makerPnl);
+        } else if (address == events[0].taker) {
+            return SignedNumberToBigNumber(events[0].takerPnl);
         } else {
             throw `TradeExecuted event not found for address: ${address}`;
         }
     }
 
     static getAccountBankBalanceFromEvent(
-        tx: SuiExecuteTransactionResponse,
+        tx: SuiTransactionBlockResponse,
         address: string
     ): BigNumber {
         const events = Transaction.getEvents(tx, "BankBalanceUpdate");
@@ -173,39 +178,20 @@ export class Transaction {
         return BigNumber(0);
     }
 
-    static getBankAccountID(tx: SuiExecuteTransactionResponse): string {
-        const newObject = Transaction.getObjects(
+    // assumes if there was any object created, it was bank account
+    static getBankAccountID(tx: SuiTransactionBlockResponse): string {
+        // if an object is created its bank account
+        const createdObjects = this.getCreatedObjectIDs(tx);
+        const mutatedObjects = this.getMutatedObjectsUsingType(
             tx,
-            "newObject",
             "BankAccount"
         );
-        const transferObject = Transaction.getObjects(
-            tx,
-            "transferObject",
-            "BankAccount"
-        );
-
-        if (newObject.length > 0) {
-            return (newObject[0] as any).id;
+        if (createdObjects.length > 0) {
+            return createdObjects[0];
+        } else if (mutatedObjects.length > 0) {
+            return mutatedObjects[0];
+        } else {
+            return "";
         }
-
-        if (transferObject.length > 0) {
-            return (transferObject[0] as any).id;
-        }
-        return "";
-    }
-
-    static getAllBankAccounts(tx: SuiExecuteTransactionResponse) {
-        const newObject = Transaction.getObjects(
-            tx,
-            "newObject",
-            "BankAccount"
-        );
-        const transferObject = Transaction.getObjects(
-            tx,
-            "transferObject",
-            "BankAccount"
-        );
-        return [...newObject, ...transferObject];
     }
 }

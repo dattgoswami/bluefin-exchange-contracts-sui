@@ -1,14 +1,13 @@
-import Wallet from "ethereumjs-wallet";
-import { getTestAccounts } from "./accounts";
+import { createAccount, getTestAccounts } from "./accounts";
 import { network, DeploymentConfigs } from "../../src/DeploymentConfig";
 import {
     createMarket,
     createOrder,
-    getAddressFromSigner,
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
-    readFile
+    readFile,
+    requestGas
 } from "../../src/utils";
 import { toBigNumber, toBigNumberStr } from "../../src/library";
 import { OnChainCalls, OrderSigner, Trader, Transaction } from "../../src";
@@ -21,11 +20,11 @@ import {
 } from "./expect";
 import { MarketDetails } from "../../src/interfaces";
 import { ERROR_CODES } from "../../src/errors";
-import { SuiExecuteTransactionResponse } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
 import { config } from "dotenv";
-import { mintAndDeposit } from "./utils";
+import { fundTestAccounts, mintAndDeposit } from "./utils";
 import { TestCaseJSON } from "./interfaces";
+import { SuiTransactionBlockResponse } from "@mysten/sui.js";
 config({ path: ".env" });
 
 const provider = getProvider(network.rpc, network.faucet);
@@ -49,15 +48,15 @@ export async function executeTests(
     const dog = getTestAccounts(provider)[3];
     const liquidator = getTestAccounts(provider)[4];
 
-    let tx: SuiExecuteTransactionResponse;
+    let tx: SuiTransactionBlockResponse;
     let lastOraclePrice: BigNumber;
     let feePoolAddress: string;
     let insurancePoolAddress: string;
 
     const setupTest = async () => {
         lastOraclePrice = new BigNumber(0);
-        feePoolAddress = Wallet.generate().getAddressString();
-        insurancePoolAddress = Wallet.generate().getAddressString();
+        feePoolAddress = createAccount(provider).address;
+        insurancePoolAddress = createAccount(provider).address;
 
         const marketData = await createMarket(
             deployment,
@@ -81,11 +80,11 @@ export async function executeTests(
         onChain = new OnChainCalls(ownerSigner, deployment);
 
         // empty all accounts
-        await onChain.withdrawAllMarginFromBank(alice.signer);
-        await onChain.withdrawAllMarginFromBank(bob.signer);
-        await onChain.withdrawAllMarginFromBank(cat.signer);
-        await onChain.withdrawAllMarginFromBank(dog.signer);
-        await onChain.withdrawAllMarginFromBank(liquidator.signer);
+        await onChain.withdrawAllMarginFromBank(alice.signer, 10000000);
+        await onChain.withdrawAllMarginFromBank(bob.signer, 10000000);
+        await onChain.withdrawAllMarginFromBank(cat.signer, 10000000);
+        await onChain.withdrawAllMarginFromBank(dog.signer, 10000000);
+        await onChain.withdrawAllMarginFromBank(liquidator.signer, 10000000);
 
         // provide maker/taker starting margin in margin bank
         alice.bankAccountId = await mintAndDeposit(
@@ -117,44 +116,29 @@ export async function executeTests(
         before(async () => {
             onChain = new OnChainCalls(ownerSigner, deployment);
 
-            const address = await getAddressFromSigner(onChain.signer);
+            const address = await onChain.signer.getAddress();
+
+            //fund the admin with Sui
+            await requestGas(await onChain.signer.getAddress());
 
             // make owner, the price oracle operator
             const tx1 = await onChain.setPriceOracleOperator({
                 operator: address
             });
-            priceOracleCapID = (
-                Transaction.getObjects(
-                    tx1,
-                    "newObject",
-                    "PriceOracleOperatorCap"
-                )[0] as any
-            ).id as string;
+            priceOracleCapID = Transaction.getCreatedObjectIDs(tx1)[0];
 
             // make admin settlement operator
             const tx2 = await onChain.createSettlementOperator({
                 operator: address
             });
-            settlementCapID = (
-                Transaction.getObjects(
-                    tx2,
-                    "newObject",
-                    "SettlementCap"
-                )[0] as any
-            ).id as string;
+            settlementCapID = Transaction.getCreatedObjectIDs(tx2)[0];
 
             // make admin deleveraging operator
             const tx3 = await onChain.setDeleveragingOperator({
                 operator: address
             });
 
-            deleveragingCapID = (
-                Transaction.getObjects(
-                    tx3,
-                    "newObject",
-                    "DeleveragingCap"
-                )[0] as any
-            ).id as string;
+            deleveragingCapID = Transaction.getCreatedObjectIDs(tx3)[0];
         });
 
         Object.keys(testCases).forEach((testName) => {
@@ -267,7 +251,8 @@ export async function executeTests(
                             if (testCase.tradeType == "liquidator_bob") {
                                 await onChain.adjustLeverage(
                                     {
-                                        leverage: testCase.leverage as number
+                                        leverage: testCase.leverage as number,
+                                        gasBudget: 10000000
                                     },
                                     taker.signer
                                 );
@@ -282,7 +267,8 @@ export async function executeTests(
                                         taker.keyPair,
                                         order
                                     )),
-                                    settlementCapID
+                                    settlementCapID,
+                                    gasBudget: 100000000
                                 },
                                 ownerSigner
                             );
@@ -297,7 +283,8 @@ export async function executeTests(
                                     ),
                                     leverage: toBigNumberStr(
                                         testCase.leverage as any as number
-                                    )
+                                    ),
+                                    gasBudget: 100000000
                                 },
                                 liquidator.signer
                             );
@@ -311,7 +298,8 @@ export async function executeTests(
                                     quantity: toBigNumberStr(
                                         Math.abs(testCase.size)
                                     ),
-                                    deleveragingCapID
+                                    deleveragingCapID,
+                                    gasBudget: 100000000
                                 },
                                 ownerSigner
                             );
@@ -319,21 +307,30 @@ export async function executeTests(
                         // add margin
                         else if (testCase.addMargin != undefined) {
                             tx = await onChain.addMargin(
-                                { amount: testCase.addMargin },
+                                {
+                                    amount: testCase.addMargin,
+                                    gasBudget: 10000000
+                                },
                                 bob.signer
                             );
                         }
                         // remove margin
                         else if (testCase.removeMargin != undefined) {
                             tx = await onChain.removeMargin(
-                                { amount: testCase.removeMargin },
+                                {
+                                    amount: testCase.removeMargin,
+                                    gasBudget: 10000000
+                                },
                                 bob.signer
                             );
                         }
                         // adjust leverage
                         else if (testCase.adjustLeverage != undefined) {
                             tx = await onChain.adjustLeverage(
-                                { leverage: testCase.adjustLeverage },
+                                {
+                                    leverage: testCase.adjustLeverage,
+                                    gasBudget: 10000000
+                                },
                                 bob.signer
                             );
                         }
@@ -404,7 +401,6 @@ export async function executeTests(
             });
         });
     });
-
     // helper method to extract maker/taker of trade
     function getMakerTakerOfTrade(testCase: any) {
         if (testCase.tradeType == "liquidator_bob") {

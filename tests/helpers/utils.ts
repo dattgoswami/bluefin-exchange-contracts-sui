@@ -4,7 +4,7 @@ import { Transaction } from "../../src";
 import { Balance } from "../../src/classes/Balance";
 import { OnChainCalls } from "../../src/classes/OnChainCalls";
 import { BASE_DECIMALS, bigNumber, toBigNumberStr } from "../../src/library";
-import { getAddressFromSigner, requestGas } from "../../src/utils";
+import { requestGas } from "../../src/utils";
 import { TEST_WALLETS } from "./accounts";
 import { expectTxToSucceed } from "./expect";
 import { TestPositionExpect } from "./interfaces";
@@ -15,7 +15,7 @@ export async function mintAndDeposit(
     amount?: number
 ): Promise<string> {
     const amt = amount || 100_000;
-    const ownerAddress = await getAddressFromSigner(onChain.signer);
+    const ownerAddress = await onChain.signer.getAddress();
 
     let coin = undefined;
     // TODO figure out why `onChain.getUSDCCoins` calls returns no coin
@@ -34,9 +34,8 @@ export async function mintAndDeposit(
 
         // TODO: implement a method to get the coin with balance > amt
         // assuming 0th index coin will have balance > amount
-        coin = (
-            await onChain.getUSDCCoins({ address: ownerAddress })
-        ).data.pop();
+        const usdcCoins = await onChain.getUSDCCoins({ address: ownerAddress });
+        coin = usdcCoins.data.pop();
     }
 
     // transferring from owners usdc coin to receiver
