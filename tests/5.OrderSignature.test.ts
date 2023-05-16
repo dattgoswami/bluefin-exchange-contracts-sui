@@ -4,12 +4,14 @@ import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
 import { DeploymentConfigs } from "../src/DeploymentConfig";
 import { Order } from "../src/interfaces";
 import {
+    createOrder,
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
+    printOrder,
     readFile
 } from "../src/utils";
-import { TEST_WALLETS } from "./helpers/accounts";
+import { getTestAccounts, TEST_WALLETS } from "./helpers/accounts";
 import { DEFAULT } from "../src/defaults";
 import {
     base64ToBuffer,
@@ -324,6 +326,164 @@ describe("Order Signer", () => {
             Buffer.from(ownerKeyPair.getPublicKey().toBytes()).toString("hex")
         );
         expect(hash).to.be.equal(onChainHash);
+    });
+
+    it("should recover public key from a random signed order", async () => {
+        const [alice] = getTestAccounts(provider);
+
+        const order = createOrder({
+            isBuy: true,
+            maker: alice.address,
+            market: onChain.getPerpetualID()
+        });
+
+        printOrder(order);
+
+        const orderSigner = new OrderSigner(alice.keyPair);
+        const hash = orderSigner.getOrderHash(order);
+
+        const serializedOrder = orderSigner.getSerializedOrder(order);
+        const signature = orderSigner.signOrder(order);
+
+        const receipt = await onChain.signAndCall(
+            ownerSigner,
+            "get_public_key_from_signed_order",
+            [
+                order.market,
+                order.maker,
+                order.isBuy,
+                order.reduceOnly,
+                order.postOnly,
+                order.price,
+                order.quantity,
+                order.leverage,
+                order.expiration,
+                order.salt,
+                Array.from(hexToBuffer(signature))
+            ],
+            "test"
+        );
+
+        const hashGeneratedEvent = Transaction.getEvents(
+            receipt,
+            "HashGeneratedEvent"
+        )[0];
+
+        const orderSerializedEvent = Transaction.getEvents(
+            receipt,
+            "OrderSerializedEvent"
+        )[0];
+
+        const enocdedOrderEvent = Transaction.getEvents(
+            receipt,
+            "EncodedOrder"
+        )[0];
+
+        const publicKeyRecoveredEvent = Transaction.getEvents(
+            receipt,
+            "PublicKeyRecoveredEvent"
+        )[0];
+
+        expect(hashGeneratedEvent).to.not.be.undefined;
+        expect(orderSerializedEvent).to.not.be.undefined;
+        expect(publicKeyRecoveredEvent).to.not.be.undefined;
+
+        expect(
+            Buffer.from(orderSerializedEvent.serialized_order).toString("hex")
+        ).to.be.equal(serializedOrder);
+
+        expect(base64ToHex(hashGeneratedEvent?.hash ?? "")).to.be.equal(hash);
+
+        expect(Buffer.from(enocdedOrderEvent.order).toString()).to.be.equal(
+            serializedOrder
+        );
+
+        console.log(
+            "Encoded order:",
+            Buffer.from(enocdedOrderEvent.order).toString()
+        );
+        console.log(
+            "Recovered public key:",
+            Buffer.from(publicKeyRecoveredEvent.public_key).toString("hex")
+        );
+        // console.log(Buffer.from(alice.keyPair.getPublicKey().toBytes()).toString("hex"));
+
+        expect(
+            Buffer.from(publicKeyRecoveredEvent.public_key).toString("hex")
+        ).to.be.equal(
+            Buffer.from(alice.keyPair.getPublicKey().toBytes()).toString("hex")
+        );
+    });
+    it("should recover public key from a random signed order 2 ", async () => {
+        const [alice] = getTestAccounts(provider);
+
+        const order = createOrder({
+            isBuy: true,
+            maker: alice.address,
+            market: onChain.getPerpetualID(),
+            salt: 1684272867494
+        });
+
+        const orderSigner = new OrderSigner(alice.keyPair);
+        const hash = orderSigner.getOrderHash(order);
+
+        const serializedOrder = orderSigner.getSerializedOrder(order);
+        const signature = orderSigner.signOrder(order);
+
+        const receipt = await onChain.signAndCall(
+            ownerSigner,
+            "get_public_key_from_signed_order",
+            [
+                order.market,
+                order.maker,
+                order.isBuy,
+                order.reduceOnly,
+                order.postOnly,
+                order.price,
+                order.quantity,
+                order.leverage,
+                order.expiration,
+                order.salt,
+                Array.from(hexToBuffer(signature))
+            ],
+            "test"
+        );
+
+        const hashGeneratedEvent = Transaction.getEvents(
+            receipt,
+            "HashGeneratedEvent"
+        )[0];
+
+        const orderSerializedEvent = Transaction.getEvents(
+            receipt,
+            "OrderSerializedEvent"
+        )[0];
+
+        const enocdedOrderEvent = Transaction.getEvents(
+            receipt,
+            "EncodedOrder"
+        )[0];
+
+        const publicKeyRecoveredEvent = Transaction.getEvents(
+            receipt,
+            "PublicKeyRecoveredEvent"
+        )[0];
+
+        expect(hashGeneratedEvent).to.not.be.undefined;
+        expect(orderSerializedEvent).to.not.be.undefined;
+        expect(publicKeyRecoveredEvent).to.not.be.undefined;
+
+        expect(
+            Buffer.from(orderSerializedEvent.serialized_order).toString("hex")
+        ).to.be.equal(serializedOrder);
+
+        expect(base64ToHex(hashGeneratedEvent?.hash ?? "")).to.be.equal(hash);
+
+        expect(
+            Buffer.from(publicKeyRecoveredEvent.public_key).toString("hex")
+        ).to.be.equal(
+            Buffer.from(alice.keyPair.getPublicKey().toBytes()).toString("hex")
+        );
     });
 
     it("should generate off-chain public address exactly equal to on-chain public address", async () => {

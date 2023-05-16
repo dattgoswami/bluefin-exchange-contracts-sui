@@ -3,6 +3,7 @@ import { Order, SignedOrder } from "../interfaces/order";
 import { bnToHex, hexToBuffer } from "../library";
 import * as secp from "@noble/secp256k1";
 import { sha256 } from "@noble/hashes/sha256";
+import { secp256k1 } from "@noble/curves/secp256k1";
 
 export class OrderSigner {
     constructor(private keypair: Keypair) {}
@@ -15,14 +16,27 @@ export class OrderSigner {
         };
     }
 
+    private signOrderOverride(data: Uint8Array): [Uint8Array, number] {
+        const msgHash = sha256(data);
+        const sig = secp256k1.sign(msgHash, (this as any).keypair.secretKey, {
+            lowS: true
+        });
+
+        return [sig.toCompactRawBytes(), sig.recovery || 0];
+    }
+
     signOrder(order: Order, keypair?: Keypair): string {
         const signer = keypair || this.keypair;
 
+        const [sign, recovery] = this.signOrderOverride.call(
+            signer,
+            new TextEncoder().encode(this.getSerializedOrder(order))
+        );
+
         return (
-            Buffer.from(
-                signer.signData(hexToBuffer(this.getSerializedOrder(order)))
-            ).toString("hex") + "00"
-        ); // + 01 is for sha256, use "00" for keccak256
+            Buffer.from(sign).toString("hex") +
+            recovery.toString().padStart(2, "0")
+        );
     }
 
     public getSerializedOrder(order: Order): string {

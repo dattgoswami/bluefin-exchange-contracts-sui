@@ -110,7 +110,7 @@ describe("Liquidation Trade Method", () => {
                 quantity: toBigNumberStr(1),
                 leverage: toBigNumberStr(1),
                 liquidator: bob.address, // liquidator is bob
-                gasBudget: 10000000
+                gasBudget: 90000000
             },
             ownerSigner
         ); // caller is owner
@@ -126,7 +126,7 @@ describe("Liquidation Trade Method", () => {
                 quantity: toBigNumberStr(1),
                 leverage: toBigNumberStr(1),
                 liquidator: ownerAddress, // owner is the liquidator
-                gasBudget: 10000000
+                gasBudget: 90000000
             },
             ownerSigner
         );
@@ -142,7 +142,7 @@ describe("Liquidation Trade Method", () => {
                 quantity: toBigNumberStr(0.01), // min quantity tradeable is 0.1
                 leverage: toBigNumberStr(1),
                 liquidator: ownerAddress, // owner is the liquidator
-                gasBudget: 10000000
+                gasBudget: 90000000
             },
             ownerSigner
         );
@@ -158,7 +158,7 @@ describe("Liquidation Trade Method", () => {
                 quantity: toBigNumberStr(500000), // max quantity tradeable for limit order is 100000
                 leverage: toBigNumberStr(1),
                 liquidator: ownerAddress, // owner is the liquidator
-                gasBudget: 10000000
+                gasBudget: 90000000
             },
             ownerSigner
         );
@@ -174,7 +174,7 @@ describe("Liquidation Trade Method", () => {
                 quantity: toBigNumberStr(2000), // max quantity tradeable for market order is 1000
                 leverage: toBigNumberStr(1),
                 liquidator: ownerAddress, // owner is the liquidator
-                gasBudget: 10000000
+                gasBudget: 90000000
             },
             ownerSigner
         );
@@ -218,7 +218,7 @@ describe("Liquidation Trade Method", () => {
                 quantity: toBigNumberStr(1),
                 leverage: toBigNumberStr(1),
                 liquidator: ownerAddress, // owner is the liquidator
-                gasBudget: 10000000
+                gasBudget: 90000000
             },
             ownerSigner
         );
@@ -234,7 +234,7 @@ describe("Liquidation Trade Method", () => {
                 quantity: toBigNumberStr(1),
                 leverage: toBigNumberStr(1),
                 liquidator: ownerAddress, // owner is the liquidator
-                gasBudget: 1000000
+                gasBudget: 9000000
             },
             ownerSigner
         );
@@ -257,7 +257,7 @@ describe("Liquidation Trade Method", () => {
                 leverage: toBigNumberStr(1),
                 allOrNothing: true,
                 liquidator: ownerAddress, // owner is the liquidator
-                gasBudget: 1000000
+                gasBudget: 9000000
             },
             ownerSigner
         );
@@ -312,7 +312,7 @@ describe("Liquidation Trade Method", () => {
                 quantity: toBigNumberStr(1),
                 leverage: toBigNumberStr(4), // trying to liquidate at 4x
                 liquidator: makerTaker.maker.address, // maker is the liquidator
-                gasBudget: 10000000
+                gasBudget: 90000000
             },
             makerTaker.maker.signer
         );

@@ -166,7 +166,7 @@ describe("Regular Trade Method", () => {
             {
                 ...tradeData,
                 settlementCapID: capID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             },
             alice.signer
         );
@@ -185,7 +185,7 @@ describe("Regular Trade Method", () => {
                 { takerOrder: { ...defaultOrder, isBuy: true } }
             )),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
         expectTxToFail(tx);
         expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[48]);
@@ -241,7 +241,7 @@ describe("Regular Trade Method", () => {
         const tx = await onChain.trade({
             ...tradeData,
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(tx);
@@ -259,7 +259,7 @@ describe("Regular Trade Method", () => {
                 { takerOrder: { ...defaultOrder, isBuy: false } }
             )),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
         expectTxToFail(tx);
         expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[48]);
@@ -285,7 +285,7 @@ describe("Regular Trade Method", () => {
                 }
             )),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(tx);
@@ -321,7 +321,7 @@ describe("Regular Trade Method", () => {
         const tx = await onChain.trade({
             ...tradeData,
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
         expectTxToFail(tx);
         expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[34]);
@@ -353,7 +353,7 @@ describe("Regular Trade Method", () => {
                 { takerOrder }
             )),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(tx);
@@ -408,7 +408,7 @@ describe("Regular Trade Method", () => {
                 { takerOrder }
             )),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(tx);
@@ -464,7 +464,7 @@ describe("Regular Trade Method", () => {
                 { takerOrder }
             )),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(tx);
@@ -499,7 +499,7 @@ describe("Regular Trade Method", () => {
                 { takerOrder }
             )),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(tx);
@@ -535,7 +535,7 @@ describe("Regular Trade Method", () => {
                 { takerOrder }
             )),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(tx);
@@ -578,7 +578,7 @@ describe("Regular Trade Method", () => {
         const tx = await onChain.trade({
             ...tradeParams,
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
         expectTxToFail(tx);
         expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[45]);
@@ -620,13 +620,13 @@ describe("Regular Trade Method", () => {
         const tx = await onChain.trade({
             ...tradeParams,
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
         expectTxToFail(tx);
         expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[44]);
     });
 
-    xit("should revert as alice signature does not match the order", async () => {
+    it("should revert as alice signature does not match the order", async () => {
         const makerOrder = createOrder({
             maker: alice.address,
             price: 26,
@@ -664,14 +664,14 @@ describe("Regular Trade Method", () => {
             takerSignature: takerOrderSigned.typedSignature,
             fillQuantity: toBigNumber(5),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(txResponse);
         expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[30]);
     });
 
-    xit("should revert as alice signed order for ETH market but is getting executed on BTC market", async () => {
+    it("should revert as alice signed order for ETH market but is getting executed on BTC market", async () => {
         const priceTx = await onChain.updateOraclePrice({
             price: toBigNumberStr(1),
             updateOPCapID: priceOracleCapID
@@ -701,14 +701,14 @@ describe("Regular Trade Method", () => {
             ...trade,
             perpID: onChain.getPerpetualID("BTC-PERP"),
             settlementCapID,
-            gasBudget: 10000000
+            gasBudget: 90000000
         });
 
         expectTxToFail(tx);
         expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[30]);
     });
 
-    xit("should allow a sub account to trade on alice's behalf", async () => {
+    it("should allow a sub account to trade on alice's behalf", async () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
@@ -752,14 +752,14 @@ describe("Regular Trade Method", () => {
         const TradeExecuted = Transaction.getEvents(tx2, "TradeExecuted")[0];
 
         //taker of the trade was alice
-        expect(TradeExecuted.fields.taker).to.be.equal(alice.address);
+        expect(TradeExecuted.taker).to.be.equal(alice.address);
 
         const orderFill = Transaction.getEvents(tx2, "OrderFill").filter(
             (event) => {
-                return event.fields.order.fields.maker == alice.address;
+                return event.order.maker == alice.address;
             }
         )[0];
 
-        expect(orderFill.fields.sigMaker).to.be.equal(bob.address);
+        expect(orderFill.sigMaker).to.be.equal(bob.address);
     });
 });

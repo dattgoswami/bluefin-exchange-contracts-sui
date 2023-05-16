@@ -181,7 +181,7 @@ describe("Margin Bank", () => {
             const txResult = await onChain.withdrawFromBank(
                 {
                     amount: toBigNumberStr("50000", 6),
-                    gasBudget: 10000000
+                    gasBudget: 90000000
                 },
                 alice
             );
@@ -194,7 +194,7 @@ describe("Margin Bank", () => {
             const txResult = await onChain.withdrawFromBank(
                 {
                     amount: toBigNumberStr("10000", 6),
-                    gasBudget: 10000000
+                    gasBudget: 90000000
                 },
                 alice
             );

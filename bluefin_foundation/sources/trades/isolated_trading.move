@@ -9,6 +9,7 @@ module bluefin_foundation::isolated_trading {
     use sui::bcs;
     use sui::ecdsa_k1;
     use sui::transfer;
+    use sui::hex;
 
 
     // custom modules
@@ -462,9 +463,10 @@ module bluefin_foundation::isolated_trading {
                 filledQuantity: orderStatus.filledQty
             });
     }
-
-
+    
     fun verify_order_signature(subAccounts: &SubAccounts, maker:address, orderSerialized: vector<u8>, signature: vector<u8>, isTaker:u64):address{
+
+        let encoded_order = hex::encode(orderSerialized);
 
         let v = vector::borrow_mut(&mut signature, 64);
         
@@ -476,7 +478,7 @@ module bluefin_foundation::isolated_trading {
             *v = (*v - 1) % 2;
         };
 
-        let publicKey = ecdsa_k1::secp256k1_ecrecover(&signature, &orderSerialized, 1);
+        let publicKey = ecdsa_k1::secp256k1_ecrecover(&signature, &encoded_order, 1);
 
         let publicAddress = library::get_public_address(publicKey);
 

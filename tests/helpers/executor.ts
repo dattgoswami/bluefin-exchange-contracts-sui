@@ -42,11 +42,7 @@ export async function executeTests(
     marketConfig: MarketDetails,
     initialBalances?: { traders?: number; liquidator?: number }
 ) {
-    const alice = getTestAccounts(provider)[0];
-    const bob = getTestAccounts(provider)[1];
-    const cat = getTestAccounts(provider)[2];
-    const dog = getTestAccounts(provider)[3];
-    const liquidator = getTestAccounts(provider)[4];
+    const [alice, bob, cat, dog, liquidator] = getTestAccounts(provider);
 
     let tx: SuiTransactionBlockResponse;
     let lastOraclePrice: BigNumber;
@@ -80,11 +76,11 @@ export async function executeTests(
         onChain = new OnChainCalls(ownerSigner, deployment);
 
         // empty all accounts
-        await onChain.withdrawAllMarginFromBank(alice.signer, 10000000);
-        await onChain.withdrawAllMarginFromBank(bob.signer, 10000000);
-        await onChain.withdrawAllMarginFromBank(cat.signer, 10000000);
-        await onChain.withdrawAllMarginFromBank(dog.signer, 10000000);
-        await onChain.withdrawAllMarginFromBank(liquidator.signer, 10000000);
+        await onChain.withdrawAllMarginFromBank(alice.signer, 90000000);
+        await onChain.withdrawAllMarginFromBank(bob.signer, 90000000);
+        await onChain.withdrawAllMarginFromBank(cat.signer, 90000000);
+        await onChain.withdrawAllMarginFromBank(dog.signer, 90000000);
+        await onChain.withdrawAllMarginFromBank(liquidator.signer, 90000000);
 
         // provide maker/taker starting margin in margin bank
         alice.bankAccountId = await mintAndDeposit(
@@ -252,7 +248,7 @@ export async function executeTests(
                                 await onChain.adjustLeverage(
                                     {
                                         leverage: testCase.leverage as number,
-                                        gasBudget: 10000000
+                                        gasBudget: 90000000
                                     },
                                     taker.signer
                                 );
@@ -268,7 +264,7 @@ export async function executeTests(
                                         order
                                     )),
                                     settlementCapID,
-                                    gasBudget: 100000000
+                                    gasBudget: 900000000
                                 },
                                 ownerSigner
                             );
@@ -284,7 +280,7 @@ export async function executeTests(
                                     leverage: toBigNumberStr(
                                         testCase.leverage as any as number
                                     ),
-                                    gasBudget: 100000000
+                                    gasBudget: 900000000
                                 },
                                 liquidator.signer
                             );
@@ -299,7 +295,7 @@ export async function executeTests(
                                         Math.abs(testCase.size)
                                     ),
                                     deleveragingCapID,
-                                    gasBudget: 100000000
+                                    gasBudget: 900000000
                                 },
                                 ownerSigner
                             );
@@ -309,7 +305,7 @@ export async function executeTests(
                             tx = await onChain.addMargin(
                                 {
                                     amount: testCase.addMargin,
-                                    gasBudget: 10000000
+                                    gasBudget: 90000000
                                 },
                                 bob.signer
                             );
@@ -319,7 +315,7 @@ export async function executeTests(
                             tx = await onChain.removeMargin(
                                 {
                                     amount: testCase.removeMargin,
-                                    gasBudget: 10000000
+                                    gasBudget: 90000000
                                 },
                                 bob.signer
                             );
@@ -329,7 +325,7 @@ export async function executeTests(
                             tx = await onChain.adjustLeverage(
                                 {
                                     leverage: testCase.adjustLeverage,
-                                    gasBudget: 10000000
+                                    gasBudget: 90000000
                                 },
                                 bob.signer
                             );

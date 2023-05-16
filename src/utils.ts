@@ -262,21 +262,25 @@ export function createOrder(params: {
 
 export function printOrder(order: Order) {
     console.log(
-        "order.isBuy:",
-        order.isBuy,
-        "order.price:",
-        order.price.toFixed(0),
-        "order.quantity:",
-        order.quantity.toFixed(0),
-        "order.leverage:",
-        order.leverage.toFixed(0),
-        "order.reduceOnly:",
-        order.reduceOnly,
-        "order.maker:",
+        "\norder.maker:",
         order.maker,
-        "order.expiration:",
+        "\norder.market:",
+        order.market,
+        "\norder.isBuy:",
+        order.isBuy,
+        "\norder.reduceOnly:",
+        order.reduceOnly,
+        "\norder.postOnly:",
+        order.postOnly,
+        "\norder.price:",
+        order.price.toFixed(0),
+        "\norder.quantity:",
+        order.quantity.toFixed(0),
+        "\norder.leverage:",
+        order.leverage.toFixed(0),
+        "\norder.expiration:",
         order.expiration.toFixed(0),
-        "order.salt:",
+        "\norder.salt:",
         order.salt.toFixed(0)
     );
 }

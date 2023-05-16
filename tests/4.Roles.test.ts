@@ -74,7 +74,7 @@ describe("Roles", () => {
 
         it("should revert when trying to transfer ownership of exchange admin to existing admin", async () => {
             const tx = await onChain.setExchangeAdmin(
-                { address: ownerAddress, gasBudget: 10000000 },
+                { address: ownerAddress, gasBudget: 90000000 },
                 ownerSigner
             );
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[900]);
@@ -90,7 +90,7 @@ describe("Roles", () => {
             );
             await expect(
                 onChain.setExchangeGuardian(
-                    { address: alice.address, gasBudget: 100000 },
+                    { address: alice.address, gasBudget: 900000 },
                     bob.signer
                 )
             ).to.be.eventually.rejectedWith(error);
@@ -106,7 +106,7 @@ describe("Roles", () => {
 
             // expect to fail as owner is no longer guardian
             const tx2 = await onChain.setBankWithdrawalStatus(
-                { isAllowed: false, gasBudget: 10000000 },
+                { isAllowed: false, gasBudget: 90000000 },
                 ownerSigner
             );
             expectTxToFail(tx2);
@@ -176,7 +176,7 @@ describe("Roles", () => {
 
             const tx3 = await onChain.removeSettlementOperator({
                 capID: capID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
 
             expectTxToFail(tx3);

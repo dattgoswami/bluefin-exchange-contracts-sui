@@ -137,7 +137,7 @@ describe("Price Oracle", () => {
             const tx2 = await onChain.updateOraclePrice({
                 price: toBigNumber(12).toFixed(),
                 updateOPCapID: onChain.getPriceOracleOperatorCap(), // this is old cap still owned by admin
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
 
             expect(Transaction.getError(tx2)).to.be.equal(ERROR_CODES[100]);
@@ -239,7 +239,7 @@ describe("Price Oracle", () => {
                 {
                     price: newPrice.toFixed(),
                     updateOPCapID: cap,
-                    gasBudget: 1000000
+                    gasBudget: 9000000
                 },
                 ownerSigner
             );
@@ -254,7 +254,7 @@ describe("Price Oracle", () => {
             const tx = await onChain.updatePriceOracleMaxAllowedPriceDifference(
                 {
                     maxAllowedPriceDifference: toBigNumber(0).toFixed(0),
-                    gasBudget: 1000000
+                    gasBudget: 9000000
                 },
                 ownerSigner
             );
@@ -297,7 +297,7 @@ describe("Price Oracle", () => {
                     {
                         maxAllowedPriceDifference:
                             toBigNumber(100000).toFixed(0),
-                        gasBudget: 1000000
+                        gasBudget: 9000000
                     },
                     testWallet.signer
                 )

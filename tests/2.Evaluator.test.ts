@@ -87,7 +87,7 @@ describe("Evaluator", () => {
         it("should revert as min price can not be set to zero", async () => {
             const tx = await onChain.setMinPrice({
                 minPrice: 0,
-                gasBudget: 1000000
+                gasBudget: 9000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[1]);
         });
@@ -95,7 +95,7 @@ describe("Evaluator", () => {
         it("should revert as min price can not be > max price", async () => {
             const tx = await onChain.setMinPrice({
                 minPrice: 1_000_000,
-                gasBudget: 1000000
+                gasBudget: 9000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[2]);
         });
@@ -126,7 +126,7 @@ describe("Evaluator", () => {
             await onChain.setMinPrice({ minPrice: 0.5 });
             const tx = await onChain.setMaxPrice({
                 maxPrice: 0.2,
-                gasBudget: 1000000
+                gasBudget: 9000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[9]);
         });
@@ -156,7 +156,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set tick size as 0", async () => {
             const tx = await onChain.setTickSize({
                 tickSize: 0,
-                gasBudget: 1000000
+                gasBudget: 9000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[11]);
         });
@@ -208,7 +208,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 100000000
+                gasBudget: 900000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[3]);
@@ -249,7 +249,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 100000000
+                gasBudget: 900000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[4]);
@@ -290,7 +290,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 100000000
+                gasBudget: 900000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[5]);
@@ -331,7 +331,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 100000000
+                gasBudget: 900000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[5]);
@@ -397,7 +397,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set maximum quantity for limit trade < minimum trade quantity", async () => {
             const tx = await onChain.setMaxQtyLimit({
                 maxQtyLimit: 0.001,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[15]);
         });
@@ -405,7 +405,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set maximum quantity for market trade < minimum trade quantity", async () => {
             const tx = await onChain.setMaxQtyMarket({
                 maxQtyMarket: 0.001,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[16]);
         });
@@ -437,7 +437,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set minimum quantity  as 0", async () => {
             const tx = await onChain.setMinQty({
                 minQty: 0,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[18]);
         });
@@ -467,7 +467,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set step size as 0", async () => {
             const tx = await onChain.setStepSize({
                 stepSize: 0,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[10]);
         });
@@ -519,7 +519,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[19]);
@@ -560,7 +560,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[20]);
@@ -601,7 +601,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[21]);
@@ -642,7 +642,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[22]);
@@ -683,7 +683,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[22]);
@@ -732,7 +732,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set market take bound (long) as 0", async () => {
             const tx = await onChain.setMTBLong({
                 mtbLong: 0,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[12]);
         });
@@ -740,7 +740,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set market take bound (short) as 0", async () => {
             const tx = await onChain.setMTBShort({
                 mtbShort: 0,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[13]);
         });
@@ -748,13 +748,13 @@ describe("Evaluator", () => {
         it("should revert when trying to set market take bound (short) > 100%", async () => {
             const tx = await onChain.setMTBShort({
                 mtbShort: 2,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[14]);
         });
 
         it("should set market take bound (long) to 20%", async () => {
-            await onChain.setMTBLong({ mtbLong: 0.2, gasBudget: 10000000 });
+            await onChain.setMTBLong({ mtbLong: 0.2, gasBudget: 90000000 });
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
@@ -766,7 +766,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set market take bound (long) as 0", async () => {
             const tx = await onChain.setMTBLong({
                 mtbLong: 0,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[12]);
         });
@@ -796,7 +796,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set market take bound (short) as 0", async () => {
             const tx = await onChain.setMTBShort({
                 mtbShort: 0,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[13]);
         });
@@ -804,7 +804,7 @@ describe("Evaluator", () => {
         it("should revert when trying to set market take bound (short) > 100%", async () => {
             const tx = await onChain.setMTBShort({
                 mtbShort: 2,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[14]);
         });
@@ -821,7 +821,7 @@ describe("Evaluator", () => {
             ).to.eventually.be.rejectedWith(expectedError);
         });
         it("should revert when trying to trade at price < short take bound", async () => {
-            await onChain.setMTBShort({ mtbShort: 0.2, gasBudget: 10000000 });
+            await onChain.setMTBShort({ mtbShort: 0.2, gasBudget: 90000000 });
             const priceTx = await onChain.updateOraclePrice({
                 price: toBigNumberStr(20),
                 updateOPCapID: priceOracleCapID
@@ -856,7 +856,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[24]);
@@ -937,7 +937,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[23]);
@@ -1159,7 +1159,7 @@ describe("Evaluator", () => {
             const tx = await onChain.trade({
                 ...tradeParams,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[25]);
@@ -1219,7 +1219,7 @@ describe("Evaluator", () => {
             });
             expectTxToSucceed(tx);
             const tx2 = await onChain.adjustLeverage(
-                { leverage: 9, account: alice.address, gasBudget: 10000000 },
+                { leverage: 9, account: alice.address, gasBudget: 90000000 },
                 alice.signer
             );
             expectTxToFail(tx2);
@@ -1305,7 +1305,7 @@ describe("Evaluator", () => {
             const tx2 = await onChain.trade({
                 ...tradeParams2,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 90000000
             });
 
             expectTxToFail(tx2);

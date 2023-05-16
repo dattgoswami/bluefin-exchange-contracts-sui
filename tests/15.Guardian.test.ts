@@ -110,7 +110,7 @@ describe("Guardian", () => {
         const txResult = await onChain.withdrawFromBank(
             {
                 amount: toBigNumberStr("1000"),
-                gasBudget: 1000000
+                gasBudget: 9000000
             },
             alice
         );
@@ -143,7 +143,7 @@ describe("Guardian", () => {
         const tx3 = await onChain.setBankWithdrawalStatus(
             {
                 isAllowed: true,
-                gasBudget: 1000000
+                gasBudget: 9000000
             },
             ownerSigner
         );
@@ -210,7 +210,7 @@ describe("Guardian", () => {
         const tx3 = await onChain.setPerpetualTradingPermit(
             {
                 isPermitted: false,
-                gasBudget: 1000000
+                gasBudget: 9000000
             },
             ownerSigner
         );
