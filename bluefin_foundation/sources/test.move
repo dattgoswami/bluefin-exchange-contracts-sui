@@ -75,6 +75,7 @@ module bluefin_foundation::test {
          [144,144]  => reduceOnly       (1 byte)
          [145,145]  => isBuy            (1 byte)
          [146,146]  => postOnly         (1 byte)
+         [147,153]  => domain (Bluefin) (7 bytes)
         */
     
         let serialized_order = vector::empty<u8>();
@@ -88,6 +89,7 @@ module bluefin_foundation::test {
         let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
         let is_buy_b = bcs::to_bytes(&order.isBuy);
         let post_only_b = bcs::to_bytes(&order.postOnly);
+        let domain_b = bcs::to_bytes(&b"Bluefin"); // doesn't need reverse
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
@@ -105,6 +107,7 @@ module bluefin_foundation::test {
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
         vector::append(&mut serialized_order, post_only_b);
+        vector::append(&mut serialized_order, domain_b);
 
         event::emit(OrderSerializedEvent {serialized_order});
         event::emit(HashGeneratedEvent {hash:hash::sha2_256(serialized_order)});
@@ -171,6 +174,7 @@ module bluefin_foundation::test {
          [144,144]  => reduceOnly       (1 byte)
          [145,145]  => isBuy            (1 byte)
          [146,146]  => postOnly         (1 byte)
+         [147,153]  => domain (Bluefin) (7 bytes)
         */
     
         let serialized_order = vector::empty<u8>();
@@ -184,6 +188,7 @@ module bluefin_foundation::test {
         let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
         let is_buy_b = bcs::to_bytes(&order.isBuy);
         let post_only_b = bcs::to_bytes(&order.postOnly);
+        let domain_b = bcs::to_bytes(&b"Bluefin"); // doesn't need reverse
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
@@ -201,6 +206,7 @@ module bluefin_foundation::test {
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
         vector::append(&mut serialized_order, post_only_b);
+        vector::append(&mut serialized_order, domain_b);
 
         event::emit(OrderSerializedEvent {serialized_order});
         event::emit(HashGeneratedEvent {hash:hash::sha2_256(serialized_order)});
