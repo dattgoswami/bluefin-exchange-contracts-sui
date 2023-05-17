@@ -388,7 +388,6 @@ module bluefin_foundation::isolated_trading {
         let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
         let is_buy_b = bcs::to_bytes(&order.isBuy);
         let post_only_b = bcs::to_bytes(&order.postOnly);
-        let domain_b = bcs::to_bytes(&b"Bluefin"); // doesn't need reverse
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
@@ -406,7 +405,7 @@ module bluefin_foundation::isolated_trading {
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
         vector::append(&mut serialized_order, post_only_b);
-        vector::append(&mut serialized_order, domain_b);
+        vector::append(&mut serialized_order, b"Bluefin");
 
         return serialized_order
 

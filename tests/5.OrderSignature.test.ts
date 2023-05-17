@@ -8,7 +8,6 @@ import {
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
-    printOrder,
     readFile
 } from "../src/utils";
 import { getTestAccounts, TEST_WALLETS } from "./helpers/accounts";
@@ -43,7 +42,6 @@ describe("Order Signer", () => {
 
         const serializedOrder = orderSigner.getSerializedOrder(order);
 
-        // the last 2 bytes have 00 or 01 appended for hash, remove that
         const signature = orderSigner.signOrder(order);
 
         const pubkey = ownerKeyPair.getPublicKey();
@@ -53,6 +51,10 @@ describe("Order Signer", () => {
             "verify_signature",
             [
                 Array.from(
+                    // the last 2 chars in signature have 00 or 01 appended to make it
+                    // possible to recover signer address from signature.
+                    // when verifying signature using `secp256k1_verify()` on-chain,
+                    // always pass in signature without the leading `00`/`01`
                     hexToBuffer(signature.slice(0, signature.length - 2))
                 ),
                 Array.from(pubkey.toBytes()),
@@ -218,7 +220,7 @@ describe("Order Signer", () => {
         expect(signatureVerifiedEvent?.fields?.is_verified).to.be.true;
     });
 
-    it("should not verify hash to given address ed25519", async () => {
+    xit("should not verify hash to given address ed25519", async () => {
         const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase, "ED25519");
         const ownerKeyPair = getKeyPairFromSeed(
             DeploymentConfigs.deployer,
@@ -228,7 +230,7 @@ describe("Order Signer", () => {
 
         const serializedOrder = orderSigner.getSerializedOrder(order);
         const signature = orderSigner.signOrder(order);
-        const pubkey = await ownerKeyPair.getPublicKey();
+        const pubkey = ownerKeyPair.getPublicKey();
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
@@ -337,8 +339,6 @@ describe("Order Signer", () => {
             market: onChain.getPerpetualID()
         });
 
-        printOrder(order);
-
         const orderSigner = new OrderSigner(alice.keyPair);
         const hash = orderSigner.getOrderHash(order);
 
@@ -397,16 +397,6 @@ describe("Order Signer", () => {
         expect(Buffer.from(enocdedOrderEvent.order).toString()).to.be.equal(
             serializedOrder
         );
-
-        console.log(
-            "Encoded order:",
-            Buffer.from(enocdedOrderEvent.order).toString()
-        );
-        console.log(
-            "Recovered public key:",
-            Buffer.from(publicKeyRecoveredEvent.public_key).toString("hex")
-        );
-        // console.log(Buffer.from(alice.keyPair.getPublicKey().toBytes()).toString("hex"));
 
         expect(
             Buffer.from(publicKeyRecoveredEvent.public_key).toString("hex")

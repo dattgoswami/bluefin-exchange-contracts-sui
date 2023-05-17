@@ -33,6 +33,9 @@ export class OrderSigner {
             new TextEncoder().encode(this.getSerializedOrder(order))
         );
 
+        // appending 00 at the end of the signature to make it possible
+        // to recovere signer address. When verifying signature remove the leading `00`
+        // append 01 when using keccak
         return (
             Buffer.from(sign).toString("hex") +
             recovery.toString().padStart(2, "0")
@@ -51,15 +54,17 @@ export class OrderSigner {
         buffer.set([order.reduceOnly ? 1 : 0], 144);
         buffer.set([order.isBuy ? 1 : 0], 145);
         buffer.set([order.postOnly ? 1 : 0], 146);
-        buffer.set(hexToBuffer("Bluefin"), 147);
-
+        buffer.set(Buffer.from("Bluefin", "utf8"), 147);
         return buffer.toString("hex");
     }
 
-    public getOrderHash(order: Order): string {
-        const serializedOrder = this.getSerializedOrder(order);
+    public getOrderHash(order: Order | string): string {
+        // if serialized order is not provided
+        if (typeof order !== "string") {
+            order = this.getSerializedOrder(order);
+        }
 
-        const hash = sha256(hexToBuffer(serializedOrder));
+        const hash = sha256(hexToBuffer(order));
         return Buffer.from(hash).toString("hex");
     }
 
