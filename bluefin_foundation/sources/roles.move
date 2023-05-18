@@ -85,6 +85,8 @@ module bluefin_foundation::roles {
         deleveraging: ID,
         // there can be N different settlement operators
         settlementOperators: VecSet<ID>,
+        // public settlement cap, any taker can use to perform trade
+        publicSettlementCap: ID
     }
 
     struct SubAccounts has key {
@@ -110,16 +112,26 @@ module bluefin_foundation::roles {
         // create deleveraging operator
         let deleveragerID = create_deleveraging_operator(tx_context::sender(ctx), ctx);
 
+        // create public settlement capabity 
+        // this settlement cap can be use by any taker in the world, its not 
+        // added to the list of settlementOperators: VecSet<ID>
+        let objID = object::new(ctx);
+        let publicSettlementCapID = object::uid_to_inner(&objID);  
+        transfer::share_object(SettlementCap{
+            id: objID
+        });
+
         let safe = CapabilitiesSafe {
             id: object::new(ctx),
             guardian: guardianID,
             priceOracleOperator: pooID,
             deleveraging: deleveragerID,
-            settlementOperators: vec_set::empty()
+            settlementOperators: vec_set::empty(),
+            publicSettlementCap: publicSettlementCapID
         };
 
+        // share safe
         transfer::share_object(safe);
-
 
         // create sub accounts map
         let subAccounts = SubAccounts{id: object::new(ctx), map: table::new<address, VecSet<address>>(ctx)};
@@ -198,7 +210,7 @@ module bluefin_foundation::roles {
         ctx: &mut TxContext
         ){
 
-        // create new price oracle operator
+        // create new settlement  operator
         let operatorCap = SettlementCap{
             id: object::new(ctx)
         };
@@ -208,7 +220,7 @@ module bluefin_foundation::roles {
             account: operator 
         });
         
-        // insert newly created price oracle operator to safe
+        // insert newly created settlement oracle operator to safe
         vec_set::insert(&mut safe.settlementOperators, object::uid_to_inner(&operatorCap.id));
 
         // transfer capability to operator
@@ -359,6 +371,11 @@ module bluefin_foundation::roles {
         ); 
     }
 
+    /*
+     * Returns true is the settlement cap is in list of whitelisted owned settlement operators
+     * Note: If the settlement operator cap provided is shared (created at genesis of protocol)
+     * the funciton will return false
+     */
     public fun check_settlement_operator_validity(
         safe: &CapabilitiesSafe,
         cap: &SettlementCap,
@@ -366,6 +383,16 @@ module bluefin_foundation::roles {
         assert!(
             vec_set::contains(&safe.settlementOperators, &object::id(cap)),
             error::invalid_settlement_operator()
+        );       
+    }
+
+    public fun check_public_settlement_cap_validity(
+        safe: &CapabilitiesSafe,
+        cap: &SettlementCap,
+        ){ 
+        assert!(
+            safe.publicSettlementCap == object::uid_to_inner(&cap.id),
+            error::not_a_public_settlement_cap()
         );       
     }
 

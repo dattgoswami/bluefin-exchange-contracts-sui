@@ -11,6 +11,7 @@ export const DEFAULT = {
         isBuy: true,
         reduceOnly: false,
         postOnly: false,
+        orderbookOnly: true,
         maker: ADDRESSES.ZERO,
         expiration: bigNumber(3655643731),
         salt: bigNumber(1668690862116)

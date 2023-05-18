@@ -762,4 +762,143 @@ describe("Regular Trade Method", () => {
 
         expect(orderFill.sigMaker).to.be.equal(bob.address);
     });
+
+    it("should allow bob to execute trade as both Alice/Bob signed orders with orderbook only flag False", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+        await mintAndDeposit(onChain, bob.address, 2000);
+
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
+        });
+
+        expectTxToSucceed(priceTx);
+
+        const order = { ...defaultOrder, orderbookOnly: false };
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            order
+        );
+
+        const tx = await onChain.trade(
+            { ...trade, settlementCapID: onChain.getPublicSettlementCap() },
+            bob.signer
+        );
+        expectTxToSucceed(tx);
+    });
+
+    it("should revert as public settlement cap was not provided by taker/bob to execute trade", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+        await mintAndDeposit(onChain, bob.address, 2000);
+
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
+        });
+
+        expectTxToSucceed(priceTx);
+
+        const tx = await onChain.createSettlementOperator(
+            { operator: bob.address },
+            ownerSigner
+        );
+        const bobCapID = Transaction.getCreatedObjectIDs(tx)[0];
+
+        const order = { ...defaultOrder, orderbookOnly: false };
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            order
+        );
+
+        // bob owns this settlement cap but
+        // in order to execute a trade as a taker,
+        // must provide the public settlement cap
+        const tx2 = await onChain.trade(
+            { ...trade, settlementCapID: bobCapID, gasBudget: 90000000 },
+            bob.signer
+        );
+        expectTxToFail(tx2);
+        expect(Transaction.getError(tx2)).to.be.equal(ERROR_CODES[109]);
+    });
+
+    it("should revert as only taker of the trade or its sub account can execute an off-orderbook trade", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+        await mintAndDeposit(onChain, bob.address, 2000);
+
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
+        });
+
+        expectTxToSucceed(priceTx);
+
+        const order = { ...defaultOrder, orderbookOnly: false };
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            order
+        );
+
+        const tx = await onChain.trade(
+            {
+                ...trade,
+                settlementCapID: onChain.getPublicSettlementCap(),
+                gasBudget: 90000000
+            },
+            ownerSigner
+        );
+
+        expectTxToFail(tx);
+        expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[108]);
+    });
+
+    it("should revert as maker has not signed their order for off-orderbook execution", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+        await mintAndDeposit(onChain, bob.address, 2000);
+
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
+        });
+
+        expectTxToSucceed(priceTx);
+
+        const makerOrder = { ...defaultOrder, orderbookOnly: true };
+        const takerOrder = { ...defaultOrder, orderbookOnly: false };
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            makerOrder,
+            {
+                takerOrder
+            }
+        );
+
+        // only orderbook settlement operator can execute this trade
+        const tx = await onChain.trade(
+            {
+                ...trade,
+                settlementCapID: onChain.getPublicSettlementCap(),
+                gasBudget: 90000000
+            },
+            ownerSigner
+        );
+
+        expectTxToFail(tx);
+        expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[110]);
+    });
 });

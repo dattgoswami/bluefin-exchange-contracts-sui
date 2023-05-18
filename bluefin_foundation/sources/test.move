@@ -44,6 +44,7 @@ module bluefin_foundation::test {
         isBuy: bool,
         reduceOnly: bool,
         postOnly: bool,
+        orderbookOnly: bool,
         price: u128,
         quantity: u128,
         leverage: u128,
@@ -64,9 +65,10 @@ module bluefin_foundation::test {
          [144,144]  => reduceOnly       (1 byte)
          [145,145]  => isBuy            (1 byte)
          [146,146]  => postOnly         (1 byte)
-         [147,153]  => domain (Bluefin) (7 bytes)
-        */
-    
+         [147,147]  => orderbookOnly    (1 byte)
+         [148,154]  => domain (Bluefin) (7 bytes)
+         */
+
         let serialized_order = vector::empty<u8>();
         let price_b = bcs::to_bytes(&order.price);
         let quantity_b = bcs::to_bytes(&order.quantity);
@@ -78,6 +80,7 @@ module bluefin_foundation::test {
         let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
         let is_buy_b = bcs::to_bytes(&order.isBuy);
         let post_only_b = bcs::to_bytes(&order.postOnly);
+        let ob_only_b = bcs::to_bytes(&order.orderbookOnly);
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
@@ -95,6 +98,7 @@ module bluefin_foundation::test {
         vector::append(&mut serialized_order, reduce_only_b);
         vector::append(&mut serialized_order, is_buy_b);
         vector::append(&mut serialized_order, post_only_b);
+        vector::append(&mut serialized_order, ob_only_b);
         vector::append(&mut serialized_order, b"Bluefin");
 
         return serialized_order
@@ -130,6 +134,7 @@ module bluefin_foundation::test {
             isBuy: true,
             reduceOnly: false,
             postOnly: false,
+            orderbookOnly: true,
             expiration: 3655643731,
             salt: 1668690862116,
             maker: maker
@@ -176,11 +181,12 @@ module bluefin_foundation::test {
             isBuy: true,
             reduceOnly: false,
             postOnly: false,
+            orderbookOnly: true,
             expiration: 3655643731,
             salt: 1668690862116,
             maker: maker
         };
-        
+               
         let serialized_order = get_serialized_order(order);
         
         event::emit(OrderSerializedEvent {serialized_order});
@@ -198,6 +204,7 @@ module bluefin_foundation::test {
         isBuy: bool,
         reduceOnly: bool,
         postOnly: bool,
+        orderbookOnly: bool,
         price: u128,
         quantity: u128,
         leverage: u128,
@@ -214,6 +221,7 @@ module bluefin_foundation::test {
             isBuy,
             reduceOnly,
             postOnly,
+            orderbookOnly,
             expiration,
             salt,
             maker

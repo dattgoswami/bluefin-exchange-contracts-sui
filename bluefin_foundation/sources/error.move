@@ -192,6 +192,14 @@ module bluefin_foundation::error {
     }
 
 
+    public fun only_taker_of_trade_can_execute_trade_involving_non_orderbook_orders(): u64 {
+        return 108
+    }
+
+    public fun not_a_public_settlement_cap() : u64 {
+        return 109
+    }
+
     public fun invalid_settlement_operator() : u64 {
         return 110
     }

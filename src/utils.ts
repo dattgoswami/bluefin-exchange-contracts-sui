@@ -244,6 +244,7 @@ export function createOrder(params: {
     leverage?: number;
     reduceOnly?: boolean;
     postOnly?: boolean;
+    orderbookOnly?: boolean;
     expiration?: number;
     salt?: number;
 }): Order {
@@ -253,6 +254,8 @@ export function createOrder(params: {
         isBuy: params.isBuy == true,
         reduceOnly: params.reduceOnly == true,
         postOnly: params.postOnly == true,
+        orderbookOnly:
+            params.orderbookOnly != undefined ? params.orderbookOnly : true, // default to true
         price: params.price ? toBigNumber(params.price) : DEFAULT.ORDER.price,
         quantity: params.quantity
             ? toBigNumber(params.quantity)

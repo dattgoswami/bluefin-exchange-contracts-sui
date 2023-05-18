@@ -589,6 +589,7 @@ export class OnChainCalls {
 
         callArgs.push(args.makerOrder.isBuy);
         callArgs.push(args.makerOrder.postOnly);
+        callArgs.push(args.makerOrder.orderbookOnly);
         callArgs.push(args.makerOrder.price.toFixed(0));
         callArgs.push(args.makerOrder.quantity.toFixed(0));
         callArgs.push(args.makerOrder.leverage.toFixed(0));
@@ -600,6 +601,7 @@ export class OnChainCalls {
 
         callArgs.push(args.takerOrder.isBuy);
         callArgs.push(args.takerOrder.postOnly);
+        callArgs.push(args.takerOrder.orderbookOnly);
         callArgs.push(args.takerOrder.price.toFixed(0));
         callArgs.push(args.takerOrder.quantity.toFixed(0));
         callArgs.push(args.takerOrder.leverage.toFixed(0));
@@ -1317,6 +1319,10 @@ export class OnChainCalls {
     getPriceOracleOperatorCap(): string {
         return this.deployment["objects"]["PriceOracleOperatorCap"]
             .id as string;
+    }
+
+    getPublicSettlementCap(): string {
+        return this.deployment["objects"]["SettlementCap"].id as string;
     }
 
     // by default returns the perpetual id of 1st market

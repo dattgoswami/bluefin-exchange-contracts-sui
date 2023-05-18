@@ -149,6 +149,7 @@ module bluefin_foundation::exchange {
         // maker
         makerIsBuy: bool,
         makerPostOnly: bool,
+        makerOrderbookOnly: bool,
         makerPrice: u128,
         makerQuantity: u128,
         makerLeverage: u128,
@@ -161,6 +162,7 @@ module bluefin_foundation::exchange {
         // taker
         takerIsBuy: bool,
         takerPostOnly: bool,
+        takerOrderbookOnly: bool,
         takerPrice: u128,
         takerQuantity: u128,
         takerLeverage: u128,
@@ -176,15 +178,27 @@ module bluefin_foundation::exchange {
         
         ctx: &mut TxContext        
         ){
-            // ensure perpetual is not delisted
-            assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
-            
-            // only settlement operators can trade
-            roles::check_settlement_operator_validity(safe, cap);
-
-            
             let sender = tx_context::sender(ctx);
 
+
+            // ensure perpetual is not delisted
+            assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+
+            // if the maker or taker order was signed to be executed through 
+            // orderbook, it should only be executed by a settlement operator
+            if (makerOrderbookOnly || takerOrderbookOnly){
+                // only settlement operators can trade
+                roles::check_settlement_operator_validity(safe, cap);
+            } else {
+                // ensure that capability provided is public settlement cap
+                roles::check_public_settlement_cap_validity(safe, cap);
+
+                // the sender must be the taker or a sub account of taker
+                assert!(sender == takerAddress || roles::is_sub_account(subAccounts, takerAddress, sender),
+                    error::only_taker_of_trade_can_execute_trade_involving_non_orderbook_orders()
+                );
+            }; 
+        
 
             // TODO check if trading is allowed by guardian for given perpetual or not
 
@@ -199,6 +213,7 @@ module bluefin_foundation::exchange {
                  // maker
                 makerIsBuy,
                 makerPostOnly, 
+                makerOrderbookOnly,
                 makerPrice, 
                 makerQuantity, 
                 makerLeverage, 
@@ -211,6 +226,7 @@ module bluefin_foundation::exchange {
                 // taker
                 takerIsBuy,
                 takerPostOnly, 
+                takerOrderbookOnly,
                 takerPrice, 
                 takerQuantity, 
                 takerLeverage, 

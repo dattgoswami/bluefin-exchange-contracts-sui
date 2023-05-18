@@ -7,6 +7,7 @@ export interface Order {
     isBuy: boolean;
     reduceOnly: boolean;
     postOnly: boolean;
+    orderbookOnly: boolean;
     quantity: BigNumber;
     price: BigNumber;
     leverage: BigNumber;
