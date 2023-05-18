@@ -28,9 +28,6 @@ async function main() {
         process.exit(1);
     }
 
-    if (!Client.switchAccount(deployerAddress)) {
-        process.exit(1);
-    }
     const path = "../../deployment.json";
     const data = await import(path);
     const deployment = getDeploymentData(

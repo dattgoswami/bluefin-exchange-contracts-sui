@@ -25,10 +25,6 @@ async function main() {
         process.exit(1);
     }
 
-    if (!Client.switchAccount(deployerAddress)) {
-        process.exit(1);
-    }
-
     // public package
     const publishTxn = await publishPackage(false, signer);
 
