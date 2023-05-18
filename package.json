@@ -13,6 +13,8 @@
     "test": "ts-mocha --no-timeout tests/*.test.ts",
     "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
     "prepare": "husky install",
+    "make:trade": "ts-node ./scripts/makeTrade.ts",
+    "create:settlement:operator": "ts-node ./scripts/settlementOperator.ts",
     "lint": "yarn eslint --fix --cache --max-warnings=-1 ."
   },
   "directories": {
