@@ -173,9 +173,16 @@ export async function getGenesisMap(
     return map;
 }
 
-export async function publishPackageUsingClient(): Promise<SuiTransactionBlockResponse> {
+export async function publishPackage(
+    usingCLI: boolean = false,
+    deployer: RawSigner | undefined = undefined
+): Promise<SuiTransactionBlockResponse> {
     const pkgPath = `"${path.join(process.cwd(), `/${packageName}`)}"`;
-    return Client.publishPackage(pkgPath) as SuiTransactionBlockResponse;
+    if (usingCLI) {
+        return Client.publishPackage(pkgPath);
+    } else {
+        return Client.publishPackageUsingSDK(deployer as RawSigner, pkgPath);
+    }
 }
 
 export async function createMarket(

@@ -5,7 +5,7 @@ import {
     getProvider,
     getSignerFromSeed,
     getGenesisMap,
-    publishPackageUsingClient,
+    publishPackage,
     getDeploymentData,
     requestGas
 } from "../src/utils";
@@ -37,7 +37,7 @@ describe("Roles", () => {
 
     beforeEach(async () => {
         await requestGas(ownerAddress);
-        const publishTxn = await publishPackageUsingClient();
+        const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = await getDeploymentData(ownerAddress, objects);
         onChain = new OnChainCalls(ownerSigner, deploymentData);

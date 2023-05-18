@@ -1,6 +1,11 @@
 import * as Networks from "../../networks.json";
 import { execCommand } from "../utils";
 import { wallet } from "../interfaces";
+import {
+    RawSigner,
+    SuiTransactionBlockResponse,
+    TransactionBlock
+} from "@mysten/sui.js";
 
 export class Client {
     static createWallet(): wallet {
@@ -32,12 +37,41 @@ export class Client {
         return true;
     }
 
-    static publishPackage(pkgPath: string) {
+    static publishPackage(pkgPath: string): SuiTransactionBlockResponse {
         return JSON.parse(
             execCommand(
                 `sui client publish --gas-budget 500000000 --json ${pkgPath} --skip-dependency-verification --skip-fetch-latest-git-deps`
             )
         );
+    }
+
+    static async publishPackageUsingSDK(
+        deployer: RawSigner,
+        pkgPath: string
+    ): Promise<SuiTransactionBlockResponse> {
+        const { modules, dependencies } = JSON.parse(
+            execCommand(
+                `sui move build --dump-bytecode-as-base64 --path ${pkgPath}`
+            )
+        );
+
+        const tx = new TransactionBlock();
+
+        const [upgradeCap] = tx.publish({ modules, dependencies });
+
+        tx.transferObjects([upgradeCap], tx.pure(await deployer.getAddress()));
+
+        const result = await deployer.signAndExecuteTransactionBlock({
+            transactionBlock: tx,
+            options: {
+                showObjectChanges: true,
+                showEffects: true,
+                showEvents: true,
+                showInput: true
+            }
+        });
+
+        return result;
     }
 
     static buildPackage(pkgPath: string) {

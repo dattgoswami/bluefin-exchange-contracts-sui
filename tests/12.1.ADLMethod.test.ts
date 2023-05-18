@@ -6,7 +6,7 @@ import {
     getSignerFromSeed,
     createOrder,
     createMarket,
-    publishPackageUsingClient,
+    publishPackage,
     getGenesisMap,
     getDeploymentData
 } from "../src/utils";
@@ -42,7 +42,7 @@ describe("Deleveraging Trade Method", () => {
     let order: Order;
 
     before(async () => {
-        const publishTxn = await publishPackageUsingClient();
+        const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = await getDeploymentData(ownerAddress, objects);
 
@@ -138,7 +138,7 @@ describe("Deleveraging Trade Method", () => {
     });
 
     it("should revert as owner is no longer deleveraging operator", async () => {
-        const publishTxn = await publishPackageUsingClient();
+        const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
         const localDeployment = getDeploymentData(ownerAddress, objects);
 
@@ -539,7 +539,7 @@ describe("Deleveraging Trade Method", () => {
     });
 
     it("should successfully partially deleverage taker of adl trade", async () => {
-        const publishTxn = await publishPackageUsingClient();
+        const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
         const localDeployment = getDeploymentData(ownerAddress, objects);
 

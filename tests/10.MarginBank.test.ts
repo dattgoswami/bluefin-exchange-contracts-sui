@@ -5,7 +5,7 @@ import {
     getProvider,
     getSignerFromSeed,
     getGenesisMap,
-    publishPackageUsingClient
+    publishPackage
 } from "../src/utils";
 import { OnChainCalls, Transaction } from "../src/classes";
 import { fundTestAccounts } from "./helpers/utils";
@@ -34,7 +34,7 @@ describe("Margin Bank", () => {
     });
 
     beforeEach(async () => {
-        const publishTxn = await publishPackageUsingClient();
+        const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
         const deployment = {
             deployer: ownerAddress,

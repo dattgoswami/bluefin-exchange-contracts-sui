@@ -3,7 +3,7 @@ import {
     getGenesisMap,
     getSignerFromSeed,
     getProvider,
-    publishPackageUsingClient,
+    publishPackage,
     getDeploymentData
 } from "../../src/utils";
 import { DeploymentConfigs } from "../../src/DeploymentConfig";
@@ -30,7 +30,7 @@ async function main() {
     }
 
     // public package
-    const publishTxn = await publishPackageUsingClient();
+    const publishTxn = await publishPackage(false, signer);
 
     console.log("Package published");
 
