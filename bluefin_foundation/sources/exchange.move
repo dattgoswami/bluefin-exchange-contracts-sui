@@ -230,6 +230,14 @@ module bluefin_foundation::exchange {
             // ensure perpetual is not delisted
             assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
 
+            // ensure trading is allowed on the perp
+            assert!(perpetual::is_trading_permitted(perp), error::trading_is_stopped_on_perpetual());
+
+            // ensure trading is started
+            assert!(
+                clock::timestamp_ms(clock) > perpetual::startTime(perp), 
+                error::trading_not_started());
+
             // if the maker or taker order was signed to be executed through 
             // orderbook, it should only be executed by a settlement operator
             if (isolated_trading::for_orderbook_only(makerFlags) || isolated_trading::for_orderbook_only(takerFlags)){
@@ -245,12 +253,6 @@ module bluefin_foundation::exchange {
                 );
             }; 
         
-
-            // TODO check if trading is allowed by guardian for given perpetual or not
-            
-            assert!(
-                clock::timestamp_ms(clock) > perpetual::startTime(perp), 
-                error::trading_not_started());
 
             let perpID = object::uid_to_inner(perpetual::id(perp));
             let perpAddress = object::id_to_address(&perpID);
@@ -362,6 +364,12 @@ module bluefin_foundation::exchange {
 
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+
+        // ensure trading is allowed on the perp
+        assert!(perpetual::is_trading_permitted(perp), error::trading_is_stopped_on_perpetual());
+
+        // ensure trading is started
+        assert!(clock::timestamp_ms(clock) > perpetual::startTime(perp), error::trading_not_started());
 
         let sender = tx_context::sender(ctx);
 
@@ -490,14 +498,15 @@ module bluefin_foundation::exchange {
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
 
+        // ensure trading is allowed on the perp
+        assert!(perpetual::is_trading_permitted(perp), error::trading_is_stopped_on_perpetual());
+
+        // ensure trading is allowed on the perp
+        assert!(clock::timestamp_ms(clock) > perpetual::startTime(perp), error::trading_not_started());
+
         roles::check_delevearging_operator_validity(safe, cap);
 
         let sender = tx_context::sender(ctx);
-
-        // TODO check if trading is allowed by guardian for given perpetual or not
-
-        assert!(clock::timestamp_ms(clock) > perpetual::startTime(perp), error::trading_not_started());
-
         let perpID = object::uid_to_inner(perpetual::id(perp));
         let perpAddress = object::id_to_address(&perpID);
 
@@ -804,8 +813,8 @@ module bluefin_foundation::exchange {
             user,
             0,
             2
-        );        
-        
+        );      
+          
         let userPos = table::borrow_mut(perpetual::positions(perp), user);
         
         assert!(position::qPos(*userPos) > 0, error::user_position_size_is_zero(2));

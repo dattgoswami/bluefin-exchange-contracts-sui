@@ -172,7 +172,7 @@ module bluefin_foundation::error {
         return 62
     }
 
-    public fun perpetual_is_denied_trading(): u64 {
+    public fun trading_is_stopped_on_perpetual(): u64 {
         return 63
     }
 

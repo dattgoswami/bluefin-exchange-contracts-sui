@@ -64,7 +64,7 @@ export const ERROR_CODES: { [key: string]: string } = {
     "60": "Perpetual has been already de-listed",
     "61": "Not allowed as perpetual is de-listed",
     "62": "Perpetual must be de-listed before one can close position",
-    "63": "Perpetual is denied trading",
+    "63": "Trading has been stopped on the perpetual",
     "100": "Sender is not valid price oracle operator",
     "101": "Sender is not valid funding rate operator",
     "102": "Price is out of max allowed price difference bounds",

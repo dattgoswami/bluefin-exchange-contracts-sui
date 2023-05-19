@@ -149,7 +149,6 @@ module bluefin_foundation::isolated_trading {
         subAccounts: &SubAccounts,
         data: TradeData):TradeResponse
         {
-            assert!(perpetual::is_trading_permitted(perp), error::perpetual_is_denied_trading());
             assert!(
                 data.makerOrder.isBuy != data.takerOrder.isBuy, 
                 error::order_cannot_be_of_same_side());

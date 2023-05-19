@@ -405,6 +405,90 @@ describe("Perpetual", () => {
         });
     });
 
+    it("should revert when trying to trade/liquidate/deleverage as trading has been stopped on the perpetual", async () => {
+        const localDeployment = { ...deployment };
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
+            await createMarket(deployment, ownerSigner, provider, {
+                startingTime: Date.now() - 10000
+            })
+        ).marketObjects;
+
+        const onChain = new OnChainCalls(ownerSigner, localDeployment);
+
+        // make admin operator
+        const tx1 = await onChain.createSettlementOperator({
+            operator: ownerAddress
+        });
+        const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[0];
+
+        const tx2 = await onChain.setDeleveragingOperator({
+            operator: ownerAddress
+        });
+
+        const deleveragingCapID = Transaction.getCreatedObjectIDs(tx2)[0];
+
+        // stop trading on perpetual
+        const tx = await onChain.setPerpetualTradingPermit({
+            isPermitted: false
+        });
+        expectTxToSucceed(tx);
+
+        // ================== trade ==================
+        const orderSigner = new OrderSigner(alice.keyPair);
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            createOrder()
+        );
+
+        const txTrade = await onChain.trade({
+            ...trade,
+            settlementCapID,
+            gasBudget: 200000000
+        });
+        expectTxToFail(txTrade);
+
+        expect(Transaction.getError(txTrade)).to.be.equal(ERROR_CODES[63]);
+
+        // ================== liquidate ==================
+
+        const txLiquidate = await onChain.liquidate(
+            {
+                liquidatee: alice.address,
+                quantity: toBigNumberStr(1),
+                leverage: toBigNumberStr(1),
+                allOrNothing: true,
+                liquidator: ownerAddress, // owner is the liquidator
+                gasBudget: 200000000
+            },
+            ownerSigner
+        );
+
+        expectTxToFail(txLiquidate);
+
+        expect(Transaction.getError(txLiquidate)).to.be.equal(ERROR_CODES[63]);
+
+        // ================== deleverage ==================
+
+        const txDeleverage = await onChain.deleverage(
+            {
+                maker: alice.address,
+                taker: alice.address,
+                quantity: toBigNumberStr(1),
+                gasBudget: 200000000,
+                deleveragingCapID
+            },
+            ownerSigner
+        );
+
+        expectTxToFail(txDeleverage);
+
+        expect(Transaction.getError(txDeleverage)).to.be.equal(ERROR_CODES[63]);
+    });
+
     describe("Sub account adjusting parent's position", () => {
         let priceOracleCapID: string;
         let settlementCapID: string;

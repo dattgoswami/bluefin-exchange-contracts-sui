@@ -116,7 +116,7 @@ export async function executeTests(
             const address = await onChain.signer.getAddress();
 
             //fund the admin with Sui
-            await requestGas(await onChain.signer.getAddress());
+            await requestGas(address);
 
             // make owner, the price oracle operator
             const tx1 = await onChain.setPriceOracleOperator({
