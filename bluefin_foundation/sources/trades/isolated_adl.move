@@ -88,16 +88,6 @@ module bluefin_foundation::isolated_adl {
          // round oracle price to conform to tick size
         oraclePrice = library::round(oraclePrice, evaluator::tickSize(tradeChecks));
 
-        // maker must have a position object
-        assert!(
-            table::contains(positionsTable, data.maker), 
-            error::user_has_no_position_in_table(0));
-
-        // taker must have a position object
-        assert!(
-            table::contains(positionsTable, data.taker), 
-            error::user_has_no_position_in_table(1));
-
         // verify pre-trade checks
         evaluator::verify_min_max_price(tradeChecks, oraclePrice);
         evaluator::verify_qty_checks(tradeChecks, data.quantity);
@@ -224,6 +214,10 @@ module bluefin_foundation::isolated_adl {
     
     public (friend) fun takerFundsFlow(resp:TradeResponse): Number{
         return resp.takerFundsFlow
+    }
+
+    public (friend) fun tradeType() : u8 {
+        return TRADE_TYPE
     }
 
     //===========================================================//

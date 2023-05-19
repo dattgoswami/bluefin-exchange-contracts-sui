@@ -79,7 +79,7 @@ module bluefin_foundation::library {
         return amount * 1000
     }
 
-    public fun get_public_address(public_key: vector<u8>): address{
+     public fun get_public_address(public_key: vector<u8>): address{
         let buff = vector::empty<u8>();
 
         vector::append(&mut buff, vector[1]); // signature scheme for secp256k1

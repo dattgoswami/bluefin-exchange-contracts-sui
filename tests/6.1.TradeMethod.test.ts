@@ -44,7 +44,8 @@ describe("Trade", () => {
         // deploy market
         deployment["markets"]["ETH-PERP"]["Objects"] = (
             await createMarket(deployment, ownerSigner, provider, {
-                maxAllowedPriceDiffInOP: toBigNumberStr(1000)
+                maxAllowedPriceDiffInOP: toBigNumberStr(1000),
+                startingTime: Date.now() - 1000
             })
         ).marketObjects;
 
@@ -692,8 +693,11 @@ describe("Trade", () => {
 
         // deploying a new market
         deployment["markets"]["BTC-PERP"] = {
-            Objects: (await createMarket(deployment, ownerSigner, provider))
-                .marketObjects
+            Objects: (
+                await createMarket(deployment, ownerSigner, provider, {
+                    startingTime: Date.now() - 1000
+                })
+            ).marketObjects
         };
 
         onChain = new OnChainCalls(ownerSigner, deployment);

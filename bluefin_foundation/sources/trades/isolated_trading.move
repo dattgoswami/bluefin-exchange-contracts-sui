@@ -163,10 +163,6 @@ module bluefin_foundation::isolated_trading {
             let mmr = perpetual::mmr(perp);
             let positionsTable = perpetual::positions(perp);
 
-            // // if maker/taker positions don't exist create them
-            position::create_position(perpID, positionsTable, data.makerOrder.maker);
-            position::create_position(perpID, positionsTable, data.takerOrder.maker);
-
             // // get order hashes
             let makerOrderSerialized = get_serialized_order(data.makerOrder);
             let takerOrderSerialized = get_serialized_order(data.takerOrder);
@@ -333,7 +329,9 @@ module bluefin_foundation::isolated_trading {
         return resp.fee
     }
 
-
+    public (friend) fun tradeType() : u8 {
+        return TRADE_TYPE
+    }
 
     //===========================================================//
     //                      HELPER METHODS
@@ -503,7 +501,10 @@ module bluefin_foundation::isolated_trading {
 
         let publicAddress = library::get_public_address(publicKey);
 
-        assert!(maker == publicAddress || roles::is_sub_account(subAccounts, maker, publicAddress), error::order_has_invalid_signature(isTaker));
+        assert!(
+            maker == publicAddress || 
+            roles::is_sub_account(subAccounts, maker, publicAddress), 
+            error::order_has_invalid_signature(isTaker));
 
         return publicAddress
     }

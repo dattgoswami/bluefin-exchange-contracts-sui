@@ -509,34 +509,6 @@ describe("Order Signer", () => {
         );
     });
 
-    it("should generate off-chain public address exactly equal to on-chain public address", async () => {
-        const receipt = await onChain.signAndCall(
-            ownerSigner,
-            "get_public_address",
-            [
-                Array.from(
-                    base64ToBuffer(ownerKeyPair.getPublicKey().toBase64())
-                )
-            ],
-            "test"
-        );
-
-        const addressGeneratedEvent = Transaction.getEvents(
-            receipt,
-            "PublicAddressGeneratedEvent"
-        )[0];
-
-        expect(addressGeneratedEvent).to.not.be.undefined;
-
-        const onChainAddress = base64ToHex(
-            addressGeneratedEvent?.address ?? ""
-        );
-
-        expect(onChainAddress).to.be.equal(
-            ownerKeyPair.getPublicKey().toSuiAddress().substring(2)
-        );
-    });
-
     it("should recover public key on-chain from signature & hash", async () => {
         const serializedOrder = orderSigner.getSerializedOrder(order);
         const signature = orderSigner.signOrder(order);

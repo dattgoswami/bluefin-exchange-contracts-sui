@@ -97,18 +97,9 @@ module bluefin_foundation::isolated_liquidation {
          // round oracle price to conform to tick size
         oraclePrice = library::round(oraclePrice, evaluator::tickSize(tradeChecks));
 
-        // liquidatee, maker must have a position in table
-        assert!(
-            table::contains(positionsTable, data.liquidatee), 
-            error::user_has_no_position_in_table(0));
-
         // verify pre-trade checks
         evaluator::verify_min_max_price(tradeChecks, oraclePrice);
         evaluator::verify_qty_checks(tradeChecks, data.quantity);
-
-        // create liquidator's position if not exists
-        position::create_position(perpID, positionsTable, data.liquidator);
-
 
         let makerPos = *table::borrow(positionsTable, data.liquidatee);
         let takerPos = *table::borrow(positionsTable, data.liquidator);
@@ -257,6 +248,10 @@ module bluefin_foundation::isolated_liquidation {
 
     public (friend) fun insurancePoolPortion(resp:TradeResponse): Number{
         return resp.premium.pool
+    }
+
+    public (friend) fun tradeType() : u8 {
+        return TRADE_TYPE
     }
 
     //===========================================================//

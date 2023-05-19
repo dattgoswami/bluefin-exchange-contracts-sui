@@ -11,7 +11,8 @@ import { OnChainCalls, Transaction } from "../src/classes";
 import { fundTestAccounts } from "./helpers/utils";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { toBigNumberStr } from "../src/library";
-import { expectTxToSucceed } from "./helpers/expect";
+import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
+import { ERROR_CODES } from "../src/errors";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -201,6 +202,36 @@ describe("Margin Bank", () => {
 
             expect(Transaction.getStatus(txResult)).to.be.equal("failure");
             expect(Transaction.getErrorCode(txResult)).to.be.equal(605);
+        });
+
+        it("should revert as alice does not have enough balance in coin object to deposit", async () => {
+            // minting 10 usdc
+            let coins = { data: [] };
+            while (coins.data.length == 0) {
+                const tx = await onChain.mintUSDC({
+                    amount: toBigNumberStr(10, 6),
+                    to: aliceAddress
+                });
+                expectTxToSucceed(tx);
+                coins = await onChain.getUSDCCoins({ address: aliceAddress });
+            }
+
+            const coin = coins.data.pop();
+
+            // trying to deposit 20$ when the coin has got 10$
+            const txResult = await onChain.depositToBank(
+                {
+                    coinID: (coin as any).coinObjectId,
+                    amount: toBigNumberStr(20, 6),
+                    gasBudget: 900000000
+                },
+                alice
+            );
+
+            expectTxToFail(txResult);
+            expect(Transaction.getError(txResult)).to.be.equal(
+                ERROR_CODES[107]
+            );
         });
     });
 });

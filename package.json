@@ -12,6 +12,7 @@
     "make:trade": "ts-node ./scripts/makeTrade.ts",
     "test": "ts-mocha --no-timeout tests/*.test.ts",
     "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
+    "make:trade": "ts-node ./scripts/makeTrade.ts",
     "prepare": "husky install",
     "make:trade": "ts-node ./scripts/makeTrade.ts",
     "create:settlement:operator": "ts-node ./scripts/settlementOperator.ts",

@@ -22,6 +22,7 @@ const provider = getProvider(
     DeploymentConfigs.network.rpc,
     DeploymentConfigs.network.rpc
 );
+
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 describe("Roles", () => {
@@ -212,6 +213,39 @@ describe("Roles", () => {
             const event = Transaction.getEvents(
                 tx,
                 "PriceOracleOperatorUpdate"
+            )[0];
+
+            expect(event.account).to.be.equal(alice.address);
+        });
+    });
+
+    describe("Funding Rate Operator", () => {
+        it("should revert when non-exchange admin tries to set funding rate operator", async () => {
+            const error = OWNERSHIP_ERROR(
+                onChain.getExchangeAdminCap(),
+                onChain.getDeployerAddress(),
+                alice.address
+            );
+
+            await expect(
+                onChain.setFundingRateOperator(
+                    {
+                        operator: alice.address
+                    },
+                    alice.signer
+                )
+            ).to.be.eventually.rejectedWith(error);
+        });
+
+        it("should transfer funding rate operator capability to alice", async () => {
+            const tx = await onChain.setFundingRateOperator({
+                operator: alice.address
+            });
+            expectTxToSucceed(tx);
+
+            const event = Transaction.getEvents(
+                tx,
+                "FundingRateOperatorUpdate"
             )[0];
 
             expect(event.account).to.be.equal(alice.address);

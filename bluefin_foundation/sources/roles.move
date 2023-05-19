@@ -34,7 +34,6 @@ module bluefin_foundation::roles {
         id: ID
     }
 
-
     struct PriceOracleOperatorUpdate has copy, drop {
         id: ID,
         account:address
@@ -45,6 +44,11 @@ module bluefin_foundation::roles {
         account:address
     }
 
+    struct FundingRateOperatorUpdate has copy, drop {
+        id: ID,
+        account:address
+    }
+    
     struct SubAccountUpdateEvent has copy, drop {
             account: address,
             subAccount: address,
@@ -75,6 +79,10 @@ module bluefin_foundation::roles {
         id: UID
     }
 
+    struct FundingRateCap has key {
+        id: UID
+    }
+
     struct CapabilitiesSafe has key {
         id: UID,
         // there can only be one guardian
@@ -83,10 +91,13 @@ module bluefin_foundation::roles {
         priceOracleOperator: ID,
         // address of deleveraging operator
         deleveraging: ID,
+        // address of funding rate operator
+        fundingRateOperator: ID,
+        // public settlement cap, any taker can use to perform trade
+        publicSettlementCap: ID,
         // there can be N different settlement operators
         settlementOperators: VecSet<ID>,
-        // public settlement cap, any taker can use to perform trade
-        publicSettlementCap: ID
+
     }
 
     struct SubAccounts has key {
@@ -112,11 +123,14 @@ module bluefin_foundation::roles {
         // create deleveraging operator
         let deleveragerID = create_deleveraging_operator(tx_context::sender(ctx), ctx);
 
+        // create funding rate operator
+        let frID = create_funding_rate_operator(tx_context::sender(ctx), ctx);
+
         // create public settlement capabity 
         // this settlement cap can be use by any taker in the world, its not 
         // added to the list of settlementOperators: VecSet<ID>
         let objID = object::new(ctx);
-        let publicSettlementCapID = object::uid_to_inner(&objID);  
+        let psCapID = object::uid_to_inner(&objID);  
         transfer::share_object(SettlementCap{
             id: objID
         });
@@ -126,8 +140,9 @@ module bluefin_foundation::roles {
             guardian: guardianID,
             priceOracleOperator: pooID,
             deleveraging: deleveragerID,
+            fundingRateOperator: frID,
+            publicSettlementCap: psCapID,
             settlementOperators: vec_set::empty(),
-            publicSettlementCap: publicSettlementCapID
         };
 
         // share safe
@@ -197,6 +212,24 @@ module bluefin_foundation::roles {
         safe.deleveraging = create_deleveraging_operator(newOperator, ctx);
 
     }
+
+
+    /**
+     * Creates deleveraing operator
+     * Only exchange admin can invoke this method
+     */
+    public entry fun set_funding_rate_operator(
+        _:&ExchangeAdminCap, 
+        safe: &mut CapabilitiesSafe, 
+        newOperator: address, 
+        ctx: &mut TxContext
+        ){
+
+        // update new id address in safe
+        safe.fundingRateOperator = create_funding_rate_operator(newOperator, ctx);
+
+    }
+
 
 
     /**
@@ -340,6 +373,21 @@ module bluefin_foundation::roles {
 
     }
 
+
+    fun create_funding_rate_operator(owner: address, ctx: &mut TxContext): ID {
+
+        let id = object::new(ctx);
+        let frID = object::uid_to_inner(&id);
+        let operator = FundingRateCap {id};
+        
+        transfer::transfer(operator, owner);
+        
+        emit(FundingRateOperatorUpdate{id: frID, account: owner});
+
+        return frID
+
+    }
+
     public fun check_guardian_validity(
         safe: &CapabilitiesSafe,
         cap: &ExchangeGuardianCap,
@@ -368,6 +416,17 @@ module bluefin_foundation::roles {
         assert!( 
             safe.deleveraging == object::uid_to_inner(&cap.id),
             error::invalid_deleveraging_operator()
+        ); 
+    }
+
+    public fun check_funding_rate_operator_validity(
+        safe: &CapabilitiesSafe,
+        cap: &FundingRateCap
+        ){ 
+        
+        assert!( 
+            safe.fundingRateOperator == object::uid_to_inner(&cap.id),
+            error::invalid_funding_rate_operator()
         ); 
     }
 

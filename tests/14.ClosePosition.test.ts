@@ -563,7 +563,8 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
                 maintenanceMarginRequired: toBigNumberStr(0.05),
                 maxPrice: toBigNumberStr(2000),
                 makerFee: toBigNumberStr(0.01),
-                takerFee: toBigNumberStr(0.02)
+                takerFee: toBigNumberStr(0.02),
+                startingTime: Date.now() - 1000
             }
         );
 

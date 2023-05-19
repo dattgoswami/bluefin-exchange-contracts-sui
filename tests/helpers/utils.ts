@@ -1,4 +1,4 @@
-import { RawSigner } from "@mysten/sui.js";
+import { JsonRpcProvider, RawSigner } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
 import { Transaction } from "../../src";
 import { Balance } from "../../src/classes/Balance";
@@ -88,4 +88,19 @@ export function toExpectedPositionFormat(
             : bigNumber(0),
         pnl: args?.pnl ? args?.pnl.shiftedBy(-BASE_DECIMALS) : bigNumber(0)
     } as TestPositionExpect;
+}
+
+export async function waitForTradingToStart(
+    provider: JsonRpcProvider,
+    tradeStartTime: Number
+) {
+    let chainTime = 0;
+    while (tradeStartTime > chainTime) {
+        const latestCheckpoint =
+            await provider.getLatestCheckpointSequenceNumber();
+        const checkpoint = await provider.getCheckpoint({
+            id: latestCheckpoint
+        });
+        chainTime = Number(checkpoint.timestampMs);
+    }
 }

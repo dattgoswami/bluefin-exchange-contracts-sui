@@ -122,9 +122,9 @@ module bluefin_foundation::margin_bank {
         // getting the amount of the coin
         let total_coin_value = coin::value(coin);
 
-        assert!(amount <= total_coin_value, 1);
-        
-        
+        // revert if amount > value of coin
+        assert!(amount <= total_coin_value, error::coin_does_not_have_enough_amount());
+                
         let coinForDeposit = coin::take(coin::balance_mut(coin), amount, ctx);
 
         // depositing the coin to the bank

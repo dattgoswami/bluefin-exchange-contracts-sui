@@ -32,6 +32,7 @@ import { MarketDetails } from "./interfaces/market";
 
 import { execSync } from "child_process";
 import fs from "fs";
+import { ERROR_CODES } from "./errors";
 config({ path: ".env" });
 
 export function execCommand(command: string) {
@@ -142,21 +143,17 @@ export async function getGenesisMap(
 
         // get data type
         let dataType = "package";
-        if (objectType != "package") {
-            const tableIdx = objectType.lastIndexOf("Table");
-            if (tableIdx >= 0) {
-                dataType = objectType.slice(tableIdx);
-            } else if (objectType.indexOf("TreasuryCap") > 0) {
-                dataType = "TreasuryCap";
-            } else if (objectType.indexOf("TUSDC") > 0) {
-                dataType = "Currency";
-            } else {
-                dataType = objectType.slice(objectType.lastIndexOf("::") + 2);
-            }
 
-            if (dataType.endsWith(">") && dataType.indexOf("<") == -1) {
-                dataType = dataType.slice(0, dataType.length - 1);
-            }
+        if (objectType.indexOf("TreasuryCap") > 0) {
+            dataType = "TreasuryCap";
+        } else if (objectType.indexOf("TUSDC") > 0) {
+            dataType = "Currency";
+        } else if (objectType.lastIndexOf("::") > 0) {
+            dataType = objectType.slice(objectType.lastIndexOf("::") + 2);
+        }
+
+        if (dataType.endsWith(">") && dataType.indexOf("<") == -1) {
+            dataType = dataType.slice(0, dataType.length - 1);
         }
         map[dataType] = {
             id,
@@ -198,6 +195,7 @@ export async function createMarket(
         console.error(`Error while deploying market: ${error}`);
         process.exit(1);
     }
+
     const map = await getGenesisMap(provider, txResult);
 
     // get account details for insurance pool, perpetual and fee pool
@@ -235,7 +233,7 @@ export function getDeploymentData(
     };
 }
 
-export function createOrder(params: {
+export function createOrder(params?: {
     market?: string;
     maker?: string;
     isBuy?: boolean;
@@ -250,25 +248,25 @@ export function createOrder(params: {
     salt?: number;
 }): Order {
     return {
-        market: params.market || DEFAULT.ORDER.market,
-        maker: params.maker || DEFAULT.ORDER.maker,
-        isBuy: params.isBuy == true,
-        reduceOnly: params.reduceOnly == true,
-        postOnly: params.postOnly == true,
+        market: params?.market || DEFAULT.ORDER.market,
+        maker: params?.maker || DEFAULT.ORDER.maker,
+        isBuy: params?.isBuy == true,
+        reduceOnly: params?.reduceOnly == true,
+        postOnly: params?.postOnly == true,
         orderbookOnly:
-            params.orderbookOnly == undefined ? true : params.orderbookOnly,
-        ioc: params.ioc == true,
-        price: params.price ? toBigNumber(params.price) : DEFAULT.ORDER.price,
-        quantity: params.quantity
+            params?.orderbookOnly == undefined ? true : params.orderbookOnly,
+        ioc: params?.ioc == true,
+        price: params?.price ? toBigNumber(params.price) : DEFAULT.ORDER.price,
+        quantity: params?.quantity
             ? toBigNumber(params.quantity)
             : DEFAULT.ORDER.quantity,
-        leverage: params.leverage
-            ? toBigNumber(params.leverage)
+        leverage: params?.leverage
+            ? toBigNumber(params?.leverage)
             : DEFAULT.ORDER.leverage,
-        expiration: params.expiration
-            ? bigNumber(params.expiration)
+        expiration: params?.expiration
+            ? bigNumber(params?.expiration)
             : DEFAULT.ORDER.expiration,
-        salt: params.salt ? bigNumber(params.salt) : bigNumber(Date.now())
+        salt: params?.salt ? bigNumber(params?.salt) : bigNumber(Date.now())
     } as Order;
 }
 
@@ -284,6 +282,10 @@ export function printOrder(order: Order) {
         order.reduceOnly,
         "\norder.postOnly:",
         order.postOnly,
+        "\norder.orderbookOnly:",
+        order.orderbookOnly,
+        "\norder.ioc:",
+        order.ioc,
         "\norder.price:",
         order.price.toFixed(0),
         "\norder.quantity:",

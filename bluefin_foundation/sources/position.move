@@ -4,9 +4,10 @@ module bluefin_foundation::position {
     use sui::event::{emit};
 
     // custom modules
-    use bluefin_foundation::library::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
+    use bluefin_foundation::funding_rate::{Self, FundingIndex};
     use bluefin_foundation::error::{Self};
+    use bluefin_foundation::library::{Self};
 
 
     // friend modules
@@ -44,6 +45,7 @@ module bluefin_foundation::position {
         margin: u128, 
         oiOpen: u128,
         mro: u128,
+        index: FundingIndex
     }
 
     //===========================================================//
@@ -59,6 +61,7 @@ module bluefin_foundation::position {
             margin: 0,
             oiOpen: 0,
             mro: 0,
+            index: funding_rate::initialize_index(0)
         }
     }
 
@@ -88,6 +91,10 @@ module bluefin_foundation::position {
 
     public fun user(position:UserPosition): address {
         return position.user
+    }
+
+    public fun index(position:UserPosition): FundingIndex {
+        return position.index
     }
 
     //===========================================================//
@@ -127,6 +134,10 @@ module bluefin_foundation::position {
 
     public (friend) fun set_isPosPositive(position:&mut UserPosition, isPosPositive:bool) {
         position.isPosPositive = isPosPositive;
+    }
+
+    public (friend) fun set_index(position:&mut UserPosition, index:FundingIndex) {
+        position.index = index;
     }
 
     //===========================================================//

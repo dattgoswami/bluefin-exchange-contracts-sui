@@ -1,6 +1,7 @@
 
 module bluefin_foundation::perpetual {
 
+    use sui::clock::{Self, Clock};
     use sui::object::{Self, ID, UID};
     use std::string::{Self, String};
     use sui::tx_context::{TxContext};
@@ -12,7 +13,8 @@ module bluefin_foundation::perpetual {
     use bluefin_foundation::position::{UserPosition};
     use bluefin_foundation::price_oracle::{Self, PriceOracle};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
-    use bluefin_foundation::roles::{Self, ExchangeAdminCap, PriceOracleOperatorCap, ExchangeGuardianCap, CapabilitiesSafe};
+    use bluefin_foundation::funding_rate::{Self, FundingRate, FundingIndex};
+    use bluefin_foundation::roles::{Self, ExchangeAdminCap, PriceOracleOperatorCap, ExchangeGuardianCap, FundingRateCap, CapabilitiesSafe};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
 
@@ -36,7 +38,8 @@ module bluefin_foundation::perpetual {
         insurancePoolRatio: u128,
         insurancePool: address,
         feePool: address,
-        checks:TradeChecks
+        checks:TradeChecks,
+        funding: FundingRate
     }
 
     struct InsurancePoolRatioUpdateEvent has copy, drop {
@@ -62,7 +65,6 @@ module bluefin_foundation::perpetual {
     struct TradingPermissionStatusUpdate has drop, copy {
         status: bool
     }
-
 
     //===========================================================//
     //                           STORAGE                         //
@@ -92,13 +94,16 @@ module bluefin_foundation::perpetual {
         delistingPrice: u128,
         /// is trading allowed
         isTradingPermitted:bool,
+        // time at which trading will start for perpetual
+        startTime: u64,
         /// trade checks
         checks: TradeChecks,
         /// table containing user positions for this market/perpetual
         positions: Table<address, UserPosition>,
         /// price oracle
         priceOracle: PriceOracle,
-
+        /// Funding Rate
+        funding: FundingRate,
     }
 
     //===========================================================//
@@ -124,6 +129,8 @@ module bluefin_foundation::perpetual {
         mtbLong: u128,
         mtbShort: u128,
         maxAllowedPriceDiffInOP: u128, 
+        maxAllowedFR: u128,
+        startTime: u64,
         maxAllowedOIOpen: vector<u128>,
         positions: Table<address,UserPosition>,
 
@@ -151,6 +158,8 @@ module bluefin_foundation::perpetual {
             maxAllowedPriceDiffInOP,
         );
 
+        let funding = funding_rate::initialize(startTime, maxAllowedFR);
+
         let perp = Perpetual {
             id,
             name: string::utf8(name),
@@ -164,9 +173,11 @@ module bluefin_foundation::perpetual {
             delisted: false,
             delistingPrice: 0,
             isTradingPermitted:true,
+            startTime,
             checks,
             positions,
-            priceOracle
+            priceOracle,
+            funding,
         };
 
         emit(PerpetualCreationEvent {
@@ -179,7 +190,8 @@ module bluefin_foundation::perpetual {
             insurancePoolRatio,
             insurancePool,
             feePool,
-            checks
+            checks,
+            funding 
         });
         
         transfer::share_object(perp);
@@ -190,7 +202,6 @@ module bluefin_foundation::perpetual {
     public (friend) fun positions(perp:&mut Perpetual):&mut Table<address,UserPosition>{
         return &mut perp.positions
     }
-
 
     //===========================================================//
     //                      GUARDIAN METHODS
@@ -239,6 +250,10 @@ module bluefin_foundation::perpetual {
         return perp.takerFee
     }
 
+    public fun fundingRate(perp:&Perpetual):FundingRate{
+        return perp.funding
+    }
+
     public fun poolPercentage(perp:&Perpetual): u128{
         return perp.insurancePoolRatio
     }
@@ -259,6 +274,10 @@ module bluefin_foundation::perpetual {
         return price_oracle::price(perp.priceOracle)
     }
 
+    public fun globalIndex(perp:&Perpetual): FundingIndex{
+        return funding_rate::index(perp.funding)
+    }
+
     public fun is_trading_permitted(perp: &mut Perpetual) : bool {
         perp.isTradingPermitted
     }
@@ -269,6 +288,10 @@ module bluefin_foundation::perpetual {
 
     public fun delistingPrice(perp: &Perpetual): u128{
         return perp.delistingPrice
+    }
+
+    public fun startTime(perp: &Perpetual): u64{
+        return perp.startTime
     }
 
 
@@ -310,12 +333,12 @@ module bluefin_foundation::perpetual {
     }
 
 
-    public entry fun delist_perpetual(_: &ExchangeAdminCap, perp: &mut Perpetual, price: u128){
-
+    public entry fun delist_perpetual(_: &ExchangeAdminCap, clock:&Clock, perp: &mut Perpetual, price: u128){
 
         assert!(!perp.delisted, error::perpetual_has_been_already_de_listed());
 
-        // TODO update global index over here
+        // update global index
+        update_global_index(clock, perp);
 
         // verify that price conforms to tick size
         evaluator::verify_price_checks(perp.checks, price);
@@ -435,5 +458,39 @@ module bluefin_foundation::perpetual {
             object::uid_to_inner(&perp.id),
             &mut perp.priceOracle,
             maxAllowedPriceDifference);
+    }
+
+    /*
+     * Updates max allowed funding rate to the provided one
+     */
+    public entry fun set_max_allowed_funding_rate(_: &ExchangeAdminCap, perp: &mut Perpetual,  maxAllowedFR: u128){
+        let perpID = object::uid_to_inner(id(perp));
+        assert!(maxAllowedFR <= library::base_uint(), error::can_not_be_greater_than_hundred_percent());
+        funding_rate::set_max_allowed_funding_rate(&mut perp.funding, maxAllowedFR, perpID);
+    }
+
+    /*
+     * Allows funding rate operator to set funding rate for current window
+     */
+    public entry fun set_funding_rate(clock: &Clock, safe: &CapabilitiesSafe, cap: &FundingRateCap, perp: &mut Perpetual, rate: u128, sign: bool){
+        
+        update_global_index(clock, perp);
+
+        funding_rate::set_funding_rate(
+            safe,
+            cap,
+            &mut perp.funding,
+            rate,
+            sign,
+            clock::timestamp_ms(clock),
+            object::uid_to_inner(&perp.id));
+    }
+
+    fun update_global_index(clock: &Clock, perp: &mut Perpetual){
+        let perpID = object::uid_to_inner(&perp.id);
+        // update global index based on last fuding rate
+        let index = funding_rate::compute_new_global_index(clock, perp.funding, oraclePrice(perp));
+        funding_rate::set_global_index(&mut perp.funding, index, perpID);
+
     }
 }

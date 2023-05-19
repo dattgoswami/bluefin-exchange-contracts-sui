@@ -9,6 +9,26 @@ module bluefin_foundation::error {
         return 2
     } 
 
+    public fun trade_price_less_than_min_price() : u64 {
+        return 3
+    }
+
+    public fun trade_price_greater_than_max_price() : u64 {
+        return  4
+    }
+
+    public fun trade_price_tick_size_not_allowed() : u64 {
+        return  5
+    }
+
+    public fun user_already_has_position() : u64 {
+        return 6
+    }
+
+    public fun operator_not_found() : u64 {
+        return 8
+    }
+
     public fun max_price_greater_than_min_price() : u64 {
         return 9
     }
@@ -49,19 +69,6 @@ module bluefin_foundation::error {
         return 18
     }
 
-    // Trade Errors
-    public fun trade_price_less_than_min_price() : u64 {
-        return 3
-    }
-
-    public fun trade_price_greater_than_max_price() : u64 {
-        return  4
-    }
-
-    public fun trade_price_tick_size_not_allowed() : u64 {
-        return  5
-    }
-
     public fun trade_qty_less_than_min_qty() : u64 {
         return 19
     }
@@ -75,7 +82,7 @@ module bluefin_foundation::error {
     }
 
     public fun trade_qty_step_size_not_allowed( ) : u64 {
-        return  22
+        return 22
     }
 
     public fun trade_price_greater_than_mtb_long() : u64 {
@@ -142,6 +149,17 @@ module bluefin_foundation::error {
         return 50 + offset
     }
 
+    public fun funding_due_exceeds_margin(offset: u64): u64 {
+        // 53 + 0 = 53 for maker
+        // 53 + 1 = 54 for taker
+        // 53 + 2 = 55 for user
+        return 53 + offset
+    }
+
+    public fun trading_not_started(): u64 {
+        return 56
+    }
+
     public fun perpetual_has_been_already_de_listed(): u64 {
         return 60
     }
@@ -158,21 +176,12 @@ module bluefin_foundation::error {
         return 63
     }
 
-
-    public fun user_already_has_position() : u64 {
-        return 6
-    }
-
-    public fun operator_already_whitelisted_for_settlement() : u64 {
-        return 7
-    }
-
-    public fun operator_not_found() : u64 {
-        return 8
-    }
-
     public fun invalid_price_oracle_operator() : u64 {
         return 100
+    }
+
+    public fun invalid_funding_rate_operator() : u64 {
+        return 101
     }
 
     public fun out_of_max_allowed_price_diff_bounds() : u64 {
@@ -195,7 +204,9 @@ module bluefin_foundation::error {
         return 106
     }
 
-
+    public fun coin_does_not_have_enough_amount() : u64 {
+        return 107
+    }
 
     public fun only_taker_of_trade_can_execute_trade_involving_non_orderbook_orders(): u64 {
         return 108
@@ -314,6 +325,14 @@ module bluefin_foundation::error {
 
     public fun new_address_can_not_be_same_as_current_one(): u64 {
         return 900
+    }
+
+    public fun funding_rate_can_not_be_set_for_zeroth_window(): u64 {
+        return 901
+    }
+
+    public fun funding_rate_for_window_already_set(): u64 {
+        return 902
     }
     
 }

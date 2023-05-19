@@ -16,10 +16,10 @@ Repository containing bluefin core exchange contracts that allow users to do on-
   The script will deploy the contracts, and create any markets specified in `DeploymentConfig.ts`, extract created objects and write them to `./deployment.json` file
   ```
   $ ts-node ./scripts/deploy/full.ts
-  Performing full deployment on: http://127.0.0.1:9000
-  Deployer SUI address: 0x42696a5734546c3acc9019ef93543609cb5c5c89
-  Switched client env to: local
-  Switched client account to: 0x42696a5734546c3acc9019ef93543609cb5c5c89
+  Performing full deployment on: http://suitest.bluefin.io:9000
+  Deployer SUI address: 0x0d8790b07549b9f3cfc8f66a3719cd1d6636812fb76e0b3306d13f429706f8a9
+  Switched client env to: cloud
+  Switched client account to: 0x0d8790b07549b9f3cfc8f66a3719cd1d6636812fb76e0b3306d13f429706f8a9
   INCLUDING DEPENDENCY Sui
   INCLUDING DEPENDENCY MoveStdlib
   BUILDING bluefin_foundation
@@ -30,12 +30,12 @@ Repository containing bluefin core exchange contracts that allow users to do on-
   -> ETH-PERP
   -> BTC-PERP
   Object details written to file: ./deployment.json
-  Done in 7.64s.
+  Done in 9.91s.
   ```
 
 **Running Tests:**
 
-- Updat .env file with DEPLOY_ON and DEPLOYER_SEED
+- Update .env file with DEPLOY_ON and DEPLOYER_SEED
 - Fund deployer using `yarn faucet --account <acct_address>`
 - Fund testing accounts using `yarn fund:test:accounts`
 - Deploy the package using `yarn deploy`, Every time any change is made to package, it will need to be re-deployed before running tests

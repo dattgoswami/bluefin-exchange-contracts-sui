@@ -100,8 +100,8 @@ export const DeploymentConfigs: DeploymentConfig = {
             maintenanceMarginRequired: toBigNumberStr(0.3),
             makerFee: toBigNumberStr(0.001),
             takerFee: toBigNumberStr(0.0045),
-            maxAllowedFR: toBigNumberStr(0.001),
             maxAllowedPriceDiffInOP: toBigNumberStr(1),
+            maxAllowedFR: toBigNumberStr(0.001),
             insurancePoolRatio: toBigNumberStr(0.3),
             insurancePool:
                 "0x90c55f2a388a0e31ebca93cbf87fdd08e9716be082ca8a3c479bb14bcb5e1b88",

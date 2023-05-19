@@ -41,7 +41,9 @@ describe("Guardian", () => {
             markets: {
                 ["ETH-PERP"]: {
                     Objects: (
-                        await createMarket(deployment, ownerSigner, provider)
+                        await createMarket(deployment, ownerSigner, provider, {
+                            startingTime: Date.now() - 1000
+                        })
                     ).marketObjects
                 }
             }

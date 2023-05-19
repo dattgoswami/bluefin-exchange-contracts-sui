@@ -122,21 +122,6 @@ describe("Deleveraging Trade Method", () => {
         ).to.be.eventually.rejectedWith(error);
     });
 
-    it("should revert as maker account being deleveraged has no position object", async () => {
-        const txResponse = await onChain.deleverage(
-            {
-                maker: DEFAULT.RANDOM_ACCOUNT_ADDRESS, // a random account with no position
-                taker: bob.address,
-                quantity: toBigNumberStr(1),
-                gasBudget: 9000000
-            },
-            ownerSigner
-        );
-
-        expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[505]);
-    });
-
     it("should revert as owner is no longer deleveraging operator", async () => {
         const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
@@ -168,21 +153,6 @@ describe("Deleveraging Trade Method", () => {
 
         expectTxToFail(txResponse);
         expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[113]);
-    });
-
-    it("should revert as taker account being deleveraged has no position object", async () => {
-        const txResponse = await onChain.deleverage(
-            {
-                maker: alice.address,
-                taker: DEFAULT.RANDOM_ACCOUNT_ADDRESS, // a random account with no position
-                quantity: toBigNumberStr(1),
-                gasBudget: 90000000
-            },
-            ownerSigner
-        );
-
-        expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[506]);
     });
 
     it("should revert as maker of adl trade has zero sized position", async () => {

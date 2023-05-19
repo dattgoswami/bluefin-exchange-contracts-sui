@@ -61,7 +61,8 @@ export async function executeTests(
             {
                 ...marketConfig,
                 feePool: feePoolAddress,
-                insurancePool: insurancePoolAddress
+                insurancePool: insurancePoolAddress,
+                startingTime: Date.now() - 1000
             }
         );
 

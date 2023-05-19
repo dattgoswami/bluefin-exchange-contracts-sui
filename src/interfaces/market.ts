@@ -28,16 +28,18 @@ export interface MarketDetails {
     makerFee?: string;
     // default taker order fee for this Perpetual
     takerFee?: string;
-    // max allowed funding rate
-    maxAllowedFR?: string;
     // maximum allowed difference in consecutive Oracle Price updates
     maxAllowedPriceDiffInOP?: string;
+    // max allowed funding rate
+    maxAllowedFR?: string;
     // portion of liquidation premium to be transferred to insurance pool
     insurancePoolRatio?: string;
     // address of insurance pool
     insurancePool?: string;
     // address of fee pool
     feePool?: string;
+    // time at which trading will start on perpetual
+    startingTime?: number;
 }
 
 export interface PerpCreationMarketDetails extends MarketDetails {

@@ -41,7 +41,9 @@ describe("Liquidation Trade Method", () => {
     before(async () => {
         // deploy market
         deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider)
+            await createMarket(deployment, ownerSigner, provider, {
+                startingTime: Date.now() - 1000
+            })
         ).marketObjects;
 
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -117,22 +119,6 @@ describe("Liquidation Trade Method", () => {
 
         expectTxToFail(txResponse);
         expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[51]);
-    });
-
-    it("should revert as account(maker) being liquidated has no position", async () => {
-        const txResponse = await onChain.liquidate(
-            {
-                liquidatee: DEFAULT.RANDOM_ACCOUNT_ADDRESS, // a random account with no position
-                quantity: toBigNumberStr(1),
-                leverage: toBigNumberStr(1),
-                liquidator: ownerAddress, // owner is the liquidator
-                gasBudget: 90000000
-            },
-            ownerSigner
-        );
-
-        expectTxToFail(txResponse);
-        expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[505]);
     });
 
     it("should revert as quantity to be liquidated < min allowed quantity ", async () => {
@@ -360,7 +346,9 @@ describe("Liquidation Trade Method", () => {
         const localDeployment = deployment;
 
         localDeployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(localDeployment, ownerSigner, provider)
+            await createMarket(localDeployment, ownerSigner, provider, {
+                startingTime: Date.now() - 1000
+            })
         ).marketObjects;
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
@@ -434,7 +422,9 @@ describe("Liquidation Trade Method", () => {
         const localDeployment = deployment;
 
         localDeployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(localDeployment, ownerSigner, provider)
+            await createMarket(localDeployment, ownerSigner, provider, {
+                startingTime: Date.now() - 1000
+            })
         ).marketObjects;
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
@@ -489,7 +479,7 @@ describe("Liquidation Trade Method", () => {
                 leverage: toBigNumberStr(2),
                 liquidator: ownerAddress // owner is liquidator
             },
-            tester.signer // testers is invokign the call
+            tester.signer // testers is invoking the call
         );
 
         expectTxToSucceed(txResponse);

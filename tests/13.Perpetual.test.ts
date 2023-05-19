@@ -31,10 +31,91 @@ describe("Perpetual", () => {
     before(async () => {
         // deploy market
         deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider)
+            await createMarket(deployment, ownerSigner, provider, {
+                startingTime: Date.now() - 1000
+            })
         ).marketObjects;
         onChain = new OnChainCalls(ownerSigner, deployment);
         ownerAddress = await ownerSigner.getAddress();
+    });
+
+    it("should revert when trying to trade/liquidate/deleverage as perpetual start time < current chain time", async () => {
+        const localDeployment = { ...deployment };
+        // trade starting time, current time + 1000 seconds
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
+            await createMarket(deployment, ownerSigner, provider, {
+                startingTime: Date.now() + 1000000
+            })
+        ).marketObjects;
+
+        const onChain = new OnChainCalls(ownerSigner, localDeployment);
+
+        // make admin operator
+        const tx1 = await onChain.createSettlementOperator({
+            operator: ownerAddress
+        });
+        const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[0];
+
+        const tx2 = await onChain.setDeleveragingOperator({
+            operator: ownerAddress
+        });
+
+        const deleveragingCapID = Transaction.getCreatedObjectIDs(tx2)[0];
+
+        // ================== trade ==================
+        const orderSigner = new OrderSigner(alice.keyPair);
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            createOrder()
+        );
+
+        const txTrade = await onChain.trade({
+            ...trade,
+            settlementCapID,
+            gasBudget: 200000000
+        });
+        expectTxToFail(txTrade);
+
+        expect(Transaction.getError(txTrade)).to.be.equal(ERROR_CODES[56]);
+
+        // ================== liquidate ==================
+
+        const txLiquidate = await onChain.liquidate(
+            {
+                liquidatee: alice.address,
+                quantity: toBigNumberStr(1),
+                leverage: toBigNumberStr(1),
+                allOrNothing: true,
+                liquidator: ownerAddress, // owner is the liquidator
+                gasBudget: 200000000
+            },
+            ownerSigner
+        );
+
+        expectTxToFail(txLiquidate);
+
+        expect(Transaction.getError(txLiquidate)).to.be.equal(ERROR_CODES[56]);
+
+        // ================== deleverage ==================
+
+        const txDeleverage = await onChain.deleverage(
+            {
+                maker: alice.address,
+                taker: alice.address,
+                quantity: toBigNumberStr(1),
+                gasBudget: 200000000,
+                deleveragingCapID
+            },
+            ownerSigner
+        );
+
+        expectTxToFail(txDeleverage);
+
+        expect(Transaction.getError(txDeleverage)).to.be.equal(ERROR_CODES[56]);
     });
 
     it("should successfully update insurance pool percentage", async () => {
@@ -47,22 +128,7 @@ describe("Perpetual", () => {
     it("should not update insurance pool percentage if greater than 1", async () => {
         const txResult = await onChain.setInsurancePoolPercentage({
             percentage: 1.000001,
-            gasBudget: 1000000
-        });
-        expectTxToFail(txResult);
-        expect(Transaction.getErrorCode(txResult)).to.be.equal(104);
-    });
-
-    xit("should successfully update max allowed FR", async () => {
-        const txResult = await onChain.setMaxAllowedFundingRate({
-            maxAllowedFR: 1
-        });
-        expectTxToSucceed(txResult);
-    });
-
-    xit("should not update max allowed FR if greater than 100%", async () => {
-        const txResult = await onChain.setMaxAllowedFundingRate({
-            maxAllowedFR: 1.000001
+            gasBudget: 2000000
         });
         expectTxToFail(txResult);
         expect(Transaction.getErrorCode(txResult)).to.be.equal(104);
@@ -78,7 +144,7 @@ describe("Perpetual", () => {
     it("should not update insurance pool address if zero", async () => {
         const txResult = await onChain.setInsurancePoolAddress({
             address: ADDRESSES.ZERO,
-            gasBudget: 10000000
+            gasBudget: 20000000
         });
         expectTxToFail(txResult);
         expect(Transaction.getErrorCode(txResult)).to.be.equal(105);
@@ -94,7 +160,7 @@ describe("Perpetual", () => {
     it("should not update fee pool address if zero", async () => {
         const txResult = await onChain.setFeePoolAddress({
             address: ADDRESSES.ZERO,
-            gasBudget: 10000000
+            gasBudget: 20000000
         });
         expectTxToFail(txResult);
         expect(Transaction.getErrorCode(txResult)).to.be.equal(105);
@@ -105,7 +171,8 @@ describe("Perpetual", () => {
             // deploy market
             deployment["markets"]["ETH-PERP"]["Objects"] = (
                 await createMarket(deployment, ownerSigner, provider, {
-                    tickSize: toBigNumberStr(0.1)
+                    tickSize: toBigNumberStr(0.1),
+                    startingTime: Date.now() - 1000
                 })
             ).marketObjects;
 
@@ -127,7 +194,7 @@ describe("Perpetual", () => {
 
             const tx2 = await onChain.delistPerpetual({
                 price: toBigNumberStr(100),
-                gasBudget: 10000000
+                gasBudget: 20000000
             });
             expectTxToFail(tx2);
 
@@ -137,7 +204,7 @@ describe("Perpetual", () => {
         it("should revert as de-listing price does not conform to tick size", async () => {
             const tx = await onChain.delistPerpetual({
                 price: toBigNumberStr(100.234),
-                gasBudget: 10000000
+                gasBudget: 20000000
             });
             expectTxToFail(tx);
 
@@ -194,7 +261,7 @@ describe("Perpetual", () => {
             const tx2 = await onChain.trade({
                 ...trade,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 20000000
             });
             expectTxToFail(tx2);
 
@@ -202,17 +269,17 @@ describe("Perpetual", () => {
         });
 
         it("should revert as position can only be closed once perpetual is de-listed", async () => {
-            const tx = await onChain.closePosition({ gasBudget: 1000000 });
+            const tx = await onChain.closePosition({ gasBudget: 2000000 });
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[62]);
         });
 
-        it("should revert as alice has no position to close", async () => {
+        it("should revert as cat has no position to close", async () => {
             await onChain.delistPerpetual({ price: toBigNumberStr(100) });
 
             const tx = await onChain.closePosition(
-                { gasBudget: 10000000 },
-                alice.signer
+                { gasBudget: 20000000 },
+                cat.signer
             );
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[507]);
@@ -321,7 +388,7 @@ describe("Perpetual", () => {
             const txTrade = await onChain.trade({
                 ...trade,
                 settlementCapID,
-                gasBudget: 10000000
+                gasBudget: 20000000
             });
             expectTxToFail(txTrade);
 
@@ -346,7 +413,8 @@ describe("Perpetual", () => {
             // deploy market
             deployment["markets"]["ETH-PERP"]["Objects"] = (
                 await createMarket(deployment, ownerSigner, provider, {
-                    tickSize: toBigNumberStr(0.1)
+                    tickSize: toBigNumberStr(0.1),
+                    startingTime: Date.now() - 1000
                 })
             ).marketObjects;
 
@@ -417,8 +485,14 @@ describe("Perpetual", () => {
         });
 
         it("should allow cat to remove margin from alice's position", async () => {
-            const tx = await onChain.removeMargin(
+            const tx1 = await onChain.addMargin(
                 { amount: 10, account: alice.address },
+                cat.signer
+            );
+            expectTxToSucceed(tx1);
+
+            const tx = await onChain.removeMargin(
+                { amount: 10, account: alice.address, gasBudget: 200000000 },
                 cat.signer
             );
             expectTxToSucceed(tx);
@@ -442,13 +516,13 @@ describe("Perpetual", () => {
 
             expectTxToFail(
                 await onChain.addMargin(
-                    { amount: 10, account: alice.address, gasBudget: 10000000 },
+                    { amount: 10, account: alice.address, gasBudget: 20000000 },
                     cat.signer
                 )
             );
             expectTxToFail(
                 await onChain.removeMargin(
-                    { amount: 10, account: alice.address, gasBudget: 10000000 },
+                    { amount: 10, account: alice.address, gasBudget: 20000000 },
                     cat.signer
                 )
             );
@@ -457,7 +531,7 @@ describe("Perpetual", () => {
                     {
                         leverage: 2,
                         account: alice.address,
-                        gasBudget: 10000000
+                        gasBudget: 20000000
                     },
                     cat.signer
                 )

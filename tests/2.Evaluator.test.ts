@@ -66,8 +66,11 @@ describe("Evaluator", () => {
     // deploy the market again before each test
     beforeEach(async () => {
         deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider)
+            await createMarket(deployment, ownerSigner, provider, {
+                startingTime: Date.now() - 1000
+            })
         ).marketObjects;
+
         onChain = new OnChainCalls(ownerSigner, deployment);
     });
 
@@ -79,7 +82,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
 
-            expect(details.checks["fields"]["minPrice"]).to.be.equal(
+            expect(details.checks.fields["minPrice"]).to.be.equal(
                 toBigNumberStr(0.02)
             );
         });
@@ -117,7 +120,7 @@ describe("Evaluator", () => {
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            expect(details.checks["fields"]["maxPrice"]).to.be.equal(
+            expect(details.checks.fields["maxPrice"]).to.be.equal(
                 toBigNumberStr(20000)
             );
         });
@@ -148,7 +151,7 @@ describe("Evaluator", () => {
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            expect(details.checks["fields"]["tickSize"]).to.be.equal(
+            expect(details.checks.fields["tickSize"]).to.be.equal(
                 toBigNumberStr(0.1)
             );
         });
@@ -381,7 +384,7 @@ describe("Evaluator", () => {
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            expect(details.checks["fields"]["maxQtyLimit"]).to.be.equal(
+            expect(details.checks.fields.maxQtyLimit).to.be.equal(
                 toBigNumberStr(20000)
             );
         });
@@ -390,7 +393,7 @@ describe("Evaluator", () => {
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            expect(details.checks["fields"]["maxQtyMarket"]).to.be.equal(
+            expect(details.checks.fields.maxQtyMarket).to.be.equal(
                 toBigNumberStr(20000)
             );
         });
@@ -459,7 +462,7 @@ describe("Evaluator", () => {
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            expect(details.checks["fields"]["stepSize"]).to.be.equal(
+            expect(details.checks.fields.stepSize).to.be.equal(
                 toBigNumberStr(0.1)
             );
         });
@@ -722,7 +725,8 @@ describe("Evaluator", () => {
             );
             const tx = await onChain.trade({
                 ...tradeParams,
-                settlementCapID
+                settlementCapID,
+                gasBudget: 900000000
             });
             expectTxToSucceed(tx);
         });
@@ -758,7 +762,7 @@ describe("Evaluator", () => {
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            expect(details.checks["fields"]["mtbLong"]).to.be.equal(
+            expect(details.checks.fields["mtbLong"]).to.be.equal(
                 toBigNumberStr(0.2)
             );
         });
@@ -788,7 +792,7 @@ describe("Evaluator", () => {
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            expect(details.checks["fields"]["mtbShort"]).to.be.equal(
+            expect(details.checks.fields["mtbShort"]).to.be.equal(
                 toBigNumberStr(0.2)
             );
         });
@@ -995,7 +999,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
             maxLimit.unshift(toBigNumberStr(0));
-            expect(details.checks["fields"]["maxAllowedOIOpen"]).deep.equal(
+            expect(details.checks.fields["maxAllowedOIOpen"]).deep.equal(
                 maxLimit
             );
         });
@@ -1253,7 +1257,7 @@ describe("Evaluator", () => {
                 market: onChain.getPerpetualID()
             });
 
-            let takerOrder = createOrder({
+            const takerOrder = createOrder({
                 maker: bob.address,
                 price: 10,
                 isBuy: true,
