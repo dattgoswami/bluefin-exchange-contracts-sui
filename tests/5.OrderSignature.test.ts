@@ -16,6 +16,7 @@ import {
     base64ToBuffer,
     base64ToHex,
     bigNumber,
+    encodeOrderFlags,
     hexToBuffer
 } from "../src/library";
 chai.use(chaiAsPromised);
@@ -256,6 +257,7 @@ describe("Order Signer", () => {
 
     it("should generate off-chain hash exactly equal to on-chain hash", async () => {
         const orderSigner = new OrderSigner(ownerKeyPair);
+
         const hash = orderSigner.getOrderHash(order);
 
         const receipt = await onChain.signAndCall(
@@ -279,7 +281,6 @@ describe("Order Signer", () => {
         expect(orderSerializedEvent).to.not.be.undefined;
 
         const onChainHash = base64ToHex(hashGeneratedEvent?.hash ?? "");
-
         expect(hash).to.be.equal(onChainHash);
     });
 
@@ -355,6 +356,7 @@ describe("Order Signer", () => {
                 order.reduceOnly,
                 order.postOnly,
                 order.orderbookOnly,
+                encodeOrderFlags(order),
                 order.price,
                 order.quantity,
                 order.leverage,
@@ -431,6 +433,7 @@ describe("Order Signer", () => {
                 order.reduceOnly,
                 order.postOnly,
                 order.orderbookOnly,
+                encodeOrderFlags(order),
                 order.price,
                 order.quantity,
                 order.leverage,

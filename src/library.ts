@@ -1,4 +1,6 @@
 import BigNumber from "bignumber.js";
+import { number, string } from "yargs";
+import { Order, OrderFlags } from "./interfaces";
 
 export type BigNumberable = BigNumber | number | string;
 export type SignedNumber = {
@@ -49,12 +51,13 @@ export function toBaseNumber(val: BigNumberable, decimals = 3): number {
     );
 }
 
-export function bnToHex(bn: BigNumber) {
+export function bnToHex(bn: BigNumber | number, pad: number = 32): string {
     // u128 on chain = 16 bytes = 32 hex characters (2 char / byte)
-    return bn.toString(16).padStart(32, "0");
+    // u8 on chain = 1 byte = 2 hex characters
+    return bn.toString(16).padStart(pad, "0");
 }
 
-export function hexToBuffer(hex: string) {
+export function hexToBuffer(hex: string): Buffer {
     if (hex?.toLowerCase().indexOf("x") !== -1) {
         hex = hex.substring(2);
     }
@@ -62,10 +65,10 @@ export function hexToBuffer(hex: string) {
     return Buffer.from(hex, "hex");
 }
 
-export function base64ToBuffer(data: string) {
+export function base64ToBuffer(data: string): Buffer {
     return Buffer.from(data, "base64");
 }
-export function base64ToHex(data: string) {
+export function base64ToHex(data: string): string {
     return Buffer.from(data, "base64").toString("hex");
 }
 
@@ -81,4 +84,40 @@ export function SignedNumberToBigNumberStr(number: SignedNumber, decimals = 2) {
 
 export function SignedNumberToBaseNumber(number: SignedNumber, decimals = 3) {
     return toBaseNumber(SignedNumberToBigNumber(number), decimals);
+}
+
+export function decodeOrderFlags(flagsValue: number): OrderFlags {
+    const flags: OrderFlags = {
+        ioc: (flagsValue & 1) > 0,
+        postOnly: (flagsValue & 2) > 0,
+        reduceOnly: (flagsValue & 4) > 0,
+        isBuy: (flagsValue & 8) > 0,
+        orderbookOnly: (flagsValue & 16) > 0
+    };
+
+    return flags;
+}
+
+export function encodeOrderFlags(order: Order): number {
+    // 0th bit = ioc
+    // 1st bit = postOnly
+    // 2nd bit = reduceOnly
+    // 3rd bit  = isBuy
+    // 4th bit = orderbookOnly
+    // e.g. 00000000 // all flags false
+    // e.g. 00000001 // ioc order, sell side, can be executed by taker
+    // e.e. 00010001 // same as above but can only be executed by settlement operator
+
+    let value = 0;
+    if (order.ioc) value += 1;
+
+    if (order.postOnly) value += 2;
+
+    if (order.reduceOnly) value += 4;
+
+    if (order.isBuy) value += 8;
+
+    if (order.orderbookOnly) value += 16;
+
+    return value;
 }

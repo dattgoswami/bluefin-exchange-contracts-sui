@@ -191,6 +191,11 @@ module bluefin_foundation::error {
         return 105
     }
 
+    public fun maker_order_can_not_be_ioc() : u64 {
+        return 106
+    }
+
+
 
     public fun only_taker_of_trade_can_execute_trade_involving_non_orderbook_orders(): u64 {
         return 108

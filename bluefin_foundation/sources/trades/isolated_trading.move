@@ -61,6 +61,14 @@ module bluefin_foundation::isolated_trading {
     //                           STORAGE                         //
     //===========================================================//
 
+    struct OrderFlags has drop, copy {
+        ioc: bool,
+        postOnly: bool,
+        reduceOnly: bool,
+        isBuy: bool,
+        orderbookOnly: bool,
+    }
+
     struct Order has drop, copy {
         market:address,
         maker: address,
@@ -68,6 +76,8 @@ module bluefin_foundation::isolated_trading {
         reduceOnly: bool,
         postOnly: bool,
         orderbookOnly: bool,
+        ioc: bool,
+        flags: u8,
         price: u128,
         quantity: u128,
         leverage: u128,
@@ -276,26 +286,20 @@ module bluefin_foundation::isolated_trading {
     
     public (friend) fun pack_trade_data(
          // maker
-        makerIsBuy: bool,
-        makerPostOnly: bool,
-        makerOrderbookOnly: bool,
+        makerFlags:u8,
         makerPrice: u128,
         makerQuantity: u128,
         makerLeverage: u128,
-        makerReduceOnly: bool,
         makerAddress: address,
         makerExpiration: u128,
         makerSalt: u128,
         makerSignature:vector<u8>,
 
         // taker
-        takerIsBuy: bool,
-        takerPostOnly: bool,
-        takerOrderbookOnly: bool,
+        takerFlags:u8,
         takerPrice: u128,
         takerQuantity: u128,
         takerLeverage: u128,
-        takerReduceOnly: bool,
         takerAddress: address,
         takerExpiration: u128,
         takerSalt: u128,
@@ -309,8 +313,8 @@ module bluefin_foundation::isolated_trading {
         perpetual:address
 
     ): TradeData{
-        let makerOrder = pack_order(perpetual, makerIsBuy, makerPostOnly, makerOrderbookOnly, makerPrice, makerQuantity, makerLeverage, makerReduceOnly, makerAddress, makerExpiration, makerSalt);
-        let takerOrder = pack_order(perpetual, takerIsBuy, takerPostOnly, takerOrderbookOnly, takerPrice, takerQuantity, takerLeverage, takerReduceOnly, takerAddress, takerExpiration, takerSalt);
+        let makerOrder = pack_order(perpetual, makerFlags, makerPrice, makerQuantity, makerLeverage, makerAddress, makerExpiration, makerSalt);
+        let takerOrder = pack_order(perpetual, takerFlags, takerPrice, takerQuantity, takerLeverage, takerAddress, takerExpiration, takerSalt);
         let fill = Fill{quantity, price};
         return TradeData{makerOrder, takerOrder, fill, makerSignature, takerSignature}
 
@@ -335,31 +339,46 @@ module bluefin_foundation::isolated_trading {
     //                      HELPER METHODS
     //===========================================================//
 
+    public fun for_orderbook_only(flags:u8): bool{
+        return (flags & 16) > 0
+    }
+
+    fun decode_order_flags(flags:u8): OrderFlags{
+        return OrderFlags{
+            ioc: (flags & 1) > 0,
+            postOnly: (flags & 2) > 0,
+            reduceOnly: (flags & 4) > 0,
+            isBuy: (flags & 8) > 0,
+            orderbookOnly: (flags & 16) > 0
+        }
+    }
     
 
     fun pack_order(
         market: address,
-        isBuy: bool,
-        postOnly:bool,
-        orderbookOnly:bool,
+        flags:u8,
         price: u128,
         quantity: u128,
         leverage: u128,
-        reduceOnly: bool,
         maker: address,
         expiration: u128,
         salt: u128,
     ): Order {
+
+        let decoded_flags = decode_order_flags(flags);
+
         return Order {
                 market,
                 maker,
-                isBuy,
-                postOnly,
-                orderbookOnly,
+                isBuy: decoded_flags.isBuy,
+                postOnly: decoded_flags.postOnly,
+                orderbookOnly: decoded_flags.orderbookOnly,
+                reduceOnly: decoded_flags.reduceOnly,
+                ioc: decoded_flags.ioc,
+                flags,
                 price,
                 quantity,
                 leverage,
-                reduceOnly,
                 expiration,
                 salt
         }
@@ -376,12 +395,10 @@ module bluefin_foundation::isolated_trading {
          [64,79]    => salt             (128 bits = 16 bytes)
          [80,111]   => maker            (160 bits = 32 bytes)
          [112,143]   => market          (160 bits = 32 bytes)
-         [144,144]  => reduceOnly       (1 byte)
-         [145,145]  => isBuy            (1 byte)
-         [146,146]  => postOnly         (1 byte)
-         [147,147]  => orderbookOnly    (1 byte)
-         [148,154]  => domain (Bluefin) (7 bytes)
-        */
+         [144,144]  => flags       (1 byte)
+         [145,151]  => domain (Bluefin) (7 bytes)
+         */
+
 
         let serialized_order = vector::empty<u8>();
         let price_b = bcs::to_bytes(&order.price);
@@ -391,16 +408,14 @@ module bluefin_foundation::isolated_trading {
         let market_address_b = bcs::to_bytes(&order.market); // doesn't need reverse
         let expiration_b = bcs::to_bytes(&order.expiration);
         let salt_b = bcs::to_bytes(&order.salt);
-        let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
-        let is_buy_b = bcs::to_bytes(&order.isBuy);
-        let post_only_b = bcs::to_bytes(&order.postOnly);
-        let ob_only_b = bcs::to_bytes(&order.orderbookOnly);
+        let flags_b = bcs::to_bytes(&order.flags);
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
         vector::reverse(&mut leverage_b);
         vector::reverse(&mut expiration_b);
         vector::reverse(&mut salt_b);
+        vector::reverse(&mut flags_b);
 
         vector::append(&mut serialized_order, price_b);
         vector::append(&mut serialized_order, quantity_b);
@@ -409,10 +424,7 @@ module bluefin_foundation::isolated_trading {
         vector::append(&mut serialized_order, salt_b);
         vector::append(&mut serialized_order, maker_address_b);
         vector::append(&mut serialized_order, market_address_b);
-        vector::append(&mut serialized_order, reduce_only_b);
-        vector::append(&mut serialized_order, is_buy_b);
-        vector::append(&mut serialized_order, post_only_b);
-        vector::append(&mut serialized_order, ob_only_b);
+        vector::append(&mut serialized_order, flags_b);
         vector::append(&mut serialized_order, b"Bluefin");
 
         return serialized_order
@@ -436,6 +448,8 @@ module bluefin_foundation::isolated_trading {
             // if a taker order, must have post only false else
             // it can only be a maker order
             assert!(isTaker == 0 || !order.postOnly, error::taker_order_can_not_be_post_only());       
+
+            assert!(isTaker == 1 || !order.ioc,  error::maker_order_can_not_be_ioc());
 
             verify_order_state(ordersTable, hash, isTaker);
 

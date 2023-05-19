@@ -147,29 +147,23 @@ module bluefin_foundation::exchange {
         ordersTable: &mut Table<vector<u8>, OrderStatus>,
 
         // maker
-        makerIsBuy: bool,
-        makerPostOnly: bool,
-        makerOrderbookOnly: bool,
+        makerFlags:u8,
         makerPrice: u128,
         makerQuantity: u128,
         makerLeverage: u128,
-        makerReduceOnly: bool,
-        makerAddress: address,
         makerExpiration: u128,
         makerSalt: u128,
+        makerAddress: address,
         makerSignature:vector<u8>,
 
         // taker
-        takerIsBuy: bool,
-        takerPostOnly: bool,
-        takerOrderbookOnly: bool,
+        takerFlags:u8,
         takerPrice: u128,
         takerQuantity: u128,
         takerLeverage: u128,
-        takerReduceOnly: bool,
-        takerAddress: address,
         takerExpiration: u128,
         takerSalt: u128,
+        takerAddress: address,
         takerSignature:vector<u8>,
 
         // fill
@@ -186,7 +180,7 @@ module bluefin_foundation::exchange {
 
             // if the maker or taker order was signed to be executed through 
             // orderbook, it should only be executed by a settlement operator
-            if (makerOrderbookOnly || takerOrderbookOnly){
+            if (isolated_trading::for_orderbook_only(makerFlags) || isolated_trading::for_orderbook_only(takerFlags)){
                 // only settlement operators can trade
                 roles::check_settlement_operator_validity(safe, cap);
             } else {
@@ -211,26 +205,20 @@ module bluefin_foundation::exchange {
 
             let data = isolated_trading::pack_trade_data(
                  // maker
-                makerIsBuy,
-                makerPostOnly, 
-                makerOrderbookOnly,
+                makerFlags,
                 makerPrice, 
                 makerQuantity, 
                 makerLeverage, 
-                makerReduceOnly, 
                 makerAddress, 
                 makerExpiration, 
                 makerSalt, 
                 makerSignature,
 
                 // taker
-                takerIsBuy,
-                takerPostOnly, 
-                takerOrderbookOnly,
+                takerFlags,
                 takerPrice, 
                 takerQuantity, 
                 takerLeverage, 
-                takerReduceOnly, 
                 takerAddress, 
                 takerExpiration, 
                 takerSalt, 

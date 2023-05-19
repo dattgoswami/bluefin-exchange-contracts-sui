@@ -66,6 +66,7 @@ export const ERROR_CODES: { [key: string]: string } = {
     "103": "Max allowed price difference cannot be 0%",
     "104": "Can not be > 100%",
     "105": "Address can not be zero",
+    "106": "Maker order can not be immediate or cancel",
     "108": "Only taker (or its sub accounts) can execute trades involving non orderbook orders",
     "109": "Not public settlement operator capability",
     "110": "Sender is not a valid settlement operator",

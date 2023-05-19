@@ -45,6 +45,7 @@ module bluefin_foundation::test {
         reduceOnly: bool,
         postOnly: bool,
         orderbookOnly: bool,
+        flags:u8,
         price: u128,
         quantity: u128,
         leverage: u128,
@@ -62,12 +63,10 @@ module bluefin_foundation::test {
          [64,79]    => salt             (128 bits = 16 bytes)
          [80,111]   => maker            (160 bits = 32 bytes)
          [112,143]   => market          (160 bits = 32 bytes)
-         [144,144]  => reduceOnly       (1 byte)
-         [145,145]  => isBuy            (1 byte)
-         [146,146]  => postOnly         (1 byte)
-         [147,147]  => orderbookOnly    (1 byte)
-         [148,154]  => domain (Bluefin) (7 bytes)
+         [144,144]  => flags       (1 byte)
+         [145,151]  => domain (Bluefin) (7 bytes)
          */
+
 
         let serialized_order = vector::empty<u8>();
         let price_b = bcs::to_bytes(&order.price);
@@ -77,16 +76,14 @@ module bluefin_foundation::test {
         let market_address_b = bcs::to_bytes(&order.market); // doesn't need reverse
         let expiration_b = bcs::to_bytes(&order.expiration);
         let salt_b = bcs::to_bytes(&order.salt);
-        let reduce_only_b = bcs::to_bytes(&order.reduceOnly);
-        let is_buy_b = bcs::to_bytes(&order.isBuy);
-        let post_only_b = bcs::to_bytes(&order.postOnly);
-        let ob_only_b = bcs::to_bytes(&order.orderbookOnly);
+        let flags_b = bcs::to_bytes(&order.flags);
 
         vector::reverse(&mut price_b);
         vector::reverse(&mut quantity_b);
         vector::reverse(&mut leverage_b);
         vector::reverse(&mut expiration_b);
         vector::reverse(&mut salt_b);
+        vector::reverse(&mut flags_b);
 
         vector::append(&mut serialized_order, price_b);
         vector::append(&mut serialized_order, quantity_b);
@@ -95,10 +92,7 @@ module bluefin_foundation::test {
         vector::append(&mut serialized_order, salt_b);
         vector::append(&mut serialized_order, maker_address_b);
         vector::append(&mut serialized_order, market_address_b);
-        vector::append(&mut serialized_order, reduce_only_b);
-        vector::append(&mut serialized_order, is_buy_b);
-        vector::append(&mut serialized_order, post_only_b);
-        vector::append(&mut serialized_order, ob_only_b);
+        vector::append(&mut serialized_order, flags_b);
         vector::append(&mut serialized_order, b"Bluefin");
 
         return serialized_order
@@ -135,6 +129,7 @@ module bluefin_foundation::test {
             reduceOnly: false,
             postOnly: false,
             orderbookOnly: true,
+            flags:24,
             expiration: 3655643731,
             salt: 1668690862116,
             maker: maker
@@ -182,6 +177,7 @@ module bluefin_foundation::test {
             reduceOnly: false,
             postOnly: false,
             orderbookOnly: true,
+            flags:24,
             expiration: 3655643731,
             salt: 1668690862116,
             maker: maker
@@ -205,6 +201,7 @@ module bluefin_foundation::test {
         reduceOnly: bool,
         postOnly: bool,
         orderbookOnly: bool,
+        flags:u8,
         price: u128,
         quantity: u128,
         leverage: u128,
@@ -224,7 +221,8 @@ module bluefin_foundation::test {
             orderbookOnly,
             expiration,
             salt,
-            maker
+            maker,
+            flags
         };
 
 

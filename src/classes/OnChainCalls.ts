@@ -16,6 +16,7 @@ import {
 import {
     bigNumber,
     BigNumberable,
+    encodeOrderFlags,
     hexToBuffer,
     toBigNumber,
     toBigNumberStr,
@@ -587,28 +588,22 @@ export class OnChainCalls {
         callArgs.push(args.subAccountsMapID || this.getSubAccountsID());
         callArgs.push(this.getOrdersTableID());
 
-        callArgs.push(args.makerOrder.isBuy);
-        callArgs.push(args.makerOrder.postOnly);
-        callArgs.push(args.makerOrder.orderbookOnly);
+        callArgs.push(encodeOrderFlags(args.makerOrder));
         callArgs.push(args.makerOrder.price.toFixed(0));
         callArgs.push(args.makerOrder.quantity.toFixed(0));
         callArgs.push(args.makerOrder.leverage.toFixed(0));
-        callArgs.push(args.makerOrder.reduceOnly);
-        callArgs.push(args.makerOrder.maker);
         callArgs.push(args.makerOrder.expiration.toFixed(0));
         callArgs.push(args.makerOrder.salt.toFixed(0));
+        callArgs.push(args.makerOrder.maker);
         callArgs.push(Array.from(hexToBuffer(args.makerSignature)));
 
-        callArgs.push(args.takerOrder.isBuy);
-        callArgs.push(args.takerOrder.postOnly);
-        callArgs.push(args.takerOrder.orderbookOnly);
+        callArgs.push(encodeOrderFlags(args.takerOrder));
         callArgs.push(args.takerOrder.price.toFixed(0));
         callArgs.push(args.takerOrder.quantity.toFixed(0));
         callArgs.push(args.takerOrder.leverage.toFixed(0));
-        callArgs.push(args.takerOrder.reduceOnly);
-        callArgs.push(args.takerOrder.maker);
         callArgs.push(args.takerOrder.expiration.toFixed(0));
         callArgs.push(args.takerOrder.salt.toFixed(0));
+        callArgs.push(args.takerOrder.maker);
         callArgs.push(Array.from(hexToBuffer(args.takerSignature)));
 
         callArgs.push(

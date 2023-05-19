@@ -1,6 +1,6 @@
 import { Keypair, Secp256k1PublicKey } from "@mysten/sui.js";
 import { Order, SignedOrder } from "../interfaces/order";
-import { bnToHex, hexToBuffer } from "../library";
+import { bnToHex, encodeOrderFlags, hexToBuffer } from "../library";
 import * as secp from "@noble/secp256k1";
 import { sha256 } from "@noble/hashes/sha256";
 import { secp256k1 } from "@noble/curves/secp256k1";
@@ -43,7 +43,10 @@ export class OrderSigner {
     }
 
     public getSerializedOrder(order: Order): string {
-        const buffer = Buffer.alloc(155);
+        // encode order flags
+        const orderFlags = encodeOrderFlags(order);
+
+        const buffer = Buffer.alloc(152);
         buffer.set(hexToBuffer(bnToHex(order.price)), 0);
         buffer.set(hexToBuffer(bnToHex(order.quantity)), 16);
         buffer.set(hexToBuffer(bnToHex(order.leverage)), 32);
@@ -51,11 +54,8 @@ export class OrderSigner {
         buffer.set(hexToBuffer(bnToHex(order.salt)), 64);
         buffer.set(hexToBuffer(order.maker), 80);
         buffer.set(hexToBuffer(order.market), 112);
-        buffer.set([order.reduceOnly ? 1 : 0], 144);
-        buffer.set([order.isBuy ? 1 : 0], 145);
-        buffer.set([order.postOnly ? 1 : 0], 146);
-        buffer.set([order.orderbookOnly ? 1 : 0], 147);
-        buffer.set(Buffer.from("Bluefin", "utf8"), 148);
+        buffer.set(hexToBuffer(bnToHex(orderFlags, 2)), 144);
+        buffer.set(Buffer.from("Bluefin", "utf8"), 145);
 
         return buffer.toString("hex");
     }
