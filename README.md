@@ -4,7 +4,7 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 
 ## Prerequisites:
 
-- SUI Node: v0.27.1
+- SUI Node: v0.33.0-f65b02ccc
 - Node: v18.x.x
 
 ## How to

@@ -1,4 +1,4 @@
-import { JsonRpcProvider, SuiEventFilter } from "@mysten/sui.js";
+import { Connection, JsonRpcProvider, SuiEventFilter } from "@mysten/sui.js";
 
 import { listenerCallback } from "./Types";
 
@@ -18,10 +18,9 @@ class ChainEventListener {
         this.rpcURL = _rpcURL;
 
         // provider object
-        this.provider = new JsonRpcProvider(_rpcURL);
-
-        // allow 100 events to be received per sec
-        // this.provider._maxFilterBlockRange = 100;
+        this.provider = new JsonRpcProvider(
+            new Connection({ fullnode: this.rpcURL })
+        );
     }
 
     /**
@@ -31,10 +30,10 @@ class ChainEventListener {
         eventsFilter: SuiEventFilter,
         callback: listenerCallback
     ): Promise<boolean> {
-        this.listenerSubscriptionId = await this.provider.subscribeEvent(
-            eventsFilter,
-            callback
-        );
+        this.listenerSubscriptionId = (await this.provider.subscribeEvent({
+            filter: eventsFilter,
+            onMessage: callback,
+        })) as number;
         return true;
     }
 
@@ -46,7 +45,9 @@ class ChainEventListener {
             return false;
         }
 
-        await this.provider.unsubscribeEvent(this.listenerSubscriptionId);
+        await this.provider.unsubscribeEvent({
+            id: this.listenerSubscriptionId,
+        });
         this.listenerSubscriptionId = null;
         return true;
     }

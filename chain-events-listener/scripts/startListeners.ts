@@ -7,36 +7,40 @@ import { RabbitMQAdapter } from "../src/RabbitMQAdapter";
 
 import { log } from "../src/utils/logger";
 import EventJson from "../configs/events.json";
-import { SuiEventFilter } from "@mysten/sui.js";
+import { SuiEvent, SuiEventFilter } from "@mysten/sui.js";
+import { parseEvent } from "../src/utils";
 
 const JSONData: ContractEventsConfig[] = EventJson;
 
+// TODO: create envstore
 const rpcURL = process.env.RPC_URL as string;
-
-const rabbitMQUrl = process.env.AMQP_URI as string;
-
+const rabbitMQURL = process.env.AMQP_URI as string;
 const channelName = process.env.CHANNEL as string;
+
+const callback = (event: SuiEvent) => {
+    log.info(parseEvent(event));
+};
 
 async function main() {
     const contractEventsConfig: ContractEventsConfig[] = JSONData; // typecase imported data
 
     // create chain event listener
     log.debug("Creating Chain Event Listener");
+    log.debug(`rpcURL: ${rpcURL}`);
+    log.debug(`rabbitMQURL: ${rabbitMQURL}`);
+    log.debug(`channelName: ${channelName}`);
 
-    const rabbitMQAdapter = new RabbitMQAdapter(rabbitMQUrl, channelName);
     const chainEventListener = new ChainEventListener(rpcURL);
+    let rabbitMQAdapter: RabbitMQAdapter = undefined as any;
 
-    log.debug("Initializing RabbitMQ connection");
-
-    await rabbitMQAdapter.initRabbitMQ();
+    if (rabbitMQURL && channelName) {
+        log.debug("Initializing RabbitMQ connection");
+        rabbitMQAdapter = new RabbitMQAdapter(rabbitMQURL, channelName);
+        await rabbitMQAdapter.initRabbitMQ();
+    }
 
     log.debug("Adding Contracts and respective Events Event Listener");
     // create chain event listener
-    log.debug("Creating Chain Event Listener");
-    log.debug(`rpcURL: ${rpcURL}`);
-    log.debug(`rabbitMQUrl: ${rabbitMQUrl}`);
-    log.debug(`channelName: ${channelName}`);
-
     let length = Object.keys(contractEventsConfig).length;
     let totalEvents = 0;
 
@@ -51,17 +55,10 @@ async function main() {
             continue;
         }
 
-        eventFilter.Any.push({
-            And: [
-                {
-                    Package: packageObjectId,
-                },
-                {
-                    Any: events.map((event) => ({
-                        MoveEventType: `${packageObjectId}::${module}::${event}`,
-                    })),
-                },
-            ],
+        events.forEach((e) => {
+            eventFilter.Any.push({
+                MoveEventType: `${packageObjectId}::${module}::${e}`,
+            });
         });
 
         totalEvents += events.length;
@@ -71,7 +68,9 @@ async function main() {
 
     await chainEventListener.startListeners(
         eventFilter,
-        rabbitMQAdapter.defaultCallback.bind(rabbitMQAdapter)
+        rabbitMQAdapter
+            ? rabbitMQAdapter.defaultCallback.bind(rabbitMQAdapter)
+            : callback
     );
 
     log.info(`Done. Listening to events. Events count: ${totalEvents}`);

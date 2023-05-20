@@ -8,7 +8,6 @@ export interface ContractEventsConfig {
 }
 
 export interface EventQueueData {
-    suiEventType: SuiEventType | null;
     module: string;
     event: string | null;
     data: object | null;

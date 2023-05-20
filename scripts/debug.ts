@@ -9,6 +9,13 @@ import { OnChainCalls } from "../src/classes/OnChainCalls";
 import { TEST_WALLETS } from "../tests/helpers/accounts";
 import { Transaction } from "../src";
 
+import { SuiEventFilter } from "@mysten/sui.js";
+import {
+    parseEvent,
+    parseEventData,
+    parseEventType
+} from "../chain-events-listener/src/utils";
+
 const deployment = readFile(DeploymentConfigs.filePath);
 
 const provider = getProvider(

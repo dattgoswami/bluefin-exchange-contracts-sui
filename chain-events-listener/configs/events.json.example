@@ -1,13 +1,17 @@
 [
     {
-        "packageObjectId": "",
-        "module": "perpetual",
+        "packageObjectId": "0x0d603c28ab57a540f9f51cc9014ab31a9eb5c2a46ca21b42f7e82aa098b4be9d",
+        "module": "isolated_trading",
         "events": [
-            "PerpetualCreationEvent",
-            "SettlementOperatorUpdateEvent",
-            "MinOrderPriceUpdateEvent",
-            "AccountPositionUpdateEvent",
-            "OraclePriceUpdateEvent"
+            "TradeExecuted",
+            "OrderFill"
+        ]
+    },
+    {
+        "packageObjectId": "0x0d603c28ab57a540f9f51cc9014ab31a9eb5c2a46ca21b42f7e82aa098b4be9d",
+        "module": "margin_bank",
+        "events": [
+            "BankBalanceUpdate"
         ]
     }
 ]

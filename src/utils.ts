@@ -18,7 +18,6 @@ import {
     BankAccountMap,
     DeploymentData,
     DeploymentObjectMap,
-    DeploymentObjects,
     MarketDeployment,
     MarketDeploymentData
 } from "../src/interfaces";
@@ -32,7 +31,6 @@ import { MarketDetails } from "./interfaces/market";
 
 import { execSync } from "child_process";
 import fs from "fs";
-import { ERROR_CODES } from "./errors";
 config({ path: ".env" });
 
 export function execCommand(command: string) {
@@ -53,7 +51,6 @@ export function getProvider(
     rpcURL: string,
     faucetURL: string
 ): JsonRpcProvider {
-    // return new JsonRpcProvider(rpcURL, { faucetURL: faucetURL });
     return new JsonRpcProvider(
         new Connection({ fullnode: rpcURL, faucet: faucetURL })
     );

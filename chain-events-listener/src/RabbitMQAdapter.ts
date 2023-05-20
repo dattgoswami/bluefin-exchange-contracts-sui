@@ -1,4 +1,4 @@
-import { SuiEventEnvelope } from "@mysten/sui.js";
+import { SuiEvent } from "@mysten/sui.js";
 import { Channel, Connection, connect } from "amqplib";
 import { EventQueueData } from "./Interfaces";
 import { parseEvent } from "./utils";
@@ -56,7 +56,7 @@ export class RabbitMQAdapter {
      * received event into event rabbitMQ
      * @param event data event received from chain
      */
-    public defaultCallback(event: SuiEventEnvelope): void {
+    public defaultCallback(event: SuiEvent): void {
         log.info("%o", event);
 
         const parsedEvent = parseEvent(event);
