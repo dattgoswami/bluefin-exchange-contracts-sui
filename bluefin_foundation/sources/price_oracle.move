@@ -75,7 +75,7 @@ module bluefin_foundation::price_oracle {
     }
     
     public (friend) fun set_oracle_price_max_allowed_diff(perp: ID, op: &mut PriceOracle, maxAllowedPriceDifference: u128){
-        assert!(maxAllowedPriceDifference != 0, 103);
+        assert!(maxAllowedPriceDifference != 0, error::max_allowed_price_diff_cannot_be_zero());
 
         op.maxAllowedPriceDifference = maxAllowedPriceDifference;
 

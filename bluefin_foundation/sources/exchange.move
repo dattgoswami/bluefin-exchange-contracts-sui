@@ -603,7 +603,7 @@ module bluefin_foundation::exchange {
         // update margin of user in storage
         position::set_margin(balance, margin + amount);
         
-        position::emit_position_update_event(perpID, user, *balance, ACTION_ADD_MARGIN);
+        position::emit_position_update_event(*balance, ACTION_ADD_MARGIN);
 
         // user must add enough margin that can pay for its all settlement dues
         apply_funding_rate(
@@ -688,7 +688,7 @@ module bluefin_foundation::exchange {
             0, 
             0);
             
-        position::emit_position_update_event(perpID, user, currBalance, ACTION_REMOVE_MARGIN);
+        position::emit_position_update_event(currBalance, ACTION_REMOVE_MARGIN);
 
     }
 
@@ -785,7 +785,7 @@ module bluefin_foundation::exchange {
             0, 
             0);
 
-        position::emit_position_update_event(perpID, user, currBalance, ACTION_ADJUST_LEVERAGE);
+        position::emit_position_update_event(currBalance, ACTION_ADJUST_LEVERAGE);
     }
     
 
@@ -838,7 +838,7 @@ module bluefin_foundation::exchange {
         );
 
         position::emit_position_closed_event(perpID, user, marginLeft);
-        position::emit_position_update_event(perpID, user, *userPos, ACTION_FINAL_WITHDRAWAL);
+        position::emit_position_update_event(*userPos, ACTION_FINAL_WITHDRAWAL);
 
     }
 

@@ -249,7 +249,7 @@ export async function executeTests(
                                 await onChain.adjustLeverage(
                                     {
                                         leverage: testCase.leverage as number,
-                                        gasBudget: 90000000
+                                        gasBudget: 50000000
                                     },
                                     taker.signer
                                 );
@@ -326,7 +326,7 @@ export async function executeTests(
                             tx = await onChain.adjustLeverage(
                                 {
                                     leverage: testCase.adjustLeverage,
-                                    gasBudget: 90000000
+                                    gasBudget: 50000000
                                 },
                                 bob.signer
                             );

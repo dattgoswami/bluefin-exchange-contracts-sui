@@ -270,7 +270,6 @@ module bluefin_foundation::evaluator {
     {
         assert!(checks.minPrice > 0, error::min_price_greater_than_zero());
         assert!(checks.minPrice < checks.maxPrice, error::min_price_less_than_max_price());
-        assert!(checks.maxPrice > checks.minPrice, error::max_price_greater_than_min_price());
         assert!(checks.stepSize > 0, error::step_size_greater_than_zero());
         assert!(checks.tickSize > 0, error::tick_size_greater_than_zero());
         assert!(checks.mtbLong > 0, error::mtb_long_greater_than_zero());

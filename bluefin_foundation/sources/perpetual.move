@@ -300,7 +300,9 @@ module bluefin_foundation::perpetual {
     //===========================================================//
 
     public entry fun set_insurance_pool_percentage(_: &ExchangeAdminCap, perp: &mut Perpetual,  percentage: u128){
-        assert!(percentage <= library::base_uint(), error::can_not_be_greater_than_hundred_percent());
+        assert!(
+            percentage <= library::base_uint(), 
+            error::can_not_be_greater_than_hundred_percent());
         let perpID = object::uid_to_inner(id(perp));
         perp.insurancePoolRatio = percentage;
 
@@ -465,7 +467,9 @@ module bluefin_foundation::perpetual {
      */
     public entry fun set_max_allowed_funding_rate(_: &ExchangeAdminCap, perp: &mut Perpetual,  maxAllowedFR: u128){
         let perpID = object::uid_to_inner(id(perp));
-        assert!(maxAllowedFR <= library::base_uint(), error::can_not_be_greater_than_hundred_percent());
+        assert!(
+            maxAllowedFR <= library::base_uint(), 
+            error::can_not_be_greater_than_hundred_percent());
         funding_rate::set_max_allowed_funding_rate(&mut perp.funding, maxAllowedFR, perpID);
     }
 

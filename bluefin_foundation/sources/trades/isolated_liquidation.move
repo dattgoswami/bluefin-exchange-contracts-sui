@@ -194,8 +194,8 @@ module bluefin_foundation::isolated_liquidation {
         takerResponse.pnl = signed_number::add(premium.liquidator, takerResponse.pnl);
 
         // emit position updates
-        position::emit_position_update_event(perpID, data.liquidatee, newMakerPos, ACTION_TRADE);
-        position::emit_position_update_event(perpID, data.liquidator, newTakerPos, ACTION_TRADE);
+        position::emit_position_update_event(newMakerPos, ACTION_TRADE);
+        position::emit_position_update_event(newTakerPos, ACTION_TRADE);
 
         emit(TradeExecuted{
             sender,
@@ -276,13 +276,13 @@ module bluefin_foundation::isolated_liquidation {
         assert!(position::qPos(makerPos) > 0, error::user_position_size_is_zero(0));
 
         assert!(
+            !data.allOrNothing || position::qPos(makerPos) >= data.quantity,
+            error::liquidation_all_or_nothing_constraint_not_held());
+
+        assert!(
             position::is_undercollat(makerPos, price, mmr),
             error::liquidatee_above_mmr(),
         );
-
-        assert!(
-            !data.allOrNothing || position::qPos(makerPos) >= data.quantity,
-            error::liquidation_all_or_nothing_constraint_not_held());
 
         assert!(
             position::mro(takerPos) == 0 || position::compute_mro(data.leverage) == position::mro(takerPos),

@@ -21,8 +21,6 @@ module bluefin_foundation::position {
     //===========================================================//
 
     struct AccountPositionUpdateEvent has copy, drop {
-        perpID: ID,
-        account:address,
         position:UserPosition,
         action: u8
     }
@@ -173,7 +171,7 @@ module bluefin_foundation::position {
     }
 
     public fun compute_average_entry_price(position:UserPosition): u128 {
-        return if (position.oiOpen == 0) { 0 } else { 
+        return if (position.qPos == 0) { 0 } else { 
             library::base_div(position.oiOpen, position.qPos) 
             }
     }
@@ -186,10 +184,8 @@ module bluefin_foundation::position {
 
     }   
 
-    public (friend) fun emit_position_update_event(perpID:ID, account:address, position: UserPosition, action:u8){
+    public (friend) fun emit_position_update_event(position: UserPosition, action:u8){
         emit (AccountPositionUpdateEvent{
-            perpID, 
-            account,
             position,
             action
         });

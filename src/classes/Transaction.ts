@@ -124,9 +124,9 @@ export class Transaction {
     ): UserPositionExtended {
         const events = Transaction.getEvents(tx, "AccountPositionUpdateEvent");
         let userPosition: UserPositionExtended;
-
-        if (events[0].account == address) userPosition = events[0].position;
-        else if (events[1].account == address)
+        if (events[0].position.user == address)
+            userPosition = events[0].position;
+        else if (events[1].position.user == address)
             userPosition = events[1].position;
         else
             throw `AccountPositionUpdate event not found for address: ${address}`;
