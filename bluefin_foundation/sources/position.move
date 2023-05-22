@@ -22,6 +22,7 @@ module bluefin_foundation::position {
 
     struct AccountPositionUpdateEvent has copy, drop {
         position:UserPosition,
+        sender: address,
         action: u8
     }
 
@@ -184,9 +185,10 @@ module bluefin_foundation::position {
 
     }   
 
-    public (friend) fun emit_position_update_event(position: UserPosition, action:u8){
+    public (friend) fun emit_position_update_event(position: UserPosition, sender:address, action:u8){
         emit (AccountPositionUpdateEvent{
             position,
+            sender,
             action
         });
     }

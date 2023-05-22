@@ -218,8 +218,8 @@ module bluefin_foundation::isolated_trading {
                 TRADE_TYPE, 
                 1);           
 
-            position::emit_position_update_event(newMakerPosition, ACTION_TRADE);
-            position::emit_position_update_event(newTakerPosition, ACTION_TRADE);
+            position::emit_position_update_event(newMakerPosition, sender, ACTION_TRADE);
+            position::emit_position_update_event(newTakerPosition, sender, ACTION_TRADE);
     
             emit(TradeExecuted{
                 sender,

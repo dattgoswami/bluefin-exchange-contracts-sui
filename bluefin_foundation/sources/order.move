@@ -23,8 +23,9 @@ module bluefin_foundation::order {
         orderHash:vector<u8>,
         order: Order,
         sigMaker: address,
-        fill: u128,
-        filledQuantity: u128        
+        fillPrice: u128,
+        fillQty: u128,
+        newFilledQuantity: u128        
     }
 
 
@@ -300,8 +301,9 @@ module bluefin_foundation::order {
                 orderHash,
                 order,
                 sigMaker,
-                fill:fillQty,
-                filledQuantity: orderStatus.filledQty
+                fillPrice,
+                fillQty,
+                newFilledQuantity: orderStatus.filledQty
         });
     }
 

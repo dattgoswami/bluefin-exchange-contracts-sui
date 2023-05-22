@@ -194,8 +194,8 @@ module bluefin_foundation::isolated_liquidation {
         takerResponse.pnl = signed_number::add(premium.liquidator, takerResponse.pnl);
 
         // emit position updates
-        position::emit_position_update_event(newMakerPos, ACTION_TRADE);
-        position::emit_position_update_event(newTakerPos, ACTION_TRADE);
+        position::emit_position_update_event(newMakerPos, sender, ACTION_TRADE);
+        position::emit_position_update_event(newTakerPos, sender, ACTION_TRADE);
 
         emit(TradeExecuted{
             sender,
