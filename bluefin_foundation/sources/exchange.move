@@ -14,13 +14,14 @@ module bluefin_foundation::exchange {
     use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::margin_bank::{Self, Bank};
+    use bluefin_foundation::order::{Self, OrderStatus};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::funding_rate::{Self};
     use bluefin_foundation::evaluator::{Self};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::margin_math::{Self};
-    
+
     // roles and capabilities
     use bluefin_foundation::roles::{
         Self, 
@@ -32,7 +33,7 @@ module bluefin_foundation::exchange {
         };
 
     // traders
-    use bluefin_foundation::isolated_trading::{Self, OrderStatus};
+    use bluefin_foundation::isolated_trading::{Self};
     use bluefin_foundation::isolated_liquidation::{Self};
     use bluefin_foundation::isolated_adl::{Self};
 
@@ -240,7 +241,7 @@ module bluefin_foundation::exchange {
 
             // if the maker or taker order was signed to be executed through 
             // orderbook, it should only be executed by a settlement operator
-            if (isolated_trading::for_orderbook_only(makerFlags) || isolated_trading::for_orderbook_only(takerFlags)){
+            if (order::flag_orderbook_only(makerFlags) || order::flag_orderbook_only(takerFlags)){
                 // only settlement operators can trade
                 roles::check_settlement_operator_validity(safe, cap);
             } else {
@@ -787,7 +788,6 @@ module bluefin_foundation::exchange {
 
         position::emit_position_update_event(currBalance, ACTION_ADJUST_LEVERAGE);
     }
-    
 
     //===========================================================// 
     //                     CLOSE POSITION                        //

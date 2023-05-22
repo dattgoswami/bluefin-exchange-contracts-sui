@@ -2,7 +2,9 @@ module bluefin_foundation::library {
     use std::vector;
     use sui::address;
     use sui::hash;
-    
+    use sui::ecdsa_k1;
+    use std::hash as std_hash;
+
     const BASE_UINT : u128 = 1000000000;
     const HALF_BASE_UINT : u128 = 500000000;
 
@@ -71,6 +73,12 @@ module bluefin_foundation::library {
         return num - (num % decimals)
     }
 
+    /**
+     * computes mro from leverage. mro = 1/leverage
+     */
+    public fun compute_mro(leverage:u128): u128 {
+        return base_div(base_uint(), leverage)
+    }
 
     /**
      * @dev given an amount in 6 decimal places, converts it to base(9) decimals 
@@ -79,7 +87,40 @@ module bluefin_foundation::library {
         return amount * 1000
     }
 
-     public fun get_public_address(public_key: vector<u8>): address{
+    /**
+     * @dev returns sha256 hash of the msg
+     */
+    public fun get_hash(msg: vector<u8>): vector<u8>{
+            return std_hash::sha2_256(msg)        
+    }
+
+    /**
+     * @dev given a raw message and its signature, returns the public key of signer
+     * assumes the hashing method used is sha256
+     */
+    public fun recover_public_key_from_signature(rawMsg: vector<u8>, signature: vector<u8>):vector<u8>{
+
+        let v = vector::borrow_mut(&mut signature, 64);
+        
+        if (*v == 27) {
+            *v = 0;
+        } else if (*v == 28) {
+            *v = 1;
+        } else if (*v > 35) {
+            *v = (*v - 1) % 2;
+        };
+
+        // @dev assumes msg was signed using sha256 hence the last param is 1
+        let public_key = ecdsa_k1::secp256k1_ecrecover(&signature, &rawMsg, 1);
+
+        return public_key
+
+    }
+
+    /**
+     * Returns public address from the public key
+     */
+    public fun get_public_address(public_key: vector<u8>): address{
         let buff = vector::empty<u8>();
 
         vector::append(&mut buff, vector[1]); // signature scheme for secp256k1

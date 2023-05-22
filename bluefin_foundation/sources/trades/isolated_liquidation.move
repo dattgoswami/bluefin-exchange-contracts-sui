@@ -151,7 +151,7 @@ module bluefin_foundation::isolated_liquidation {
                 quantity,
                 oraclePrice,
                 bankruptcyPrice,
-                position::compute_mro(data.leverage),
+                library::compute_mro(data.leverage),
                 position::isPosPositive(makerPos),
                 1
             );
@@ -285,7 +285,7 @@ module bluefin_foundation::isolated_liquidation {
         );
 
         assert!(
-            position::mro(takerPos) == 0 || position::compute_mro(data.leverage) == position::mro(takerPos),
+            position::mro(takerPos) == 0 || library::compute_mro(data.leverage) == position::mro(takerPos),
             error::invalid_liquidator_leverage());    
     }
 

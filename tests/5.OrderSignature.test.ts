@@ -352,10 +352,6 @@ describe("Order Signer", () => {
             [
                 order.market,
                 order.maker,
-                order.isBuy,
-                order.reduceOnly,
-                order.postOnly,
-                order.orderbookOnly,
                 encodeOrderFlags(order),
                 order.price,
                 order.quantity,
@@ -429,10 +425,6 @@ describe("Order Signer", () => {
             [
                 order.market,
                 order.maker,
-                order.isBuy,
-                order.reduceOnly,
-                order.postOnly,
-                order.orderbookOnly,
                 encodeOrderFlags(order),
                 order.price,
                 order.quantity,
@@ -500,9 +492,7 @@ describe("Order Signer", () => {
 
         expect(addressGeneratedEvent).to.not.be.undefined;
 
-        const onChainAddress = base64ToHex(
-            addressGeneratedEvent?.address ?? ""
-        );
+        const onChainAddress = base64ToHex(addressGeneratedEvent?.addr ?? "");
 
         expect(onChainAddress).to.be.equal(
             ownerKeyPair.getPublicKey().toSuiAddress().substring(2)

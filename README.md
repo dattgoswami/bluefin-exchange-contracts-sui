@@ -14,6 +14,7 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 - Create `.env` file using `.env.example` provided. Specify the DEPLOYER_SEED (secp256k1) and DEPLOY_ON (See `networks.json` for available networks to deploy) The Deployer account must be in sui-client addresses.
 - To deploy `bluefin_foundation` contracts run `yarn deploy`
   The script will deploy the contracts, and create any markets specified in `DeploymentConfig.ts`, extract created objects and write them to `./deployment.json` file
+
   ```
   $ ts-node ./scripts/deploy/full.ts
   Performing full deployment on: http://suitest.bluefin.io:9000
@@ -48,4 +49,5 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 | Package and Market Deployment | Deploys the package and all markets provided in Deployment Config | `yarn deploy`            |
 | Package Deployment            | Deploys the package                                               | `yarn deploy:package`    |
 | Market Deployment             | Deploys the market specified in .env                              | `yarn deploy:market`     |
-| Faucet                        | Provides address with SUI coin                                    | `yarn faucet -a "0x..."` |
+| Faucet                        | Sends SUI coin to provided address coin                           | `yarn faucet -a "0x..."` |
+| Make Trade                    | Performs a trade between 2 accounts                               | `yarn make:trade`        |

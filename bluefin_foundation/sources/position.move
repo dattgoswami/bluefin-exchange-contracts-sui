@@ -244,10 +244,6 @@ module bluefin_foundation::position {
                 );
     }
 
-    public fun compute_mro(leverage:u128): u128 {
-        return library::base_div(library::base_uint(), leverage)
-    }
-
     public fun compute_pnl_per_unit(position: UserPosition, price: u128): Number{
         let pPos = compute_average_entry_price(position);
 

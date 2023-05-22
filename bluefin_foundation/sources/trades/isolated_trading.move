@@ -4,12 +4,7 @@ module bluefin_foundation::isolated_trading {
     use sui::table::{Self, Table};
     use sui::tx_context::{TxContext};
     use sui::event::{emit};
-    use std::vector;
-    use std::hash;
-    use sui::bcs;
-    use sui::ecdsa_k1;
     use sui::transfer;
-    use sui::hex;
 
 
     // custom modules
@@ -18,9 +13,10 @@ module bluefin_foundation::isolated_trading {
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::price_oracle::{Self};
+    use bluefin_foundation::order::{Self, Order, OrderStatus};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
-    use bluefin_foundation::roles::{Self, SubAccounts};
+    use bluefin_foundation::roles::{SubAccounts};
 
     // friend modules
     friend bluefin_foundation::exchange;
@@ -28,14 +24,6 @@ module bluefin_foundation::isolated_trading {
     //===========================================================//
     //                           EVENTS                          //
     //===========================================================//
-
-    struct OrderFill has copy, drop {
-        orderHash:vector<u8>,
-        order: Order,
-        sigMaker: address,
-        fill: u128,
-        filledQuantity: u128        
-    }
 
     struct TradeExecuted has copy, drop {
         sender:address,
@@ -60,35 +48,6 @@ module bluefin_foundation::isolated_trading {
     //===========================================================//
     //                           STORAGE                         //
     //===========================================================//
-
-    struct OrderFlags has drop, copy {
-        ioc: bool,
-        postOnly: bool,
-        reduceOnly: bool,
-        isBuy: bool,
-        orderbookOnly: bool,
-    }
-
-    struct Order has drop, copy {
-        market:address,
-        maker: address,
-        isBuy: bool,
-        reduceOnly: bool,
-        postOnly: bool,
-        orderbookOnly: bool,
-        ioc: bool,
-        flags: u8,
-        price: u128,
-        quantity: u128,
-        leverage: u128,
-        expiration: u128,
-        salt: u128
-    }
-
-    struct OrderStatus has store {
-        status: bool,
-        filledQty: u128
-    }
 
     struct TradeData has drop, copy {
         makerSignature:vector<u8>,
@@ -141,6 +100,7 @@ module bluefin_foundation::isolated_trading {
     //                      TRADE METHOD
     //===========================================================//
 
+
     // @dev only exchange module can invoke this
     public (friend) fun trade(
         sender: address, 
@@ -149,8 +109,16 @@ module bluefin_foundation::isolated_trading {
         subAccounts: &SubAccounts,
         data: TradeData):TradeResponse
         {
+            let fill = data.fill;
+            let makerSignature = data.makerSignature;
+            let takerSignature = data.takerSignature;
+            let makerOrder = &mut data.makerOrder;            
+            let takerOrder = &mut data.takerOrder;
+
+
             assert!(
-                data.makerOrder.isBuy != data.takerOrder.isBuy, 
+                order::isBuy(*makerOrder) != 
+                order::isBuy(*takerOrder),
                 error::order_cannot_be_of_same_side());
 
             let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
@@ -162,40 +130,46 @@ module bluefin_foundation::isolated_trading {
             let mmr = perpetual::mmr(perp);
             let positionsTable = perpetual::positions(perp);
 
+
             // // get order hashes
-            let makerOrderSerialized = get_serialized_order(data.makerOrder);
-            let takerOrderSerialized = get_serialized_order(data.takerOrder);
+            let makerOrderSerialized = order::get_serialized_order(*makerOrder);
+            let takerOrderSerialized = order::get_serialized_order(*takerOrder);
 
-            let makerHash = get_hash(makerOrderSerialized);
-            let takerHash = get_hash(takerOrderSerialized);
-
+            let makerHash = library::get_hash(makerOrderSerialized);
+            let takerHash = library::get_hash(takerOrderSerialized);
+            
             // if maker/taker orders are coming on-chain for first time, add them to order table
-            create_order(ordersTable, makerHash);
-            create_order(ordersTable, takerHash);
+            order::create_order(ordersTable, makerHash);
+            order::create_order(ordersTable, takerHash);
+                  
 
             // if taker order is market order
-            if(data.takerOrder.price == 0){
-                data.takerOrder.price = data.fill.price;    
+            if(order::price(*takerOrder) == 0){
+                order::set_price(takerOrder, fill.price);    
             };
 
             // update orders to have non decimal based leverage
-            data.makerOrder.leverage = library::round_down(data.makerOrder.leverage);
-            data.takerOrder.leverage = library::round_down(data.takerOrder.leverage);
+            let makerLeverage = library::round_down(order::leverage(*makerOrder));
+            order::set_leverage(makerOrder, makerLeverage);
+            let takerLeverage = library::round_down(order::leverage(*takerOrder));
+            order::set_leverage(takerOrder, takerLeverage);
 
-            let initMakerPos = *table::borrow(positionsTable, data.makerOrder.maker);
-            let initTakerPos = *table::borrow(positionsTable, data.takerOrder.maker);
+
+            let initMakerPos = *table::borrow(positionsTable, order::maker(*makerOrder));
+            let initTakerPos = *table::borrow(positionsTable, order::maker(*takerOrder));
 
             // Validate orders are correct and can be executed for the trade
-            verify_order(initMakerPos, ordersTable, subAccounts, data.makerOrder, makerOrderSerialized, makerHash, data.makerSignature, data.fill, 0);
-            verify_order(initTakerPos, ordersTable, subAccounts, data.takerOrder, takerOrderSerialized, takerHash, data.takerSignature, data.fill, 1);
+            verify_order(initMakerPos, ordersTable, subAccounts, *makerOrder, makerOrderSerialized, makerHash, makerSignature, fill, 0);
+            verify_order(initTakerPos, ordersTable, subAccounts, *takerOrder, takerOrderSerialized, takerHash, takerSignature, fill, 1);
 
             // verify pre-trade checks
-            evaluator::verify_price_checks(tradeChecks, data.fill.price);
-            evaluator::verify_qty_checks(tradeChecks, data.fill.quantity);
-            evaluator::verify_market_take_bound_checks(tradeChecks, data.fill.price, oraclePrice, data.takerOrder.isBuy);
+            evaluator::verify_price_checks(tradeChecks, fill.price);
+            evaluator::verify_qty_checks(tradeChecks, fill.quantity);
+            evaluator::verify_market_take_bound_checks(
+                tradeChecks, fill.price, oraclePrice, order::isBuy(*takerOrder));
 
             // Self-trade prevention; only fill order and return
-            if (data.makerOrder.maker == data.takerOrder.maker) {
+            if (order::maker(*makerOrder) == order::maker(*takerOrder)) {
                 return TradeResponse{
                     makerFundsFlow: signed_number::new(),
                     takerFundsFlow: signed_number::new(),
@@ -207,23 +181,23 @@ module bluefin_foundation::isolated_trading {
             // apply isolated margin
             let makerResponse = apply_isolated_margin(
                 tradeChecks,
-                table::borrow_mut(positionsTable, data.makerOrder.maker), 
-                data.makerOrder, 
-                data.fill, 
-                library::base_mul(data.fill.price, makerFee),
+                table::borrow_mut(positionsTable, order::maker(*makerOrder)), 
+                *makerOrder, 
+                fill, 
+                library::base_mul(fill.price, makerFee),
                 0);
 
             let takerResponse = apply_isolated_margin(
                 tradeChecks,
-                table::borrow_mut(positionsTable, data.takerOrder.maker), 
-                data.takerOrder, 
-                data.fill, 
-                library::base_mul(data.fill.price, takerFee),
+                table::borrow_mut(positionsTable, order::maker(*takerOrder)), 
+                *takerOrder, 
+                fill, 
+                library::base_mul(fill.price, takerFee),
                 1);
 
 
-            let newMakerPosition = *table::borrow(positionsTable, data.makerOrder.maker);
-            let newTakerPosition = *table::borrow(positionsTable, data.takerOrder.maker);
+            let newMakerPosition = *table::borrow(positionsTable, order::maker(*makerOrder));
+            let newTakerPosition = *table::borrow(positionsTable, order::maker(*takerOrder));
                                    
             // verify collateralization of maker and take
             position::verify_collat_checks(
@@ -246,14 +220,13 @@ module bluefin_foundation::isolated_trading {
 
             position::emit_position_update_event(newMakerPosition, ACTION_TRADE);
             position::emit_position_update_event(newTakerPosition, ACTION_TRADE);
-
     
             emit(TradeExecuted{
                 sender,
                 perpID,
                 tradeType: TRADE_TYPE,
-                maker: data.makerOrder.maker,
-                taker: data.takerOrder.maker,
+                maker: order::maker(*makerOrder),
+                taker: order::maker(*takerOrder),
                 makerOrderHash: makerHash,
                 takerOrderHash: takerHash,
                 makerMRO: position::mro(newMakerPosition),
@@ -262,9 +235,9 @@ module bluefin_foundation::isolated_trading {
                 takerFee: takerResponse.fee,
                 makerPnl: makerResponse.pnl,
                 takerPnl: takerResponse.pnl,
-                tradeQuantity: data.fill.quantity,
-                tradePrice: data.fill.price,
-                isBuy: data.takerOrder.isBuy,
+                tradeQuantity: fill.quantity,
+                tradePrice: fill.price,
+                isBuy: order::isBuy(*takerOrder),
             });
 
 
@@ -272,7 +245,7 @@ module bluefin_foundation::isolated_trading {
                 makerFundsFlow: makerResponse.fundsFlow,
                 takerFundsFlow: takerResponse.fundsFlow,
                 fee: takerResponse.fee + makerResponse.fee
-            }
+            }          
     }
 
     //===========================================================//
@@ -308,8 +281,8 @@ module bluefin_foundation::isolated_trading {
         perpetual:address
 
     ): TradeData{
-        let makerOrder = pack_order(perpetual, makerFlags, makerPrice, makerQuantity, makerLeverage, makerAddress, makerExpiration, makerSalt);
-        let takerOrder = pack_order(perpetual, takerFlags, takerPrice, takerQuantity, takerLeverage, takerAddress, takerExpiration, takerSalt);
+        let makerOrder = order::pack_order(perpetual, makerFlags, makerPrice, makerQuantity, makerLeverage, makerAddress, makerExpiration, makerSalt);
+        let takerOrder = order::pack_order(perpetual, takerFlags, takerPrice, takerQuantity, takerLeverage, takerAddress, takerExpiration, takerSalt);
         let fill = Fill{quantity, price};
         return TradeData{makerOrder, takerOrder, fill, makerSignature, takerSignature}
 
@@ -335,217 +308,35 @@ module bluefin_foundation::isolated_trading {
     //===========================================================//
     //                      HELPER METHODS
     //===========================================================//
-
-    public fun for_orderbook_only(flags:u8): bool{
-        return (flags & 16) > 0
-    }
-
-    fun decode_order_flags(flags:u8): OrderFlags{
-        return OrderFlags{
-            ioc: (flags & 1) > 0,
-            postOnly: (flags & 2) > 0,
-            reduceOnly: (flags & 4) > 0,
-            isBuy: (flags & 8) > 0,
-            orderbookOnly: (flags & 16) > 0
-        }
-    }
     
 
-    fun pack_order(
-        market: address,
-        flags:u8,
-        price: u128,
-        quantity: u128,
-        leverage: u128,
-        maker: address,
-        expiration: u128,
-        salt: u128,
-    ): Order {
 
-        let decoded_flags = decode_order_flags(flags);
-
-        return Order {
-                market,
-                maker,
-                isBuy: decoded_flags.isBuy,
-                postOnly: decoded_flags.postOnly,
-                orderbookOnly: decoded_flags.orderbookOnly,
-                reduceOnly: decoded_flags.reduceOnly,
-                ioc: decoded_flags.ioc,
-                flags,
-                price,
-                quantity,
-                leverage,
-                expiration,
-                salt
-        }
-    }
-
-    fun get_serialized_order(order:Order): vector<u8>{
-        
-        /*
-        serializedOrder
-         [0,15]     => price            (128 bits = 16 bytes)
-         [16,31]    => quantity         (128 bits = 16 bytes)
-         [32,47]    => leverage         (128 bits = 16 bytes)
-         [48,63]    => expiration       (128 bits = 16 bytes)
-         [64,79]    => salt             (128 bits = 16 bytes)
-         [80,111]   => maker            (160 bits = 32 bytes)
-         [112,143]   => market          (160 bits = 32 bytes)
-         [144,144]  => flags       (1 byte)
-         [145,151]  => domain (Bluefin) (7 bytes)
-         */
-
-
-        let serialized_order = vector::empty<u8>();
-        let price_b = bcs::to_bytes(&order.price);
-        let quantity_b = bcs::to_bytes(&order.quantity);
-        let leverage_b = bcs::to_bytes(&order.leverage);
-        let maker_address_b = bcs::to_bytes(&order.maker); // doesn't need reverse
-        let market_address_b = bcs::to_bytes(&order.market); // doesn't need reverse
-        let expiration_b = bcs::to_bytes(&order.expiration);
-        let salt_b = bcs::to_bytes(&order.salt);
-        let flags_b = bcs::to_bytes(&order.flags);
-
-        vector::reverse(&mut price_b);
-        vector::reverse(&mut quantity_b);
-        vector::reverse(&mut leverage_b);
-        vector::reverse(&mut expiration_b);
-        vector::reverse(&mut salt_b);
-        vector::reverse(&mut flags_b);
-
-        vector::append(&mut serialized_order, price_b);
-        vector::append(&mut serialized_order, quantity_b);
-        vector::append(&mut serialized_order, leverage_b);
-        vector::append(&mut serialized_order, expiration_b);
-        vector::append(&mut serialized_order, salt_b);
-        vector::append(&mut serialized_order, maker_address_b);
-        vector::append(&mut serialized_order, market_address_b);
-        vector::append(&mut serialized_order, flags_b);
-        vector::append(&mut serialized_order, b"Bluefin");
-
-        return serialized_order
-
-    }
-
-    fun get_hash(serialized_order: vector<u8>): vector<u8>{
-            return hash::sha2_256(serialized_order)        
-    }
-
-    fun create_order(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash: vector<u8>){
-        // if the order does not already exists on-chain
-        if (!table::contains(ordersTable, hash)){
-            table::add(ordersTable, hash, OrderStatus {status:true, filledQty: 0});
-        };
-    }
-
-
-    fun verify_order(position: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, order: Order, orderSerialized: vector<u8>, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
+    fun verify_order(pos: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, userOrder: Order, orderSerialized: vector<u8>, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
 
             // if a taker order, must have post only false else
             // it can only be a maker order
-            assert!(isTaker == 0 || !order.postOnly, error::taker_order_can_not_be_post_only());       
+            assert!(isTaker == 0 || !order::postOnly(userOrder), error::taker_order_can_not_be_post_only());       
 
-            assert!(isTaker == 1 || !order.ioc,  error::maker_order_can_not_be_ioc());
+            assert!(isTaker == 1 || !order::ioc(userOrder),  error::maker_order_can_not_be_ioc());
 
-            verify_order_state(ordersTable, hash, isTaker);
+            order::verify_order_state(ordersTable, hash, isTaker);
 
-            let sigMaker = verify_order_signature(subAccounts, order.maker, orderSerialized, signature, isTaker);
+            let sigMaker = order::verify_order_signature(subAccounts, order::maker(userOrder), orderSerialized, signature, isTaker);
 
-            verify_order_expiry(order, isTaker);
+            order::verify_order_expiry(order::expiration(userOrder), isTaker);
 
-            verify_order_fills(position, order, fill, isTaker);
+            order::verify_order_leverage(position::mro(pos), order::leverage(userOrder), isTaker);
 
-            verify_order_leverage(position, order, isTaker);
-
-            verify_and_fill_order_qty(ordersTable, order, hash, fill.quantity, sigMaker, isTaker);
-    }
-
-    fun verify_order_state(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash:vector<u8>, isTaker:u64){        
-        let order = table::borrow(ordersTable, hash);
-        assert!(order.status, error::order_is_canceled(isTaker));
-    }
-
-    fun verify_and_fill_order_qty(ordersTable: &mut Table<vector<u8>, OrderStatus>, order:Order, orderHash:vector<u8>, fill:u128, sigMaker:address, isTaker:u64){
-        
-        let orderStatus = table::borrow_mut(ordersTable, orderHash);
-        orderStatus.filledQty = orderStatus.filledQty + fill;
-
-        assert!(orderStatus.filledQty  <=  order.quantity,  error::cannot_overfill_order(isTaker));
-
-        emit(OrderFill{
-                orderHash,
-                order,
+            order::verify_and_fill_order_qty(
+                ordersTable, 
+                userOrder, 
+                hash, 
+                fill.price,
+                fill.quantity,
+                position::isPosPositive(pos),
+                position::qPos(pos),
                 sigMaker,
-                fill,
-                filledQuantity: orderStatus.filledQty
-            });
-    }
-    
-    fun verify_order_signature(subAccounts: &SubAccounts, maker:address, orderSerialized: vector<u8>, signature: vector<u8>, isTaker:u64):address{
-
-        let encoded_order = hex::encode(orderSerialized);
-
-        let v = vector::borrow_mut(&mut signature, 64);
-        
-        if (*v == 27) {
-            *v = 0;
-        } else if (*v == 28) {
-            *v = 1;
-        } else if (*v > 35) {
-            *v = (*v - 1) % 2;
-        };
-
-        let publicKey = ecdsa_k1::secp256k1_ecrecover(&signature, &encoded_order, 1);
-
-        let publicAddress = library::get_public_address(publicKey);
-
-        assert!(
-            maker == publicAddress || 
-            roles::is_sub_account(subAccounts, maker, publicAddress), 
-            error::order_has_invalid_signature(isTaker));
-
-        return publicAddress
-    }
-
-    fun verify_order_expiry(order:Order, isTaker:u64){
-        // TODO compare with chain time
-        assert!(order.expiration == 0 || order.expiration > 1, error::order_expired(isTaker));
-    }
-
-    fun verify_order_fills(userPosition: UserPosition, order:Order, fill:Fill, isTaker:u64){
-
-        // Ensure order is being filled at the specified or better price
-        // For long/buy orders, the fill price must be equal or lower
-        // For short/sell orders, the fill price must be equal or higher
-        let validPrice = if (order.isBuy) { fill.price <= order.price } else {fill.price >= order.price};
-
-        assert!(validPrice, error::fill_price_invalid(isTaker));
-
-        // For reduce only orders, ensure that the order would result in an
-        // open position's size to reduce (fill amount <= open position size)
-        if(order.reduceOnly){
-
-            // Reduce only order must be in the opposite direction as open position 
-            // (a positive position size means open position is Buy)
-            // Reduce only order size must be less than open position size.
-            // Size sign is stored separately (sizeIsPositive) so this is an absolute value comparison
-            // regardless of position direction (Buy or Sell)
-            assert!(
-                order.isBuy != position::isPosPositive(userPosition) && 
-                fill.quantity <= position::qPos(userPosition), 
-                error::fill_does_not_decrease_size(isTaker));        
-        }
-
-    }
-
-    fun verify_order_leverage(userPosition: UserPosition, order:Order, isTaker:u64){
-        let mro = position::mro(userPosition);
-        assert!(order.leverage > 0, error::leverage_must_be_greater_than_zero(isTaker));        
-        assert!(
-            mro == 0 || position::compute_mro(order.leverage) == mro, 
-            error::invalid_leverage(isTaker));
-
+                isTaker);
     }
 
     /*
@@ -558,13 +349,13 @@ module bluefin_foundation::isolated_trading {
         let equityPerUnit: Number;
         let marginPerUnit: u128;
 
-        let isBuy = order.isBuy;
+        let isBuy = order::isBuy(order);
         
         let oiOpen = position::oiOpen(*balance);
         let qPos = position::qPos(*balance);
         let isPosPositive = position::isPosPositive(*balance);
         let margin = position::margin(*balance);
-        let mro = position::compute_mro(order.leverage);
+        let mro = library::compute_mro(order::leverage(order));
         let pnlPerUnit = position::compute_pnl_per_unit(*balance, fill.price);
 
         // case 1: Opening position or adding to position size
@@ -598,7 +389,7 @@ module bluefin_foundation::isolated_trading {
         pnlPerUnit = signed_number::new();
         } 
         // case 2: Reduce only order
-        else if (order.reduceOnly || ( isBuy != isPosPositive && fill.quantity <= qPos)){
+        else if (order::reduceOnly(order) || ( isBuy != isPosPositive && fill.quantity <= qPos)){
             // current position - fill quantity
             let newQPos = qPos - fill.quantity;
 
