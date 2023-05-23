@@ -5,16 +5,15 @@ import {
     readFile,
     getProvider,
     getSignerFromSeed,
-    createMarket,
-    createOrder
+    createMarket
 } from "../src/utils";
-import { OnChainCalls, OrderSigner, Trader, Transaction } from "../src/classes";
+import { OnChainCalls, Transaction } from "../src/classes";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { getTestAccounts } from "./helpers/accounts";
 import { network } from "../src/DeploymentConfig";
-import { ADDRESSES, toBigNumber, toBigNumberStr } from "../src/library";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
-import { fundTestAccounts, mintAndDeposit } from "./helpers/utils";
+import { toBigNumber } from "../src/library";
+import { ERROR_CODES } from "../src/errors";
+import { fundTestAccounts } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;

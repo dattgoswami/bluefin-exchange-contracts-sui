@@ -1170,6 +1170,41 @@ export class OnChainCalls {
         );
     }
 
+    public async cancelOrder(
+        args: {
+            order: Order;
+            signature: string;
+            subAccountsMapID?: string;
+            gasBudget?: number;
+        },
+        signer?: RawSigner
+    ): Promise<SuiTransactionBlockResponse> {
+        const caller = signer || this.signer;
+
+        const callArgs = [];
+
+        callArgs.push(args.subAccountsMapID || this.getSubAccountsID());
+        callArgs.push(this.getOrdersTableID());
+
+        callArgs.push(args.order.market);
+        callArgs.push(encodeOrderFlags(args.order));
+        callArgs.push(args.order.price.toFixed(0));
+        callArgs.push(args.order.quantity.toFixed(0));
+        callArgs.push(args.order.leverage.toFixed(0));
+        callArgs.push(args.order.expiration.toFixed(0));
+        callArgs.push(args.order.salt.toFixed(0));
+        callArgs.push(args.order.maker);
+        callArgs.push(Array.from(hexToBuffer(args.signature)));
+
+        return this.signAndCall(
+            caller,
+            "cancel_order",
+            callArgs,
+            "order",
+            args.gasBudget
+        );
+    }
+
     public async mintUSDC(
         args?: {
             amount?: string;

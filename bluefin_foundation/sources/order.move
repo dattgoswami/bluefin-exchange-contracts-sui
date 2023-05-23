@@ -1,10 +1,9 @@
 module bluefin_foundation::order {
     use sui::table::{Self, Table};
-    // use sui::tx_context::{Self, TxContext};
+    use sui::tx_context::{Self, TxContext};
     use sui::event::{emit};
     use std::vector;
     use sui::bcs;
-    use std::hash;
     use sui::hex;
 
     // custom modules
@@ -27,6 +26,13 @@ module bluefin_foundation::order {
         fillQty: u128,
         newFilledQuantity: u128        
     }
+
+    struct OrderCancel has copy, drop{
+        caller: address, 
+        sigMaker: address,
+        orderHash: vector<u8>
+    }
+
 
 
     //===========================================================//
@@ -69,24 +75,64 @@ module bluefin_foundation::order {
     /**
      * Allows caller to cancel their order
      */
-    // entry fun cancel_order(
-    //     perp: &Perpetual,
-    //     subAccounts: &SubAccounts,
-    //     ordersTable: &mut Table<vector<u8>, OrderStatus>,
-    //     orderFlags:u8,
-    //     orderPrice: u128,
-    //     orderQuantity: u128,
-    //     orderLeverage: u128,
-    //     orderExpiration: u128,
-    //     orderSalt: u128,
-    //     makerAddress: address,
-    //     signature:vector<u8>,
-    //     ctx: &mut TxContext
-    //     ){
+    entry fun cancel_order(
+        subAccounts: &SubAccounts,
+        ordersTable: &mut Table<vector<u8>, OrderStatus>,
+        perpetual: address,
+        orderFlags:u8,
+        orderPrice: u128,
+        orderQuantity: u128,
+        orderLeverage: u128,
+        orderExpiration: u128,
+        orderSalt: u128,
+        makerAddress: address,
+        signature:vector<u8>,
+        ctx: &mut TxContext
+        ){
 
-    //     let caller = tx_context::sender(ctx);    
+        let caller = tx_context::sender(ctx);
 
-    // }
+        // only the account it self or its sub account can cancel an order
+        assert!(
+            caller == makerAddress || 
+            roles::is_sub_account(subAccounts, makerAddress, caller), 
+            error::sender_does_not_have_permission_for_account(2));
+
+        // pack order
+        let order = pack_order(
+            perpetual,
+            orderFlags,
+            orderPrice,
+            orderQuantity,
+            orderLeverage,
+            makerAddress,
+            orderExpiration,
+            orderSalt
+            );
+
+        // get serialized order
+        let serialized_order = get_serialized_order(order);
+
+        // compute order hash
+        let order_hash = library::get_hash(serialized_order);
+
+        // verify order signature        
+        let sig_maker = verify_order_signature(subAccounts, makerAddress, serialized_order, signature, 0);
+
+        // create order entry in orders table if doesn't exist already        
+        create_order(ordersTable, order_hash);
+
+        let order_status = table::borrow_mut(ordersTable, order_hash);
+        
+        // ensure order is not already cancelled
+        assert!(order_status.status, error::order_is_canceled(0));
+
+        // mark order as cancelled
+        order_status.status = false;
+
+        emit(OrderCancel{caller, sigMaker: sig_maker, orderHash:order_hash});
+
+    }
 
     //===========================================================//
     //                          ACCESSORS                        //
