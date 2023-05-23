@@ -54,7 +54,8 @@ module bluefin_foundation::isolated_trading {
         takerSignature:vector<u8>,
         makerOrder: Order,
         takerOrder: Order,
-        fill:Fill
+        fill:Fill,
+        currentTime: u64
     }
 
     struct Fill has drop, copy {
@@ -110,6 +111,7 @@ module bluefin_foundation::isolated_trading {
         data: TradeData):TradeResponse
         {
             let fill = data.fill;
+            let currentTime  = data.currentTime;
             let makerSignature = data.makerSignature;
             let takerSignature = data.takerSignature;
             let makerOrder = &mut data.makerOrder;            
@@ -159,8 +161,8 @@ module bluefin_foundation::isolated_trading {
             let initTakerPos = *table::borrow(positionsTable, order::maker(*takerOrder));
 
             // Validate orders are correct and can be executed for the trade
-            verify_order(initMakerPos, ordersTable, subAccounts, *makerOrder, makerOrderSerialized, makerHash, makerSignature, fill, 0);
-            verify_order(initTakerPos, ordersTable, subAccounts, *takerOrder, takerOrderSerialized, takerHash, takerSignature, fill, 1);
+            verify_order(initMakerPos, ordersTable, subAccounts, *makerOrder, makerOrderSerialized, makerHash, makerSignature, fill, currentTime, 0);
+            verify_order(initTakerPos, ordersTable, subAccounts, *takerOrder, takerOrderSerialized, takerHash, takerSignature, fill, currentTime, 1);
 
             // verify pre-trade checks
             evaluator::verify_price_checks(tradeChecks, fill.price);
@@ -259,7 +261,7 @@ module bluefin_foundation::isolated_trading {
         makerQuantity: u128,
         makerLeverage: u128,
         makerAddress: address,
-        makerExpiration: u128,
+        makerExpiration: u64,
         makerSalt: u128,
         makerSignature:vector<u8>,
 
@@ -269,7 +271,7 @@ module bluefin_foundation::isolated_trading {
         takerQuantity: u128,
         takerLeverage: u128,
         takerAddress: address,
-        takerExpiration: u128,
+        takerExpiration: u64,
         takerSalt: u128,
         takerSignature:vector<u8>,
 
@@ -278,13 +280,16 @@ module bluefin_foundation::isolated_trading {
         price: u128,
 
         // perp address
-        perpetual:address
+        perpetual:address,
+
+        // current time
+        currentTime:u64,
 
     ): TradeData{
         let makerOrder = order::pack_order(perpetual, makerFlags, makerPrice, makerQuantity, makerLeverage, makerAddress, makerExpiration, makerSalt);
         let takerOrder = order::pack_order(perpetual, takerFlags, takerPrice, takerQuantity, takerLeverage, takerAddress, takerExpiration, takerSalt);
         let fill = Fill{quantity, price};
-        return TradeData{makerOrder, takerOrder, fill, makerSignature, takerSignature}
+        return TradeData{makerOrder, takerOrder, fill, makerSignature, takerSignature, currentTime}
 
     }
 
@@ -311,7 +316,7 @@ module bluefin_foundation::isolated_trading {
     
 
 
-    fun verify_order(pos: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, userOrder: Order, orderSerialized: vector<u8>, hash: vector<u8>, signature: vector<u8>, fill:Fill, isTaker: u64){
+    fun verify_order(pos: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, userOrder: Order, orderSerialized: vector<u8>, hash: vector<u8>, signature: vector<u8>, fill:Fill, currentTime: u64, isTaker: u64){
 
             // if a taker order, must have post only false else
             // it can only be a maker order
@@ -323,7 +328,7 @@ module bluefin_foundation::isolated_trading {
 
             let sigMaker = order::verify_order_signature(subAccounts, order::maker(userOrder), orderSerialized, signature, isTaker);
 
-            order::verify_order_expiry(order::expiration(userOrder), isTaker);
+            order::verify_order_expiry(order::expiration(userOrder), currentTime, isTaker);
 
             order::verify_order_leverage(position::mro(pos), order::leverage(userOrder), isTaker);
 

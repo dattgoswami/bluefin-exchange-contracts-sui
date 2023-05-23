@@ -53,6 +53,7 @@ export function toBaseNumber(val: BigNumberable, decimals = 3): number {
 
 export function bnToHex(bn: BigNumber | number, pad: number = 32): string {
     // u128 on chain = 16 bytes = 32 hex characters (2 char / byte)
+    // u64 on chain = 8 bytes = 16 hex characters (2 char / byte)
     // u8 on chain = 1 byte = 2 hex characters
     return bn.toString(16).padStart(pad, "0");
 }

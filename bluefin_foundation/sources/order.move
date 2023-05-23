@@ -33,8 +33,6 @@ module bluefin_foundation::order {
         orderHash: vector<u8>
     }
 
-
-
     //===========================================================//
     //                           STORAGE                         //
     //===========================================================//
@@ -59,7 +57,7 @@ module bluefin_foundation::order {
         price: u128,
         quantity: u128,
         leverage: u128,
-        expiration: u128,
+        expiration: u64,
         salt: u128
     }
 
@@ -83,7 +81,7 @@ module bluefin_foundation::order {
         orderPrice: u128,
         orderQuantity: u128,
         orderLeverage: u128,
-        orderExpiration: u128,
+        orderExpiration: u64,
         orderSalt: u128,
         makerAddress: address,
         signature:vector<u8>,
@@ -190,7 +188,7 @@ module bluefin_foundation::order {
         return order.leverage
     }
 
-    public fun expiration(order:Order): u128{
+    public fun expiration(order:Order): u64{
         return order.expiration
     }
 
@@ -209,7 +207,7 @@ module bluefin_foundation::order {
         quantity: u128,
         leverage: u128,
         maker: address,
-        expiration: u128,
+        expiration: u64,
         salt: u128,
     ): Order {
 
@@ -239,12 +237,12 @@ module bluefin_foundation::order {
          [0,15]     => price            (128 bits = 16 bytes)
          [16,31]    => quantity         (128 bits = 16 bytes)
          [32,47]    => leverage         (128 bits = 16 bytes)
-         [48,63]    => expiration       (128 bits = 16 bytes)
-         [64,79]    => salt             (128 bits = 16 bytes)
-         [80,111]   => maker            (160 bits = 32 bytes)
-         [112,143]   => market          (160 bits = 32 bytes)
-         [144,144]  => flags       (1 byte)
-         [145,151]  => domain (Bluefin) (7 bytes)
+         [48,63]    => salt             (128 bits = 16 bytes)
+         [64,71]    => expiration       (64 bits = 8 bytes)
+         [72,103]   => maker            (256 bits = 32 bytes)
+         [104,135]   => market          (256 bits = 32 bytes)
+         [136,136]  => flags       (1 byte)
+         [137,143]  => domain (Bluefin) (7 bytes)
          */
 
 
@@ -268,8 +266,8 @@ module bluefin_foundation::order {
         vector::append(&mut serialized_order, price_b);
         vector::append(&mut serialized_order, quantity_b);
         vector::append(&mut serialized_order, leverage_b);
-        vector::append(&mut serialized_order, expiration_b);
         vector::append(&mut serialized_order, salt_b);
+        vector::append(&mut serialized_order, expiration_b);
         vector::append(&mut serialized_order, maker_address_b);
         vector::append(&mut serialized_order, market_address_b);
         vector::append(&mut serialized_order, flags_b);
@@ -367,9 +365,9 @@ module bluefin_foundation::order {
         return publicAddress
     }
 
-    public (friend) fun verify_order_expiry(expiry:u128, isTaker:u64){
-        // TODO compare with chain time
-        assert!(expiry == 0 || expiry > 1, error::order_expired(isTaker));
+
+    public (friend) fun verify_order_expiry(expiry:u64, currentTime:u64, isTaker:u64){
+        assert!(expiry == 0 || expiry > currentTime, error::order_expired(isTaker));
     }
 
     public (friend) fun verify_order_leverage(mro: u128, leverage:u128, isTaker:u64){

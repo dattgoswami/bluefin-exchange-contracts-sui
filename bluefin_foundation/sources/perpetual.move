@@ -441,14 +441,15 @@ module bluefin_foundation::perpetual {
     /*
      * Sets PriceOracle  
      */
-    public entry fun set_oracle_price(safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, perp: &mut Perpetual, price: u128){
+    public entry fun set_oracle_price(clock: &Clock, safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, perp: &mut Perpetual, price: u128){
         let perpID = object::uid_to_inner(&perp.id);
         price_oracle::set_oracle_price(
             safe,
             cap, 
             &mut perp.priceOracle,
             perpID, 
-            price
+            price,
+            clock::timestamp_ms(clock)
             );
     }
 

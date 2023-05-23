@@ -18,7 +18,7 @@ module bluefin_foundation::price_oracle {
     struct OraclePriceUpdateEvent has copy, drop {
         id: ID,
         price: u128,
-        updatedAt: u128,
+        updatedAt: u64,
     }
 
     struct MaxAllowedPriceDiffUpdateEvent has copy, drop {
@@ -33,13 +33,10 @@ module bluefin_foundation::price_oracle {
 
 
     struct PriceOracle has copy, drop, store {
-        
-        // timestamp at which price was updated
-        updatedAt: u128,
-
         // price 
         price: u128,
-
+        // timestamp at which price was updated
+        updatedAt: u64,
         // maximum allowed difference between 2 consecutive prices
         maxAllowedPriceDifference: u128
     }
@@ -85,7 +82,7 @@ module bluefin_foundation::price_oracle {
         });
     }
     
-    public (friend) fun set_oracle_price(safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, op: &mut PriceOracle, perp: ID, price: u128){
+    public (friend) fun set_oracle_price(safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, op: &mut PriceOracle, perp: ID, price: u128, timestamp: u64){
         
         roles::check_price_oracle_operator_validity(safe, cap);
         
@@ -94,10 +91,11 @@ module bluefin_foundation::price_oracle {
             error::out_of_max_allowed_price_diff_bounds());
 
         op.price = price;
+        op.updatedAt = timestamp;
         emit(OraclePriceUpdateEvent { 
             id: perp,
             price, 
-            updatedAt: 0
+            updatedAt: timestamp
         });
     }
 

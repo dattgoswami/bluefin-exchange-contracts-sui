@@ -49,7 +49,7 @@ module bluefin_foundation::test {
             1000000000,
             1000000000,
             maker,
-            3655643731,
+            1747984534000,
             1668690862116
             );
         
@@ -82,7 +82,7 @@ module bluefin_foundation::test {
             1000000000,
             1000000000,
             maker,
-            3655643731,
+            1747984534000,
             1668690862116
             );
                
@@ -104,7 +104,7 @@ module bluefin_foundation::test {
         price: u128,
         quantity: u128,
         leverage: u128,
-        expiration: u128,
+        expiration: u64,
         salt: u128,
         signature:vector<u8>
     ) {

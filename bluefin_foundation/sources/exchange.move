@@ -204,7 +204,7 @@ module bluefin_foundation::exchange {
         makerPrice: u128,
         makerQuantity: u128,
         makerLeverage: u128,
-        makerExpiration: u128,
+        makerExpiration: u64,
         makerSalt: u128,
         makerAddress: address,
         makerSignature:vector<u8>,
@@ -214,7 +214,7 @@ module bluefin_foundation::exchange {
         takerPrice: u128,
         takerQuantity: u128,
         takerLeverage: u128,
-        takerExpiration: u128,
+        takerExpiration: u64,
         takerSalt: u128,
         takerAddress: address,
         takerSignature:vector<u8>,
@@ -308,7 +308,10 @@ module bluefin_foundation::exchange {
                 price,
 
                 // perp id/address
-                object::id_to_address(&perpID)
+                object::id_to_address(&perpID),
+                
+                // current time
+                clock::timestamp_ms(clock)
             );
             
 

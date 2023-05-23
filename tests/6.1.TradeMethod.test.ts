@@ -91,7 +91,6 @@ describe("Trade", () => {
             bob.keyPair,
             defaultOrder
         );
-
         const tx = await onChain.trade({ ...trade, settlementCapID });
         expectTxToSucceed(tx);
     });
@@ -936,5 +935,38 @@ describe("Trade", () => {
 
         expectTxToFail(tx);
         expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[106]);
+    });
+
+    it("should revert as the maker order is expired", async () => {
+        await mintAndDeposit(onChain, alice.address, 2000);
+        await mintAndDeposit(onChain, bob.address, 2000);
+
+        const priceTx = await onChain.updateOraclePrice({
+            price: toBigNumberStr(1),
+            updateOPCapID: priceOracleCapID
+        });
+
+        expectTxToSucceed(priceTx);
+
+        const order = {
+            ...defaultOrder,
+            expiration: bigNumber(Date.now() - 1000)
+        };
+
+        const trade = await Trader.setupNormalTrade(
+            provider,
+            orderSigner,
+            alice.keyPair,
+            bob.keyPair,
+            order
+        );
+
+        const tx = await onChain.trade({
+            ...trade,
+            settlementCapID,
+            gasBudget: 500000000
+        });
+        expectTxToFail(tx);
+        expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[32]);
     });
 });

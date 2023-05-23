@@ -13,7 +13,7 @@ export const DEFAULT = {
         postOnly: false,
         orderbookOnly: true,
         maker: ADDRESSES.ZERO,
-        expiration: bigNumber(3655643731),
+        expiration: bigNumber(1747984534000),
         salt: bigNumber(1668690862116)
     } as Order,
     INSURANCE_POOL_ADDRESS:

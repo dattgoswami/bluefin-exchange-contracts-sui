@@ -46,16 +46,16 @@ export class OrderSigner {
         // encode order flags
         const orderFlags = encodeOrderFlags(order);
 
-        const buffer = Buffer.alloc(152);
+        const buffer = Buffer.alloc(144);
         buffer.set(hexToBuffer(bnToHex(order.price)), 0);
         buffer.set(hexToBuffer(bnToHex(order.quantity)), 16);
         buffer.set(hexToBuffer(bnToHex(order.leverage)), 32);
-        buffer.set(hexToBuffer(bnToHex(order.expiration)), 48);
-        buffer.set(hexToBuffer(bnToHex(order.salt)), 64);
-        buffer.set(hexToBuffer(order.maker), 80);
-        buffer.set(hexToBuffer(order.market), 112);
-        buffer.set(hexToBuffer(bnToHex(orderFlags, 2)), 144);
-        buffer.set(Buffer.from("Bluefin", "utf8"), 145);
+        buffer.set(hexToBuffer(bnToHex(order.salt)), 48);
+        buffer.set(hexToBuffer(bnToHex(order.expiration, 16)), 64);
+        buffer.set(hexToBuffer(order.maker), 72);
+        buffer.set(hexToBuffer(order.market), 104);
+        buffer.set(hexToBuffer(bnToHex(orderFlags, 2)), 136);
+        buffer.set(Buffer.from("Bluefin", "utf8"), 137);
 
         return buffer.toString("hex");
     }
