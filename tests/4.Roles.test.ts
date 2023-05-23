@@ -1,6 +1,6 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     getProvider,
     getSignerFromSeed,
@@ -8,10 +8,10 @@ import {
     publishPackage,
     getDeploymentData,
     requestGas
-} from "../src/utils";
+} from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { OnChainCalls, Transaction } from "../src/classes";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
+import { OnChainCalls, Transaction } from "../submodules/library-sui";
+import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
 import { fundTestAccounts } from "./helpers/utils";
 import { getTestAccounts } from "./helpers/accounts";
 

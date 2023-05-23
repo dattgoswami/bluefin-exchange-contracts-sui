@@ -1,6 +1,6 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     getProvider,
     getSignerFromSeed,
@@ -8,12 +8,12 @@ import {
     publishPackage,
     createMarket,
     getDeploymentData
-} from "../src/utils";
-import { OnChainCalls, Transaction } from "../src/classes";
+} from "../submodules/library-sui";
+import { OnChainCalls, Transaction } from "../submodules/library-sui";
 import { fundTestAccounts } from "./helpers/utils";
 import { expectTxToEmitEvent, expectTxToSucceed } from "./helpers/expect";
 import { getTestAccounts, TEST_WALLETS } from "./helpers/accounts";
-import { toBigNumberStr } from "../src/library";
+import { toBigNumberStr } from "../submodules/library-sui";
 
 chai.use(chaiAsPromised);
 

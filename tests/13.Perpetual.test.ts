@@ -1,19 +1,19 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
     getSignerFromSeed,
     createMarket,
     createOrder
-} from "../src/utils";
-import { OnChainCalls, OrderSigner, Trader, Transaction } from "../src/classes";
+} from "../submodules/library-sui";
+import { OnChainCalls, OrderSigner, Trader, Transaction } from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { getTestAccounts } from "./helpers/accounts";
-import { network } from "../src/DeploymentConfig";
-import { ADDRESSES, toBigNumberStr } from "../src/library";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
+import { network } from "../submodules/library-sui";
+import { ADDRESSES, toBigNumberStr } from "../submodules/library-sui";
+import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
 import { mintAndDeposit } from "./helpers/utils";
 
 chai.use(chaiAsPromised);

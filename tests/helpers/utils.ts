@@ -1,10 +1,10 @@
 import { JsonRpcProvider, RawSigner } from "@mysten/sui.js";
 import BigNumber from "bignumber.js";
-import { Transaction } from "../../src";
-import { Balance } from "../../src/classes/Balance";
-import { OnChainCalls } from "../../src/classes/OnChainCalls";
-import { BASE_DECIMALS, bigNumber, toBigNumberStr } from "../../src/library";
-import { requestGas } from "../../src/utils";
+import { Transaction } from "../../submodules/library-sui";
+import { Balance } from "../../submodules/library-sui";
+import { OnChainCalls } from "../../submodules/library-sui";
+import { BASE_DECIMALS, bigNumber, toBigNumberStr } from "../../submodules/library-sui";
+import { requestGas } from "../../submodules/library-sui";
 import { TEST_WALLETS } from "./accounts";
 import { expectTxToSucceed } from "./expect";
 import { TestPositionExpect } from "./interfaces";

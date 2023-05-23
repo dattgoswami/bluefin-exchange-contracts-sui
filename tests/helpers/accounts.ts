@@ -1,7 +1,7 @@
 import { JsonRpcProvider, Keypair, RawSigner } from "@mysten/sui.js";
-import { Client } from "../../src";
-import { wallet } from "../../src/interfaces";
-import { getKeyPairFromSeed, getSignerFromSeed } from "../../src/utils";
+import { Client } from "../../submodules/library-sui";
+import { wallet } from "../../submodules/library-sui";
+import { getKeyPairFromSeed, getSignerFromSeed } from "../../submodules/library-sui";
 
 export const TEST_WALLETS: wallet[] = [
     {

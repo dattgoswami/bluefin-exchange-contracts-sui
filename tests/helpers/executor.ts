@@ -1,5 +1,5 @@
 import { createAccount, getTestAccounts } from "./accounts";
-import { network, DeploymentConfigs } from "../../src/DeploymentConfig";
+import { network, DeploymentConfigs } from "../../submodules/library-sui";
 import {
     createMarket,
     createOrder,
@@ -8,9 +8,9 @@ import {
     getSignerFromSeed,
     readFile,
     requestGas
-} from "../../src/utils";
-import { toBigNumber, toBigNumberStr } from "../../src/library";
-import { OnChainCalls, OrderSigner, Trader, Transaction } from "../../src";
+} from "../../submodules/library-sui";
+import { toBigNumber, toBigNumberStr } from "../../submodules/library-sui";
+import { OnChainCalls, OrderSigner, Trader, Transaction } from "../../submodules/library-sui";
 import {
     evaluateSystemExpect,
     expect,
@@ -18,8 +18,8 @@ import {
     expectTxToSucceed,
     evaluateAccountPositionExpect
 } from "./expect";
-import { MarketDetails } from "../../src/interfaces";
-import { ERROR_CODES } from "../../src/errors";
+import { MarketDetails } from "../../submodules/library-sui";
+import { ERROR_CODES } from "../../submodules/library-sui";
 import BigNumber from "bignumber.js";
 import { config } from "dotenv";
 import { fundTestAccounts, mintAndDeposit } from "./utils";

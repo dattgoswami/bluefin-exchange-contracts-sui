@@ -1,8 +1,8 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
-import { OnChainCalls, Transaction, OrderSigner } from "../src/classes";
-import { Trader } from "../src/classes/Trader";
+import { DeploymentConfigs } from "../submodules/library-sui";
+import { OnChainCalls, Transaction, OrderSigner } from "../submodules/library-sui";
+import { Trader } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
@@ -10,10 +10,10 @@ import {
     createMarket,
     createOrder,
     requestGas
-} from "../src/utils";
+} from "../submodules/library-sui";
 import { getTestAccounts } from "./helpers/accounts";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
-import { toBigNumberStr, toBigNumber } from "../src/library";
+import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
+import { toBigNumberStr, toBigNumber } from "../submodules/library-sui";
 import { TEST_WALLETS } from "./helpers/accounts";
 import { fundTestAccounts, mintAndDeposit } from "./helpers/utils";
 import { expectTxToSucceed, expectTxToFail } from "./helpers/expect";

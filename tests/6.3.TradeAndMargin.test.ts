@@ -1,5 +1,5 @@
-import { MarketDetails } from "../src";
-import { toBigNumberStr } from "../src/library";
+import { MarketDetails } from "../submodules/library-sui";
+import { toBigNumberStr } from "../submodules/library-sui";
 import { executeTests } from "./helpers/executor";
 import { TestCaseJSON } from "./helpers/interfaces";
 

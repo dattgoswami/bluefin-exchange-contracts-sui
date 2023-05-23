@@ -11,9 +11,9 @@ import {
     Balance,
     UserPositionExtended,
     OnChainCalls
-} from "../../src";
+} from "../../submodules/library-sui";
 import BigNumber from "bignumber.js";
-import { bigNumber, bnToBaseStr } from "../../src/library";
+import { bigNumber, bnToBaseStr } from "../../submodules/library-sui";
 import { Account } from "./accounts";
 
 export function expectTxToSucceed(txResponse: SuiTransactionBlockResponse) {

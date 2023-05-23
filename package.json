@@ -3,6 +3,7 @@
   "description": "Repository containing Bluefin core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.",
   "version": "0.1.0",
   "scripts": {
+    "submodules": "git submodule update --init --recursive",
     "build": "ts-node ./scripts/build.ts",
     "deploy": "ts-node ./scripts/deploy/full.ts",
     "deploy:package": "ts-node ./scripts/deploy/package.ts",
@@ -12,9 +13,7 @@
     "make:trade": "ts-node ./scripts/makeTrade.ts",
     "test": "ts-mocha --no-timeout tests/*.test.ts",
     "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",
-    "make:trade": "ts-node ./scripts/makeTrade.ts",
     "prepare": "husky install",
-    "make:trade": "ts-node ./scripts/makeTrade.ts",
     "create:settlement:operator": "ts-node ./scripts/settlementOperator.ts",
     "lint": "yarn eslint --fix --cache --max-warnings=-1 ."
   },
@@ -48,7 +47,7 @@
     "eslint-plugin-n": "^15.0.0",
     "eslint-plugin-promise": "^6.0.0",
     "husky": "^8.0.0",
-    "mocha": "^10.1.0",
+    "mocha": "^10.2.0",
     "prettier": "^2.7.1",
     "pretty-quick": "^3.1.3",
     "ts-mocha": "^10.0.0",

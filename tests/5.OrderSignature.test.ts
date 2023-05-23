@@ -1,24 +1,24 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
-import { Order } from "../src/interfaces";
+import { OnChainCalls, OrderSigner, Transaction } from "../submodules/library-sui";
+import { DeploymentConfigs } from "../submodules/library-sui";
+import { Order } from "../submodules/library-sui";
 import {
     createOrder,
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
     readFile
-} from "../src/utils";
+} from "../submodules/library-sui";
 import { getTestAccounts, TEST_WALLETS } from "./helpers/accounts";
-import { DEFAULT } from "../src/defaults";
+import { DEFAULT } from "../submodules/library-sui/src/defaults";
 import {
     base64ToBuffer,
     base64ToHex,
     bigNumber,
     encodeOrderFlags,
     hexToBuffer
-} from "../src/library";
+} from "../submodules/library-sui";
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 

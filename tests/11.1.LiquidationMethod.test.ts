@@ -1,6 +1,6 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
@@ -8,16 +8,16 @@ import {
     createOrder,
     createMarket,
     requestGas
-} from "../src/utils";
-import { OnChainCalls, OrderSigner, Transaction } from "../src/classes";
+} from "../submodules/library-sui";
+import { OnChainCalls, OrderSigner, Transaction } from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { ERROR_CODES } from "../src/errors";
-import { toBigNumberStr } from "../src/library";
+import { ERROR_CODES } from "../submodules/library-sui";
+import { toBigNumberStr } from "../submodules/library-sui";
 import { getMakerTakerAccounts, getTestAccounts } from "./helpers/accounts";
-import { Trader } from "../src/classes/Trader";
-import { network } from "../src/DeploymentConfig";
-import { DEFAULT } from "../src/defaults";
-import { Order, UserPositionExtended } from "../src";
+import { Trader } from "../submodules/library-sui";
+import { network } from "../submodules/library-sui";
+import { DEFAULT } from "../submodules/library-sui/src/defaults";
+import { Order, UserPositionExtended } from "../submodules/library-sui";
 import { mintAndDeposit } from "./helpers/utils";
 
 chai.use(chaiAsPromised);

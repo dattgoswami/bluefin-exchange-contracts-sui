@@ -6,9 +6,9 @@ import {
     publishPackage,
     getDeploymentData,
     createMarket
-} from "../../src/utils";
-import { Client, Transaction } from "../../src/classes";
-import { DeploymentConfigs } from "../../src/DeploymentConfig";
+} from "../../submodules/library-sui";
+import { Client, Transaction } from "../../submodules/library-sui";
+import { DeploymentConfigs } from "../../submodules/library-sui";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -31,6 +31,7 @@ async function main() {
     }
 
     // public package
+    console.log("publishing package");
     const publishTxn = await publishPackage(false, signer);
 
     console.log("Package published");

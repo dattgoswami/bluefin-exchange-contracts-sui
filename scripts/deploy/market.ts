@@ -4,9 +4,9 @@ import {
     getProvider,
     getDeploymentData,
     createMarket
-} from "../../src/utils";
-import { Client } from "../../src/classes";
-import { DeploymentConfigs, market } from "../../src/DeploymentConfig";
+} from "../../submodules/library-sui";
+import { Client } from "../../submodules/library-sui";
+import { DeploymentConfigs, market } from "../../submodules/library-sui";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,

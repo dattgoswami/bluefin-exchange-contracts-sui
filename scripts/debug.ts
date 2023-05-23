@@ -1,13 +1,13 @@
-import { DeploymentConfigs } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
     getSignerFromSeed,
     requestGas
-} from "../src/utils";
-import { OnChainCalls } from "../src/classes/OnChainCalls";
-import { TEST_WALLETS } from "../tests/helpers/accounts";
-import { Transaction } from "../src";
+} from "../submodules/library-sui";
+import { OnChainCalls } from "../submodules/library-sui";
+//import { TEST_WALLETS } from "../submodules/library-sui";
+import { Transaction } from "../submodules/library-sui";
 
 import { SuiEventFilter } from "@mysten/sui.js";
 import {
@@ -26,6 +26,9 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 const onChain = new OnChainCalls(ownerSigner, deployment);
 
-async function main() {}
+async function main() {
+
+    console.log(ownerSigner.getAddress());
+}
 
 main();

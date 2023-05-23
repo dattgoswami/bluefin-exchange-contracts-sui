@@ -5,9 +5,9 @@ import {
     getProvider,
     publishPackage,
     getDeploymentData
-} from "../../src/utils";
-import { DeploymentConfigs } from "../../src/DeploymentConfig";
-import { Client, Transaction } from "../../src/classes";
+} from "../../submodules/library-sui";
+import { DeploymentConfigs } from "../../submodules/library-sui";
+import { Client, Transaction } from "../../submodules/library-sui";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,

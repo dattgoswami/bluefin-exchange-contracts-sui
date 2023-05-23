@@ -1,7 +1,7 @@
-import { DEFAULT } from "../src/defaults";
-import { toBigNumberStr } from "../src/library";
+import { DEFAULT } from "../submodules/library-sui/src/defaults";
+import { toBigNumberStr } from "../submodules/library-sui";
 import { executeTests } from "./helpers/executor";
-import { MarketDetails } from "../src";
+import { MarketDetails } from "../submodules/library-sui";
 import { TestCaseJSON } from "./helpers/interfaces";
 
 const liquidationTests: TestCaseJSON = {

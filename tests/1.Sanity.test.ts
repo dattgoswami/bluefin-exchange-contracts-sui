@@ -1,15 +1,15 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
     getSignerFromSeed,
     requestGas
-} from "../src/utils";
-import { OnChainCalls, Transaction } from "../src/classes";
+} from "../submodules/library-sui";
+import { OnChainCalls, Transaction } from "../submodules/library-sui";
 import { TEST_WALLETS } from "./helpers/accounts";
-import { OWNERSHIP_ERROR } from "../src/errors";
+import { OWNERSHIP_ERROR } from "../submodules/library-sui";
 import { fundTestAccounts } from "./helpers/utils";
 
 chai.use(chaiAsPromised);

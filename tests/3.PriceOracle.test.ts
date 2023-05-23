@@ -1,17 +1,17 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
     getSignerFromSeed,
     createMarket,
     requestGas
-} from "../src/utils";
-import { OnChainCalls, Transaction } from "../src/classes";
+} from "../submodules/library-sui";
+import { OnChainCalls, Transaction } from "../submodules/library-sui";
 import { getTestAccounts } from "./helpers/accounts";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../src/errors";
-import { bigNumber, toBigNumber } from "../src/library";
+import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
+import { bigNumber, toBigNumber } from "../submodules/library-sui";
 import {
     expectTxToEmitEvent,
     expectTxToFail,

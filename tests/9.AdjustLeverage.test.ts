@@ -1,6 +1,6 @@
-import { toBigNumberStr } from "../src/library";
+import { toBigNumberStr } from "../submodules/library-sui";
 import { executeTests } from "./helpers/executor";
-import { MarketDetails } from "../src";
+import { MarketDetails } from "../submodules/library-sui";
 import { TestCaseJSON } from "./helpers/interfaces";
 
 // all tests are for taker

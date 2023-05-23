@@ -1,19 +1,20 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
     getSignerFromSeed,
-    createMarket
-} from "../src/utils";
-import { OnChainCalls, Transaction } from "../src/classes";
+    createMarket,
+    createOrder
+} from "../submodules/library-sui";
+import { OnChainCalls, OrderSigner, Trader, Transaction } from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { getTestAccounts } from "./helpers/accounts";
-import { network } from "../src/DeploymentConfig";
-import { toBigNumber } from "../src/library";
-import { ERROR_CODES } from "../src/errors";
-import { fundTestAccounts } from "./helpers/utils";
+import { network } from "../submodules/library-sui";
+import { ADDRESSES, toBigNumber, toBigNumberStr } from "../submodules/library-sui";
+import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
+import { fundTestAccounts, mintAndDeposit } from "./helpers/utils";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;

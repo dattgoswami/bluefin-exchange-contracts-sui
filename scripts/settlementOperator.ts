@@ -6,9 +6,9 @@ import {
     readFile,
     requestGas,
     writeFile
-} from "../src/utils";
-import { DeploymentConfigs } from "../src/DeploymentConfig";
-import { Client, OnChainCalls, Transaction } from "../src";
+} from "../submodules/library-sui/src/utils";
+import { DeploymentConfigs } from "../submodules/library-sui/src/DeploymentConfig";
+import { Client, OnChainCalls, Transaction } from "../submodules/library-sui";
 
 config({ path: ".env" });
 

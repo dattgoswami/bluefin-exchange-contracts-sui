@@ -1,6 +1,6 @@
-import { toBigNumberStr } from "../src/library";
+import { toBigNumberStr } from "../submodules/library-sui";
 import { executeTests } from "./helpers/executor";
-import { MarketDetails } from "../src/interfaces";
+import { MarketDetails } from "../submodules/library-sui";
 import { TestCaseJSON } from "./helpers/interfaces";
 
 const tradesWithoutFee: TestCaseJSON = {

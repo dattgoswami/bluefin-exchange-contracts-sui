@@ -1,4 +1,4 @@
-import { requestGas } from "../../src/utils";
+import { requestGas } from "../../submodules/library-sui";
 import { TEST_WALLETS } from "./accounts";
 
 async function main() {

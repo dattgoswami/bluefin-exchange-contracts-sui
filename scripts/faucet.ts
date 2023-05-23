@@ -1,6 +1,6 @@
 import { config } from "dotenv";
 import * as yargs from "yargs";
-import { requestGas } from "../src/utils";
+import { requestGas } from "../submodules/library-sui";
 
 config({ path: ".env" });
 

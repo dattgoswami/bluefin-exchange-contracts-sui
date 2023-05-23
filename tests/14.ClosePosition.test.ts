@@ -1,5 +1,5 @@
 import { Account, getTestAccounts } from "./helpers/accounts";
-import { network, DeploymentConfigs } from "../src/DeploymentConfig";
+import { network, DeploymentConfigs } from "../submodules/library-sui";
 import {
     createMarket,
     createOrder,
@@ -7,15 +7,15 @@ import {
     getProvider,
     getSignerFromSeed,
     readFile
-} from "../src/utils";
-import { BASE_DECIMALS, toBigNumber, toBigNumberStr } from "../src/library";
+} from "../submodules/library-sui";
+import { BASE_DECIMALS, toBigNumber, toBigNumberStr } from "../submodules/library-sui";
 import {
     BankAccountDetails,
     OnChainCalls,
     OrderSigner,
     Trader,
     Transaction
-} from "../src";
+} from "../submodules/library-sui";
 import { expect, expectTxToSucceed } from "./helpers/expect";
 import { SuiTransactionBlockResponse } from "@mysten/sui.js";
 import { config } from "dotenv";
