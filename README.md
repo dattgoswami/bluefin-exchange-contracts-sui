@@ -4,7 +4,7 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 
 ## Prerequisites:
 
-- SUI Node: >= v0.33.0
+- SUI Node: 1.2.0
 - Node: v18.x.x
 
 ## How to
@@ -20,8 +20,7 @@ Repository containing bluefin core exchange contracts that allow users to do on-
   $ ts-node ./scripts/deploy/full.ts
   Performing full deployment on: http://suitest.bluefin.io:9000
   Deployer SUI address: 0x0d8790b07549b9f3cfc8f66a3719cd1d6636812fb76e0b3306d13f429706f8a9
-  Switched client env to: cloud
-  Switched client account to: 0x0d8790b07549b9f3cfc8f66a3719cd1d6636812fb76e0b3306d13f429706f8a9
+  2023-05-24T10:04:21.034302Z  INFO sui::client_commands: Active environment switched to [local]
   INCLUDING DEPENDENCY Sui
   INCLUDING DEPENDENCY MoveStdlib
   BUILDING bluefin_foundation
