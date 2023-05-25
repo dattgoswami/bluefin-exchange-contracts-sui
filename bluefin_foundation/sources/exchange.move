@@ -163,21 +163,18 @@ module bluefin_foundation::exchange {
         margin_bank::initialize_account(
             margin_bank::mut_accounts(bank), 
             object::id_to_address(&perpID),
-            ctx
         );
 
         // create bank account for insurance pool of perpetual
         margin_bank::initialize_account(
             margin_bank::mut_accounts(bank), 
             insurancePool,
-            ctx
         );
 
         // create bank account for fee pool of perpetual
         margin_bank::initialize_account(
             margin_bank::mut_accounts(bank), 
             feePool,
-            ctx
         );
 
     }

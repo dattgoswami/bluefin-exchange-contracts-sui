@@ -4,8 +4,9 @@ import {
     getSignerFromSeed,
     getProvider,
     publishPackage,
-    getDeploymentData,
-    createMarket
+    packDeploymentData,
+    createMarket,
+    getBankTable
 } from "../../submodules/library-sui";
 import { Client, Transaction } from "../../submodules/library-sui";
 import { DeploymentConfigs } from "../../submodules/library-sui";
@@ -43,13 +44,15 @@ async function main() {
         // fetch created objects
         const objects = await getGenesisMap(provider, publishTxn);
 
-        const deploymentData = getDeploymentData(deployerAddress, objects);
+        objects["BankTable"] = await getBankTable(provider, objects);
+
+        const deploymentData = packDeploymentData(deployerAddress, objects);
 
         // create perpetual
         console.log("Creating Perpetual Markets");
         for (const marketConfig of DeploymentConfigs.markets) {
             console.log(`-> ${marketConfig.name}`);
-            const { marketObjects, bankAccounts } = await createMarket(
+            const marketObjects = await createMarket(
                 deploymentData,
                 signer,
                 provider,
@@ -59,11 +62,6 @@ async function main() {
             deploymentData["markets"][marketConfig.name as string] = {
                 Config: marketConfig,
                 Objects: marketObjects
-            };
-
-            deploymentData.bankAccounts = {
-                ...deploymentData.bankAccounts,
-                ...bankAccounts
             };
         }
 

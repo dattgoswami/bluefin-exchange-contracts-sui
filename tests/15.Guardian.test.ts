@@ -7,7 +7,7 @@ import {
     getGenesisMap,
     publishPackage,
     createMarket,
-    getDeploymentData
+    packDeploymentData
 } from "../submodules/library-sui";
 import { OnChainCalls, Transaction } from "../submodules/library-sui";
 import { fundTestAccounts } from "./helpers/utils";
@@ -35,7 +35,7 @@ describe("Guardian", () => {
     beforeEach(async () => {
         const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
-        const deployment = getDeploymentData(ownerAddress, objects);
+        const deployment = packDeploymentData(ownerAddress, objects);
         const enrichedDeployment = {
             ...deployment,
             markets: {

@@ -43,8 +43,7 @@ module bluefin_foundation::margin_bank {
     //                      STRUCTS
     //================================================================//
 
-    struct BankAccount has key, store{
-        id: UID,
+    struct BankAccount has store{
         balance: u128,
         owner: address,
     }
@@ -115,9 +114,9 @@ module bluefin_foundation::margin_bank {
         let accounts = &mut bank.accounts;
                 
         // initializing the balance of the account address if it doesn't exist
-        initialize_account(accounts, destination, ctx);
+        initialize_account(accounts, destination);
         // initializing the balance of the sender address if it doesn't exist
-        initialize_account(accounts, sender, ctx);
+        initialize_account(accounts, sender);
 
         // getting the amount of the coin
         let total_coin_value = coin::value(coin);
@@ -262,14 +261,13 @@ module bluefin_foundation::margin_bank {
 
 
 
-    public (friend) fun initialize_account(accounts: &mut Table<address, BankAccount>, addr: address, ctx: &mut TxContext){
+    public (friend) fun initialize_account(accounts: &mut Table<address, BankAccount>, addr: address){
 
         // checking if the account exists
         if(!table::contains(accounts, addr)){
 
             // initializing the account
             table::add(accounts, addr, BankAccount {
-                id: object::new(ctx),
                 balance: 0u128,
                 owner: addr,
             });

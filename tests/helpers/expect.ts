@@ -98,27 +98,25 @@ export async function evaluateSystemExpect(
     perpetualAddress: string
 ) {
     if (expectedSystemValues.fee) {
-        const feePoolBalance = await onChain.getBankAccountDetailsUsingAddress(
-            feePoolAddress
-        );
+        const feePoolBalance = await onChain.getUserBankBalance(feePoolAddress);
         expect(bnToBaseStr(feePoolBalance)).to.be.equal(
             bigNumber(expectedSystemValues.fee).toFixed(6)
         );
     }
 
     if (expectedSystemValues.insurancePool) {
-        const insurancePoolBalance =
-            await onChain.getBankAccountDetailsUsingAddress(
-                insurancePoolAddress
-            );
+        const insurancePoolBalance = await onChain.getUserBankBalance(
+            insurancePoolAddress
+        );
         expect(bnToBaseStr(insurancePoolBalance)).to.be.equal(
             bigNumber(expectedSystemValues.insurancePool).toFixed(6)
         );
     }
 
     if (expectedSystemValues.perpetual) {
-        const perpetualBalance =
-            await onChain.getBankAccountDetailsUsingAddress(perpetualAddress);
+        const perpetualBalance = await onChain.getUserBankBalance(
+            perpetualAddress
+        );
         expect(bnToBaseStr(perpetualBalance)).to.be.equal(
             bigNumber(expectedSystemValues.perpetual).toFixed(6)
         );
@@ -139,7 +137,7 @@ export async function evaluateAccountPositionExpect(
 
     const expectedPosition = getExpectedTestPosition(expectedJSON);
 
-    const bankAcctDetails = await onChain.getBankAccountDetails(
+    const bankAcctDetails = await onChain.getBankAccountDetailsUsingID(
         account.bankAccountId as string
     );
     const onChainPosition = toExpectedPositionFormat(

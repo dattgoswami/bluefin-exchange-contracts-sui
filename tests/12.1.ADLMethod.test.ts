@@ -8,9 +8,13 @@ import {
     createMarket,
     publishPackage,
     getGenesisMap,
-    getDeploymentData
+    packDeploymentData
 } from "../submodules/library-sui";
-import { OnChainCalls, OrderSigner, Transaction } from "../submodules/library-sui";
+import {
+    OnChainCalls,
+    OrderSigner,
+    Transaction
+} from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
 import { toBigNumber, toBigNumberStr } from "../submodules/library-sui";
@@ -44,7 +48,7 @@ describe("Deleveraging Trade Method", () => {
     before(async () => {
         const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
-        const deploymentData = await getDeploymentData(ownerAddress, objects);
+        const deploymentData = await packDeploymentData(ownerAddress, objects);
 
         // deploy market
         deploymentData["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
@@ -125,7 +129,7 @@ describe("Deleveraging Trade Method", () => {
     it("should revert as owner is no longer deleveraging operator", async () => {
         const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
-        const localDeployment = getDeploymentData(ownerAddress, objects);
+        const localDeployment = packDeploymentData(ownerAddress, objects);
 
         localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
 
@@ -511,7 +515,7 @@ describe("Deleveraging Trade Method", () => {
     it("should successfully partially deleverage taker of adl trade", async () => {
         const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
-        const localDeployment = getDeploymentData(ownerAddress, objects);
+        const localDeployment = packDeploymentData(ownerAddress, objects);
 
         localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
 

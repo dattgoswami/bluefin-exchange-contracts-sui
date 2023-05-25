@@ -8,7 +8,11 @@ import {
     getSignerFromSeed,
     readFile
 } from "../submodules/library-sui";
-import { BASE_DECIMALS, toBigNumber, toBigNumberStr } from "../submodules/library-sui";
+import {
+    BASE_DECIMALS,
+    toBigNumber,
+    toBigNumberStr
+} from "../submodules/library-sui";
 import {
     BankAccountDetails,
     OnChainCalls,
@@ -516,7 +520,7 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
 
                 if (testCase.expect) {
                     const bankAcctDetails =
-                        (await onChain.getBankAccountDetails(
+                        (await onChain.getBankAccountDetailsUsingID(
                             account.bankAccountId as string
                         )) as BankAccountDetails;
 

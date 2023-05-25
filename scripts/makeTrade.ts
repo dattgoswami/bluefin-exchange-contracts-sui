@@ -86,6 +86,24 @@ async function main() {
     if (status == "failure") {
         console.log("Error:", Transaction.getError(tx));
     }
+
+    console.log(
+        "Maker bank balance: ",
+        +(await onChain.getUserBankBalance(accounts.maker.address))
+    );
+    console.log(
+        "Maker Position: ",
+        await onChain.getUserPosition(accounts.maker.address)
+    );
+
+    console.log(
+        "Taker bank balance: ",
+        +(await onChain.getUserBankBalance(accounts.taker.address))
+    );
+    console.log(
+        "Taker Position: ",
+        await onChain.getUserPosition(accounts.taker.address)
+    );
 }
 
 main();

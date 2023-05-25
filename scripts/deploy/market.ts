@@ -2,7 +2,7 @@ import {
     writeFile,
     getSignerFromSeed,
     getProvider,
-    getDeploymentData,
+    packDeploymentData,
     createMarket
 } from "../../submodules/library-sui";
 import { Client } from "../../submodules/library-sui";
@@ -30,11 +30,10 @@ async function main() {
 
     const path = "../../deployment.json";
     const data = await import(path);
-    const deployment = getDeploymentData(
+    const deployment = packDeploymentData(
         data.deployer,
         data.objects,
-        data.markets,
-        data.bankAccounts
+        data.markets
     );
 
     console.log(`Creating perpetual for market: ${market}`);
@@ -62,12 +61,7 @@ async function main() {
 
     deployment.markets[marketConfig.name as string] = {
         Config: marketConfig,
-        Objects: marketMap.marketObjects
-    };
-
-    deployment.bankAccounts = {
-        ...deployment.bankAccounts,
-        ...marketMap.bankAccounts
+        Objects: marketMap
     };
 
     await writeFile(DeploymentConfigs.filePath, deployment);

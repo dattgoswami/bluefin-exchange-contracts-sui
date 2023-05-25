@@ -6,7 +6,7 @@ import {
     getSignerFromSeed,
     getGenesisMap,
     publishPackage,
-    getDeploymentData,
+    packDeploymentData,
     requestGas
 } from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
@@ -40,7 +40,7 @@ describe("Roles", () => {
         await requestGas(ownerAddress);
         const publishTxn = await publishPackage(false, ownerSigner);
         const objects = await getGenesisMap(provider, publishTxn);
-        const deploymentData = await getDeploymentData(ownerAddress, objects);
+        const deploymentData = await packDeploymentData(ownerAddress, objects);
         onChain = new OnChainCalls(ownerSigner, deploymentData);
     });
 

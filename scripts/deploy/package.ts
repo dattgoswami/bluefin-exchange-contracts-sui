@@ -4,7 +4,8 @@ import {
     getSignerFromSeed,
     getProvider,
     publishPackage,
-    getDeploymentData
+    packDeploymentData,
+    getBankTable
 } from "../../submodules/library-sui";
 import { DeploymentConfigs } from "../../submodules/library-sui";
 import { Client, Transaction } from "../../submodules/library-sui";
@@ -37,7 +38,9 @@ async function main() {
         // fetch created objects
         const objects = await getGenesisMap(provider, publishTxn);
 
-        const deploymentData = getDeploymentData(deployerAddress, objects);
+        objects["BankTable"] = await getBankTable(provider, objects);
+
+        const deploymentData = packDeploymentData(deployerAddress, objects);
 
         await writeFile(DeploymentConfigs.filePath, deploymentData);
         console.log(
