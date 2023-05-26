@@ -572,7 +572,7 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
             }
         );
 
-        deployment["markets"]["ETH-PERP"].Objects = marketData.marketObjects;
+        deployment["markets"]["ETH-PERP"].Objects = marketData;
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 

@@ -8,11 +8,20 @@ import {
     createMarket,
     createOrder
 } from "../submodules/library-sui";
-import { OnChainCalls, OrderSigner, Trader, Transaction } from "../submodules/library-sui";
+import {
+    OnChainCalls,
+    OrderSigner,
+    Trader,
+    Transaction
+} from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { getTestAccounts } from "./helpers/accounts";
 import { network } from "../submodules/library-sui";
-import { ADDRESSES, toBigNumber, toBigNumberStr } from "../submodules/library-sui";
+import {
+    ADDRESSES,
+    toBigNumber,
+    toBigNumberStr
+} from "../submodules/library-sui";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
 import { fundTestAccounts, mintAndDeposit } from "./helpers/utils";
 
@@ -31,11 +40,14 @@ describe("Funding Oracle", () => {
         await fundTestAccounts();
 
         // deploy market
-        deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
         onChain = new OnChainCalls(ownerSigner, deployment);
         ownerAddress = await ownerSigner.getAddress();
     });
@@ -59,11 +71,14 @@ describe("Funding Oracle", () => {
     it("should revert as alice no longer has FR cap, so can not update Funding rate", async () => {
         const localDeployment = { ...deployment };
         // trade starting time, current time + 1000 seconds
-        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
@@ -98,11 +113,14 @@ describe("Funding Oracle", () => {
     it("should revert as funding rate can not be set for 0th window", async () => {
         const localDeployment = { ...deployment };
         // trade starting time, current time + 1000 seconds
-        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now()
-            })
-        ).marketObjects;
+            }
+        );
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 

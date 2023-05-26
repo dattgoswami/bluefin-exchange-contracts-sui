@@ -8,7 +8,12 @@ import {
     createMarket,
     createOrder
 } from "../submodules/library-sui";
-import { OnChainCalls, OrderSigner, Trader, Transaction } from "../submodules/library-sui";
+import {
+    OnChainCalls,
+    OrderSigner,
+    Trader,
+    Transaction
+} from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { getTestAccounts } from "./helpers/accounts";
 import { network } from "../submodules/library-sui";
@@ -30,11 +35,14 @@ describe("Perpetual", () => {
 
     before(async () => {
         // deploy market
-        deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
         onChain = new OnChainCalls(ownerSigner, deployment);
         ownerAddress = await ownerSigner.getAddress();
     });
@@ -42,11 +50,14 @@ describe("Perpetual", () => {
     it("should revert when trying to trade/liquidate/deleverage as perpetual start time < current chain time", async () => {
         const localDeployment = { ...deployment };
         // trade starting time, current time + 1000 seconds
-        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() + 1000000
-            })
-        ).marketObjects;
+            }
+        );
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
@@ -169,12 +180,15 @@ describe("Perpetual", () => {
     describe("Delist Perpetual", () => {
         beforeEach(async () => {
             // deploy market
-            deployment["markets"]["ETH-PERP"]["Objects"] = (
-                await createMarket(deployment, ownerSigner, provider, {
+            deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+                deployment,
+                ownerSigner,
+                provider,
+                {
                     tickSize: toBigNumberStr(0.1),
                     startingTime: Date.now() - 1000
-                })
-            ).marketObjects;
+                }
+            );
 
             onChain = new OnChainCalls(ownerSigner, deployment);
         });
@@ -407,11 +421,14 @@ describe("Perpetual", () => {
 
     it("should revert when trying to trade/liquidate/deleverage as trading has been stopped on the perpetual", async () => {
         const localDeployment = { ...deployment };
-        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 10000
-            })
-        ).marketObjects;
+            }
+        );
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
@@ -495,12 +512,15 @@ describe("Perpetual", () => {
 
         before(async () => {
             // deploy market
-            deployment["markets"]["ETH-PERP"]["Objects"] = (
-                await createMarket(deployment, ownerSigner, provider, {
+            deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+                deployment,
+                ownerSigner,
+                provider,
+                {
                     tickSize: toBigNumberStr(0.1),
                     startingTime: Date.now() - 1000
-                })
-            ).marketObjects;
+                }
+            );
 
             onChain = new OnChainCalls(ownerSigner, deployment);
 

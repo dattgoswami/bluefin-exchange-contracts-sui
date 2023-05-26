@@ -45,11 +45,14 @@ describe("Price Oracle", () => {
     });
 
     beforeEach(async () => {
-        deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 

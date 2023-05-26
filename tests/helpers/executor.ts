@@ -10,7 +10,12 @@ import {
     requestGas
 } from "../../submodules/library-sui";
 import { toBigNumber, toBigNumberStr } from "../../submodules/library-sui";
-import { OnChainCalls, OrderSigner, Trader, Transaction } from "../../submodules/library-sui";
+import {
+    OnChainCalls,
+    OrderSigner,
+    Trader,
+    Transaction
+} from "../../submodules/library-sui";
 import {
     evaluateSystemExpect,
     expect,
@@ -67,7 +72,7 @@ export async function executeTests(
         );
 
         // init state
-        deployment["markets"]["ETH-PERP"]["Objects"] = marketData.marketObjects;
+        deployment["markets"]["ETH-PERP"]["Objects"] = marketData;
 
         deployment.bankAccounts = {
             ...deployment.bankAccounts,

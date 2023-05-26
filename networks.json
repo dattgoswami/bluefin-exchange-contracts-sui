@@ -1,10 +1,10 @@
 {
   "local": {
     "rpc": "http://127.0.0.1:9000",
-    "faucet": "http://127.0.0.1:5003/gas"
+    "faucet": "http://127.0.0.1:5003"
   },
   "cloud": {
-    "rpc": "http://suitest.bluefin.io:9000",
+    "rpc": "http://suitest.bluefin.io",
     "faucet": "http://suitest.bluefin.io/gas"
   },
   "devnet": {

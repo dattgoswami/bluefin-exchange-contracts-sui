@@ -1,7 +1,11 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { DeploymentConfigs } from "../submodules/library-sui";
-import { OnChainCalls, Transaction, OrderSigner } from "../submodules/library-sui";
+import {
+    OnChainCalls,
+    Transaction,
+    OrderSigner
+} from "../submodules/library-sui";
 import { Trader } from "../submodules/library-sui";
 import {
     readFile,
@@ -65,11 +69,14 @@ describe("Evaluator", () => {
 
     // deploy the market again before each test
     beforeEach(async () => {
-        deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
 
         onChain = new OnChainCalls(ownerSigner, deployment);
     });

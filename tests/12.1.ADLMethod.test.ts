@@ -53,9 +53,11 @@ describe("Deleveraging Trade Method", () => {
         // deploy market
         deploymentData["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
 
-        deploymentData["markets"]["ETH-PERP"].Objects = (
-            await createMarket(deploymentData, ownerSigner, provider)
-        ).marketObjects;
+        deploymentData["markets"]["ETH-PERP"].Objects = await createMarket(
+            deploymentData,
+            ownerSigner,
+            provider
+        );
 
         onChain = new OnChainCalls(ownerSigner, deploymentData);
 
@@ -133,9 +135,11 @@ describe("Deleveraging Trade Method", () => {
 
         localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
 
-        localDeployment["markets"]["ETH-PERP"].Objects = (
-            await createMarket(localDeployment, ownerSigner, provider)
-        ).marketObjects;
+        localDeployment["markets"]["ETH-PERP"].Objects = await createMarket(
+            localDeployment,
+            ownerSigner,
+            provider
+        );
 
         const onChainCaller = new OnChainCalls(ownerSigner, localDeployment);
 
@@ -519,9 +523,11 @@ describe("Deleveraging Trade Method", () => {
 
         localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
 
-        localDeployment["markets"]["ETH-PERP"].Objects = (
-            await createMarket(localDeployment, ownerSigner, provider)
-        ).marketObjects;
+        localDeployment["markets"]["ETH-PERP"].Objects = await createMarket(
+            localDeployment,
+            ownerSigner,
+            provider
+        );
 
         const onChainCaller = new OnChainCalls(ownerSigner, localDeployment);
 

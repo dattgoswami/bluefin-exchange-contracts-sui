@@ -9,10 +9,18 @@ import {
     createMarket,
     requestGas
 } from "../submodules/library-sui";
-import { OnChainCalls, OrderSigner, Transaction } from "../submodules/library-sui";
+import {
+    OnChainCalls,
+    OrderSigner,
+    Transaction
+} from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
-import { bigNumber, toBigNumber, toBigNumberStr } from "../submodules/library-sui";
+import {
+    bigNumber,
+    toBigNumber,
+    toBigNumberStr
+} from "../submodules/library-sui";
 import { getTestAccounts } from "./helpers/accounts";
 import { Trader } from "../submodules/library-sui";
 import { network } from "../submodules/library-sui";
@@ -42,12 +50,15 @@ describe("Trade", () => {
         await requestGas(bob.address);
 
         // deploy market
-        deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 maxAllowedPriceDiffInOP: toBigNumberStr(1000),
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
 
         onChain = new OnChainCalls(ownerSigner, deployment);
         ownerAddress = await ownerSigner.getAddress();
@@ -692,11 +703,9 @@ describe("Trade", () => {
 
         // deploying a new market
         deployment["markets"]["BTC-PERP"] = {
-            Objects: (
-                await createMarket(deployment, ownerSigner, provider, {
-                    startingTime: Date.now() - 1000
-                })
-            ).marketObjects
+            Objects: await createMarket(deployment, ownerSigner, provider, {
+                startingTime: Date.now() - 1000
+            })
         };
 
         onChain = new OnChainCalls(ownerSigner, deployment);

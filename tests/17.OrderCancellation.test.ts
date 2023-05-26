@@ -8,11 +8,19 @@ import {
     createMarket,
     createOrder
 } from "../submodules/library-sui/src/utils";
-import { OnChainCalls, OrderSigner, Trader, Transaction } from "../submodules/library-sui/src/classes";
+import {
+    OnChainCalls,
+    OrderSigner,
+    Trader,
+    Transaction
+} from "../submodules/library-sui/src/classes";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { getTestAccounts } from "./helpers/accounts";
 import { network } from "../submodules/library-sui/src/DeploymentConfig";
-import { base64ToHex, toBigNumberStr } from "../submodules/library-sui/src/library";
+import {
+    base64ToHex,
+    toBigNumberStr
+} from "../submodules/library-sui/src/library";
 import { ERROR_CODES } from "../submodules/library-sui/src/errors";
 import { mintAndDeposit } from "./helpers/utils";
 
@@ -34,11 +42,14 @@ describe("Order Cancellation", () => {
 
     before(async () => {
         // deploy market
-        deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
         onChain = new OnChainCalls(ownerSigner, deployment);
         ownerAddress = await ownerSigner.getAddress();
 
@@ -83,28 +94,13 @@ describe("Order Cancellation", () => {
             market: onChain.getPerpetualID()
         });
 
-        const signature = orderSigner.signOrder(order);
+        const signature = orderSigner.signOrder(order, alice.keyPair);
+
+        const tester = getTestAccounts(provider)[7];
 
         const tx = await onChain.cancelOrder(
-            { order, signature, gasBudget: 5000000 },
-            bob.signer
-        );
-        expectTxToFail(tx);
-
-        expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[52]);
-    });
-
-    it("should revert as caller for cancellation is not order maker or its sub account", async () => {
-        const order = createOrder({
-            maker: alice.address,
-            market: onChain.getPerpetualID()
-        });
-
-        const signature = orderSigner.signOrder(order);
-
-        const tx = await onChain.cancelOrder(
-            { order, signature, gasBudget: 5000000 },
-            bob.signer
+            { order, signature, gasBudget: 500000000 },
+            tester.signer
         );
         expectTxToFail(tx);
 

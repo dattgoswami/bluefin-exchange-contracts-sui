@@ -9,7 +9,11 @@ import {
     createMarket,
     requestGas
 } from "../submodules/library-sui";
-import { OnChainCalls, OrderSigner, Transaction } from "../submodules/library-sui";
+import {
+    OnChainCalls,
+    OrderSigner,
+    Transaction
+} from "../submodules/library-sui";
 import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
 import { ERROR_CODES } from "../submodules/library-sui";
 import { toBigNumberStr } from "../submodules/library-sui";
@@ -40,11 +44,14 @@ describe("Liquidation Trade Method", () => {
 
     before(async () => {
         // deploy market
-        deployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(deployment, ownerSigner, provider, {
+        deployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            deployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
 
         onChain = new OnChainCalls(ownerSigner, deployment);
 
@@ -307,7 +314,7 @@ describe("Liquidation Trade Method", () => {
         expect(Transaction.getError(txResponse)).to.be.equal(ERROR_CODES[702]);
     });
 
-    it("should successfully completely liquidate alice/maker", async () => {
+    it("should successfuLiquidation Trade Methodlly completely liquidate alice/maker", async () => {
         // set oracle price to 89, alice becomes liquidate-able
         await onChain.updateOraclePrice({
             price: toBigNumberStr(89),
@@ -345,11 +352,14 @@ describe("Liquidation Trade Method", () => {
         // deploy market
         const localDeployment = deployment;
 
-        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(localDeployment, ownerSigner, provider, {
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            localDeployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
@@ -421,11 +431,14 @@ describe("Liquidation Trade Method", () => {
         // deploy market
         const localDeployment = deployment;
 
-        localDeployment["markets"]["ETH-PERP"]["Objects"] = (
-            await createMarket(localDeployment, ownerSigner, provider, {
+        localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
+            localDeployment,
+            ownerSigner,
+            provider,
+            {
                 startingTime: Date.now() - 1000
-            })
-        ).marketObjects;
+            }
+        );
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
