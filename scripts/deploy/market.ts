@@ -40,7 +40,7 @@ async function main() {
 
     // create perpetual
     const marketConfig = DeploymentConfigs.markets.filter((data) => {
-        if (data["name"] == market) {
+        if (data["symbol"] == market) {
             return true;
         }
     })[0];
@@ -59,7 +59,7 @@ async function main() {
         marketConfig
     );
 
-    deployment.markets[marketConfig.name as string] = {
+    deployment.markets[marketConfig.symbol as string] = {
         Config: marketConfig,
         Objects: marketMap
     };
