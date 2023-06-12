@@ -51,7 +51,7 @@ async function main() {
         // create perpetual
         console.log("Creating Perpetual Markets");
         for (const marketConfig of DeploymentConfigs.markets) {
-            console.log(`-> ${marketConfig.name}`);
+            console.log(`-> ${marketConfig.symbol}`);
             const marketObjects = await createMarket(
                 deploymentData,
                 signer,
@@ -59,7 +59,7 @@ async function main() {
                 marketConfig
             );
 
-            deploymentData["markets"][marketConfig.name as string] = {
+            deploymentData["markets"][marketConfig.symbol as string] = {
                 Config: marketConfig,
                 Objects: marketObjects
             };
