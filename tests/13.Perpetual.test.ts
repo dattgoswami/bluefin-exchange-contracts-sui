@@ -1,28 +1,28 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
+    DeploymentConfigs,
     readFile,
     getProvider,
     getSignerFromSeed,
     createMarket,
-    createOrder
-} from "../submodules/library-sui";
-import {
+    createOrder,
     OnChainCalls,
     OrderSigner,
     Trader,
-    Transaction
+    Transaction,
+    getTestAccounts,
+    network,
+    ADDRESSES,
+    toBigNumberStr,
+    ERROR_CODES,
+    OWNERSHIP_ERROR
 } from "../submodules/library-sui";
-import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { getTestAccounts } from "./helpers/accounts";
-import { network } from "../submodules/library-sui";
-import { ADDRESSES, toBigNumberStr } from "../submodules/library-sui";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
-import { mintAndDeposit } from "./helpers/utils";
+import {
+    expect,
+    expectTxToFail,
+    expectTxToSucceed,
+    mintAndDeposit
+} from "./helpers";
 
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 const provider = getProvider(network.rpc, network.faucet);
 
 describe("Perpetual", () => {
@@ -40,7 +40,7 @@ describe("Perpetual", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -55,7 +55,7 @@ describe("Perpetual", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() + 1000000
+                tradingStartTime: Date.now() + 1000000
             }
         );
 
@@ -186,7 +186,7 @@ describe("Perpetual", () => {
                 provider,
                 {
                     tickSize: toBigNumberStr(0.1),
-                    startingTime: Date.now() - 1000
+                    tradingStartTime: Date.now() - 1000
                 }
             );
 
@@ -426,7 +426,7 @@ describe("Perpetual", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 10000
+                tradingStartTime: Date.now() - 10000
             }
         );
 
@@ -518,7 +518,7 @@ describe("Perpetual", () => {
                 provider,
                 {
                     tickSize: toBigNumberStr(0.1),
-                    startingTime: Date.now() - 1000
+                    tradingStartTime: Date.now() - 1000
                 }
             );
 

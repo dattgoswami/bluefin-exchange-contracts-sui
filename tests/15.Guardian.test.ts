@@ -1,21 +1,23 @@
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
+    DeploymentConfigs,
     getProvider,
     getSignerFromSeed,
     getGenesisMap,
     publishPackage,
     createMarket,
-    packDeploymentData
+    packDeploymentData,
+    getTestAccounts,
+    TEST_WALLETS,
+    toBigNumberStr,
+    OnChainCalls,
+    Transaction
 } from "../submodules/library-sui";
-import { OnChainCalls, Transaction } from "../submodules/library-sui";
-import { fundTestAccounts } from "./helpers/utils";
-import { expectTxToEmitEvent, expectTxToSucceed } from "./helpers/expect";
-import { getTestAccounts, TEST_WALLETS } from "./helpers/accounts";
-import { toBigNumberStr } from "../submodules/library-sui";
-
-chai.use(chaiAsPromised);
+import {
+    expectTxToEmitEvent,
+    expectTxToSucceed,
+    expect,
+    fundTestAccounts
+} from "./helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -45,7 +47,7 @@ describe("Guardian", () => {
                         ownerSigner,
                         provider,
                         {
-                            startingTime: Date.now() - 1000
+                            tradingStartTime: Date.now() - 1000
                         }
                     )
                 }

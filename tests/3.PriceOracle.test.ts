@@ -1,26 +1,25 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
+    DeploymentConfigs,
+    OnChainCalls,
+    Transaction,
     readFile,
     getProvider,
     getSignerFromSeed,
     createMarket,
-    requestGas
+    requestGas,
+    ERROR_CODES,
+    OWNERSHIP_ERROR,
+    bigNumber,
+    toBigNumber,
+    getTestAccounts
 } from "../submodules/library-sui";
-import { OnChainCalls, Transaction } from "../submodules/library-sui";
-import { getTestAccounts } from "./helpers/accounts";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
-import { bigNumber, toBigNumber } from "../submodules/library-sui";
 import {
     expectTxToEmitEvent,
+    expect,
     expectTxToFail,
-    expectTxToSucceed
-} from "./helpers/expect";
-import { fundTestAccounts } from "./helpers/utils";
-
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+    expectTxToSucceed,
+    fundTestAccounts
+} from "./helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -50,7 +49,7 @@ describe("Price Oracle", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
 

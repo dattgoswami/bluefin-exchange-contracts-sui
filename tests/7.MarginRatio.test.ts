@@ -1,7 +1,5 @@
-import { toBigNumberStr } from "../submodules/library-sui";
-import { executeTests } from "./helpers/executor";
-import { MarketDetails } from "../submodules/library-sui";
-import { TestCaseJSON } from "./helpers/interfaces";
+import { toBigNumberStr, MarketDetails } from "../submodules/library-sui";
+import { executeTests, TestCaseJSON } from "./helpers";
 
 const mrTests: TestCaseJSON = {
     "Test # 1 - Case I: Long position, Long Order = Error on 3rd order": [
@@ -1026,12 +1024,12 @@ const mrTests: TestCaseJSON = {
 
 describe("Margin Ratio", () => {
     const marketConfig: MarketDetails = {
-        makerFee: toBigNumberStr(0.02),
-        takerFee: toBigNumberStr(0.05),
+        defaultMakerFee: toBigNumberStr(0.02),
+        defaultTakerFee: toBigNumberStr(0.05),
         mtbLong: toBigNumberStr(1),
         mtbShort: toBigNumberStr(0.99),
-        initialMarginRequired: toBigNumberStr(0.0625),
-        maintenanceMarginRequired: toBigNumberStr(0.05),
+        initialMarginReq: toBigNumberStr(0.0625),
+        maintenanceMarginReq: toBigNumberStr(0.05),
         tickSize: toBigNumberStr(0.0000001),
         maxAllowedPriceDiffInOP: toBigNumberStr(100)
     };

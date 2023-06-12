@@ -1,29 +1,30 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
+    DeploymentConfigs,
     OnChainCalls,
     Transaction,
-    OrderSigner
-} from "../submodules/library-sui";
-import { Trader } from "../submodules/library-sui";
-import {
+    OrderSigner,
+    Trader,
     readFile,
     getProvider,
     getSignerFromSeed,
     createMarket,
     createOrder,
-    requestGas
+    requestGas,
+    toBigNumberStr,
+    toBigNumber,
+    ERROR_CODES,
+    OWNERSHIP_ERROR,
+    getTestAccounts,
+    TEST_WALLETS
 } from "../submodules/library-sui";
-import { getTestAccounts } from "./helpers/accounts";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
-import { toBigNumberStr, toBigNumber } from "../submodules/library-sui";
-import { TEST_WALLETS } from "./helpers/accounts";
-import { fundTestAccounts, mintAndDeposit } from "./helpers/utils";
-import { expectTxToSucceed, expectTxToFail } from "./helpers/expect";
 
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import {
+    fundTestAccounts,
+    mintAndDeposit,
+    expectTxToSucceed,
+    expectTxToFail,
+    expect
+} from "./helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -74,7 +75,7 @@ describe("Evaluator", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
 

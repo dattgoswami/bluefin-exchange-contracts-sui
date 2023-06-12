@@ -1,31 +1,27 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui/src/DeploymentConfig";
 import {
+    DeploymentConfigs,
     readFile,
     getProvider,
     getSignerFromSeed,
     createMarket,
-    createOrder
-} from "../submodules/library-sui/src/utils";
-import {
+    createOrder,
     OnChainCalls,
     OrderSigner,
     Trader,
-    Transaction
-} from "../submodules/library-sui/src/classes";
-import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { getTestAccounts } from "./helpers/accounts";
-import { network } from "../submodules/library-sui/src/DeploymentConfig";
-import {
+    Transaction,
+    network,
+    getTestAccounts,
     base64ToHex,
-    toBigNumberStr
-} from "../submodules/library-sui/src/library";
-import { ERROR_CODES } from "../submodules/library-sui/src/errors";
-import { mintAndDeposit } from "./helpers/utils";
+    toBigNumberStr,
+    ERROR_CODES
+} from "../submodules/library-sui";
+import {
+    expectTxToFail,
+    expectTxToSucceed,
+    expect,
+    mintAndDeposit
+} from "./helpers";
 
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 const provider = getProvider(network.rpc, network.faucet);
 
 describe("Order Cancellation", () => {
@@ -47,7 +43,7 @@ describe("Order Cancellation", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);

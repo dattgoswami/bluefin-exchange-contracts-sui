@@ -1,19 +1,15 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
+    DeploymentConfigs,
     readFile,
     getProvider,
     getSignerFromSeed,
-    requestGas
+    requestGas,
+    OnChainCalls,
+    Transaction,
+    OWNERSHIP_ERROR,
+    TEST_WALLETS
 } from "../submodules/library-sui";
-import { OnChainCalls, Transaction } from "../submodules/library-sui";
-import { TEST_WALLETS } from "./helpers/accounts";
-import { OWNERSHIP_ERROR } from "../submodules/library-sui";
-import { fundTestAccounts } from "./helpers/utils";
-
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { fundTestAccounts, expect } from "./helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -49,7 +45,9 @@ describe("Sanity Tests", () => {
     });
 
     it("should allow admin to create a perpetual", async () => {
-        const txResponse = await onChain.createPerpetual({ name: "TEST-PERP" });
+        const txResponse = await onChain.createPerpetual({
+            symbol: "TEST-PERP"
+        });
         const event = Transaction.getEvents(
             txResponse,
             "PerpetualCreationEvent"

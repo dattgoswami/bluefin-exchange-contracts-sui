@@ -1,32 +1,23 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
     getSignerFromSeed,
     createMarket,
-    createOrder
-} from "../submodules/library-sui";
-import {
     OnChainCalls,
-    OrderSigner,
-    Trader,
+    DeploymentConfigs,
+    getTestAccounts,
+    network,
+    toBigNumber,
+    ERROR_CODES,
     Transaction
 } from "../submodules/library-sui";
-import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { getTestAccounts } from "./helpers/accounts";
-import { network } from "../submodules/library-sui";
 import {
-    ADDRESSES,
-    toBigNumber,
-    toBigNumberStr
-} from "../submodules/library-sui";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
-import { fundTestAccounts, mintAndDeposit } from "./helpers/utils";
+    expectTxToFail,
+    expectTxToSucceed,
+    expect,
+    fundTestAccounts
+} from "./helpers";
 
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 const provider = getProvider(network.rpc, network.faucet);
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const deployment = readFile(DeploymentConfigs.filePath);
@@ -45,7 +36,7 @@ describe("Funding Oracle", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -54,14 +45,14 @@ describe("Funding Oracle", () => {
 
     it("should successfully update max allowed FR", async () => {
         const txResult = await onChain.setMaxAllowedFundingRate({
-            maxAllowedFR: 1
+            maxFundingRate: 1
         });
         expectTxToSucceed(txResult);
     });
 
     it("should not update max allowed FR if greater than 100%", async () => {
         const txResult = await onChain.setMaxAllowedFundingRate({
-            maxAllowedFR: 1.000001,
+            maxFundingRate: 1.000001,
             gasBudget: 200000000
         });
         expectTxToFail(txResult);
@@ -76,7 +67,7 @@ describe("Funding Oracle", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
 
@@ -118,7 +109,7 @@ describe("Funding Oracle", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now()
+                tradingStartTime: Date.now()
             }
         );
 

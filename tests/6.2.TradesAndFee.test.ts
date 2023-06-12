@@ -1,7 +1,5 @@
-import { toBigNumberStr } from "../submodules/library-sui";
-import { executeTests } from "./helpers/executor";
-import { MarketDetails } from "../submodules/library-sui";
-import { TestCaseJSON } from "./helpers/interfaces";
+import { toBigNumberStr, MarketDetails } from "../submodules/library-sui";
+import { executeTests, TestCaseJSON } from "./helpers";
 
 const tradesWithoutFee: TestCaseJSON = {
     "Long Position + Long Trade = Long Position": [
@@ -3359,16 +3357,16 @@ const tradesWithFee: TestCaseJSON = {
 
 describe("Trades Without Fee", () => {
     const marketConfig: MarketDetails = {
-        makerFee: toBigNumberStr(0),
-        takerFee: toBigNumberStr(0)
+        defaultMakerFee: toBigNumberStr(0),
+        defaultTakerFee: toBigNumberStr(0)
     };
     executeTests(tradesWithoutFee, marketConfig);
 });
 
 describe("Trades With Fee", () => {
     const marketConfig: MarketDetails = {
-        makerFee: toBigNumberStr(0.05),
-        takerFee: toBigNumberStr(0.15)
+        defaultMakerFee: toBigNumberStr(0.05),
+        defaultTakerFee: toBigNumberStr(0.15)
     };
     executeTests(tradesWithFee, marketConfig);
 });

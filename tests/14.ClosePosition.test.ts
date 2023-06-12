@@ -1,31 +1,27 @@
-import { Account, getTestAccounts } from "./helpers/accounts";
-import { network, DeploymentConfigs } from "../submodules/library-sui";
 import {
     createMarket,
     createOrder,
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
-    readFile
-} from "../submodules/library-sui";
-import {
+    readFile,
+    Account,
+    getTestAccounts,
+    network,
+    DeploymentConfigs,
     BASE_DECIMALS,
     toBigNumber,
-    toBigNumberStr
-} from "../submodules/library-sui";
-import {
+    toBigNumberStr,
     BankAccountDetails,
     OnChainCalls,
     OrderSigner,
     Trader,
-    Transaction
+    Transaction,
+    SuiTransactionBlockResponse,
+    BigNumber
 } from "../submodules/library-sui";
-import { expect, expectTxToSucceed } from "./helpers/expect";
-import { SuiTransactionBlockResponse } from "@mysten/sui.js";
-import { config } from "dotenv";
-import { mintAndDeposit } from "./helpers/utils";
-import BigNumber from "bignumber.js";
-config({ path: ".env" });
+
+import { expect, expectTxToSucceed, mintAndDeposit } from "./helpers";
 
 const testCases = {
     "Test # 1": [
@@ -563,12 +559,12 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
             ownerSigner,
             provider,
             {
-                initialMarginRequired: toBigNumberStr(0.0625),
-                maintenanceMarginRequired: toBigNumberStr(0.05),
-                maxPrice: toBigNumberStr(2000),
-                makerFee: toBigNumberStr(0.01),
-                takerFee: toBigNumberStr(0.02),
-                startingTime: Date.now() - 1000
+                initialMarginReq: toBigNumberStr(0.0625),
+                maintenanceMarginReq: toBigNumberStr(0.05),
+                maxOrderPrice: toBigNumberStr(2000),
+                defaultMakerFee: toBigNumberStr(0.01),
+                defaultTakerFee: toBigNumberStr(0.02),
+                tradingStartTime: Date.now() - 1000
             }
         );
 

@@ -1,5 +1,3 @@
-import { createAccount, getTestAccounts } from "./accounts";
-import { network, DeploymentConfigs } from "../../submodules/library-sui";
 import {
     createMarket,
     createOrder,
@@ -7,14 +5,21 @@ import {
     getProvider,
     getSignerFromSeed,
     readFile,
-    requestGas
-} from "../../submodules/library-sui";
-import { toBigNumber, toBigNumberStr } from "../../submodules/library-sui";
-import {
+    requestGas,
+    createAccount,
+    getTestAccounts,
+    network,
+    DeploymentConfigs,
+    toBigNumber,
+    toBigNumberStr,
     OnChainCalls,
     OrderSigner,
     Trader,
-    Transaction
+    Transaction,
+    MarketDetails,
+    ERROR_CODES,
+    BigNumber,
+    SuiTransactionBlockResponse
 } from "../../submodules/library-sui";
 import {
     evaluateSystemExpect,
@@ -23,14 +28,8 @@ import {
     expectTxToSucceed,
     evaluateAccountPositionExpect
 } from "./expect";
-import { MarketDetails } from "../../submodules/library-sui";
-import { ERROR_CODES } from "../../submodules/library-sui";
-import BigNumber from "bignumber.js";
-import { config } from "dotenv";
-import { fundTestAccounts, mintAndDeposit } from "./utils";
+import { mintAndDeposit } from "./utils";
 import { TestCaseJSON } from "./interfaces";
-import { SuiTransactionBlockResponse } from "@mysten/sui.js";
-config({ path: ".env" });
 
 const provider = getProvider(network.rpc, network.faucet);
 const ownerKeyPair = getKeyPairFromSeed(DeploymentConfigs.deployer);
@@ -67,7 +66,7 @@ export async function executeTests(
                 ...marketConfig,
                 feePool: feePoolAddress,
                 insurancePool: insurancePoolAddress,
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
 

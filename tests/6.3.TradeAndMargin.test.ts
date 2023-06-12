@@ -1,7 +1,5 @@
-import { MarketDetails } from "../submodules/library-sui";
-import { toBigNumberStr } from "../submodules/library-sui";
-import { executeTests } from "./helpers/executor";
-import { TestCaseJSON } from "./helpers/interfaces";
+import { toBigNumberStr, MarketDetails } from "../submodules/library-sui";
+import { executeTests, TestCaseJSON } from "./helpers";
 
 const marginTestsWithoutFee: TestCaseJSON = {
     "Test # 1 - Long Position + Long Trade (Increasing) + [MR > IMR] + Proceed":
@@ -1302,10 +1300,10 @@ const marginTestsWithoutFee: TestCaseJSON = {
 
 describe("Margin Tests Without Fee", () => {
     const marketConfig: MarketDetails = {
-        makerFee: toBigNumberStr(0),
-        takerFee: toBigNumberStr(0),
-        initialMarginRequired: toBigNumberStr(0.0625),
-        maintenanceMarginRequired: toBigNumberStr(0.05),
+        defaultMakerFee: toBigNumberStr(0),
+        defaultTakerFee: toBigNumberStr(0),
+        initialMarginReq: toBigNumberStr(0.0625),
+        maintenanceMarginReq: toBigNumberStr(0.05),
         tickSize: toBigNumberStr(0.0000001),
         maxAllowedPriceDiffInOP: toBigNumberStr(1000),
         mtbLong: toBigNumberStr(1),
@@ -3088,13 +3086,13 @@ const marginTestsWithFee: TestCaseJSON = {
 
 describe("Margin Tests With Fee", () => {
     const marketConfig: MarketDetails = {
-        initialMarginRequired: toBigNumberStr(0.0625),
-        maintenanceMarginRequired: toBigNumberStr(0.05),
+        initialMarginReq: toBigNumberStr(0.0625),
+        maintenanceMarginReq: toBigNumberStr(0.05),
         tickSize: toBigNumberStr(0.0000001),
         mtbLong: toBigNumberStr(1),
         mtbShort: toBigNumberStr(0.99),
-        makerFee: toBigNumberStr(0.02),
-        takerFee: toBigNumberStr(0.05),
+        defaultMakerFee: toBigNumberStr(0.02),
+        defaultTakerFee: toBigNumberStr(0.05),
         maxAllowedPriceDiffInOP: toBigNumberStr(1000)
     };
     executeTests(marginTestsWithFee, marketConfig);

@@ -1,31 +1,30 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
+    DeploymentConfigs,
     readFile,
     getProvider,
     getSignerFromSeed,
     createOrder,
     createMarket,
-    requestGas
-} from "../submodules/library-sui";
-import {
+    requestGas,
     OnChainCalls,
     OrderSigner,
-    Transaction
+    Transaction,
+    ERROR_CODES,
+    toBigNumberStr,
+    Trader,
+    network,
+    Order,
+    UserPositionExtended,
+    getMakerTakerAccounts,
+    getTestAccounts
 } from "../submodules/library-sui";
-import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { ERROR_CODES } from "../submodules/library-sui";
-import { toBigNumberStr } from "../submodules/library-sui";
-import { getMakerTakerAccounts, getTestAccounts } from "./helpers/accounts";
-import { Trader } from "../submodules/library-sui";
-import { network } from "../submodules/library-sui";
-import { DEFAULT } from "../submodules/library-sui/src/defaults";
-import { Order, UserPositionExtended } from "../submodules/library-sui";
-import { mintAndDeposit } from "./helpers/utils";
+import {
+    expectTxToFail,
+    expectTxToSucceed,
+    expect,
+    mintAndDeposit
+} from "./helpers";
 
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 const provider = getProvider(network.rpc, network.faucet);
 const deployment = readFile(DeploymentConfigs.filePath);
 
@@ -49,7 +48,7 @@ describe("Liquidation Trade Method", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
 
@@ -357,7 +356,7 @@ describe("Liquidation Trade Method", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
 
@@ -436,7 +435,7 @@ describe("Liquidation Trade Method", () => {
             ownerSigner,
             provider,
             {
-                startingTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000
             }
         );
 

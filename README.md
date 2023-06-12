@@ -1,4 +1,9 @@
-# Bluefin Exchange Contracts
+<div align="center">
+  <img height="100x" src="https://bluefin.io/images/bluefin-logo.svg" />
+
+  <h1 style="margin-top:20px;">Bluefin Exchange Contracts Sui</h1>
+
+</div>
 
 Repository containing bluefin core exchange contracts that allow users to do on-chain derivatives trading on [Sui](https://sui.io/) blockchain.
 

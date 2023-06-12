@@ -1,21 +1,21 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
+    DeploymentConfigs,
     getProvider,
     getSignerFromSeed,
     getGenesisMap,
-    publishPackage
+    publishPackage,
+    OnChainCalls,
+    Transaction,
+    TEST_WALLETS,
+    toBigNumberStr,
+    ERROR_CODES
 } from "../submodules/library-sui";
-import { OnChainCalls, Transaction } from "../submodules/library-sui";
-import { fundTestAccounts } from "./helpers/utils";
-import { TEST_WALLETS } from "./helpers/accounts";
-import { toBigNumberStr } from "../submodules/library-sui";
-import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { ERROR_CODES } from "../submodules/library-sui";
-
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import {
+    fundTestAccounts,
+    expectTxToFail,
+    expectTxToSucceed,
+    expect
+} from "./helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,

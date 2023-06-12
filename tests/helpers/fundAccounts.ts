@@ -1,5 +1,4 @@
-import { requestGas } from "../../submodules/library-sui";
-import { TEST_WALLETS } from "./accounts";
+import { requestGas, TEST_WALLETS } from "../../submodules/library-sui";
 
 async function main() {
     for (const wallet of TEST_WALLETS) {

@@ -1,26 +1,24 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { OnChainCalls, OrderSigner, Transaction } from "../submodules/library-sui";
-import { DeploymentConfigs } from "../submodules/library-sui";
-import { Order } from "../submodules/library-sui";
 import {
+    OnChainCalls,
+    OrderSigner,
+    Transaction,
     createOrder,
     getKeyPairFromSeed,
     getProvider,
     getSignerFromSeed,
-    readFile
-} from "../submodules/library-sui";
-import { getTestAccounts, TEST_WALLETS } from "./helpers/accounts";
-import { DEFAULT } from "../submodules/library-sui/src/defaults";
-import {
+    readFile,
+    DeploymentConfigs,
+    Order,
+    getTestAccounts,
+    TEST_WALLETS,
     base64ToBuffer,
     base64ToHex,
     bigNumber,
     encodeOrderFlags,
     hexToBuffer
 } from "../submodules/library-sui";
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { DEFAULT } from "../submodules/library-sui/src/defaults";
+import { expect } from "./helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,

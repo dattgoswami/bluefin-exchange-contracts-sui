@@ -1,8 +1,6 @@
 import { DEFAULT } from "../submodules/library-sui/src/defaults";
-import { toBigNumberStr } from "../submodules/library-sui";
-import { executeTests } from "./helpers/executor";
-import { MarketDetails } from "../submodules/library-sui";
-import { TestCaseJSON } from "./helpers/interfaces";
+import { toBigNumberStr, MarketDetails } from "../submodules/library-sui";
+import { executeTests, TestCaseJSON } from "./helpers";
 
 const liquidationTests: TestCaseJSON = {
     "Test #1 Long Position + Full Liquidation": [
@@ -945,13 +943,13 @@ const liquidationTests: TestCaseJSON = {
 
 describe("Liquidation Trades", () => {
     const marketConfig: MarketDetails = {
-        initialMarginRequired: toBigNumberStr(0.0625),
-        maintenanceMarginRequired: toBigNumberStr(0.05),
+        initialMarginReq: toBigNumberStr(0.0625),
+        maintenanceMarginReq: toBigNumberStr(0.05),
         insurancePoolRatio: toBigNumberStr(0.1),
         tickSize: toBigNumberStr(0.000001),
-        makerFee: toBigNumberStr(0.02),
-        takerFee: toBigNumberStr(0.05),
-        maxAllowedFR: toBigNumberStr(1000), // 1000x% max allowed FR
+        defaultMakerFee: toBigNumberStr(0.02),
+        defaultTakerFee: toBigNumberStr(0.05),
+        maxFundingRate: toBigNumberStr(1000), // 1000x% max allowed FR
         insurancePool: DEFAULT.INSURANCE_POOL_ADDRESS,
         feePool: DEFAULT.FEE_POOL_ADDRESS
     };

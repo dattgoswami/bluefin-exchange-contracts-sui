@@ -1,8 +1,6 @@
 import { DEFAULT } from "../submodules/library-sui/src/defaults";
-import { toBigNumberStr } from "../submodules/library-sui";
-import { executeTests } from "./helpers/executor";
-import { MarketDetails } from "../submodules/library-sui";
-import { TestCaseJSON } from "./helpers/interfaces";
+import { toBigNumberStr, MarketDetails } from "../submodules/library-sui";
+import { executeTests, TestCaseJSON } from "./helpers";
 
 const tests: TestCaseJSON = {
     "# 1 - Long Position + Full deleveraging": [
@@ -201,15 +199,15 @@ const tests: TestCaseJSON = {
 
 describe("ADL Trades", () => {
     const marketConfig: MarketDetails = {
-        initialMarginRequired: toBigNumberStr(0.0625),
-        maintenanceMarginRequired: toBigNumberStr(0.05),
+        initialMarginReq: toBigNumberStr(0.0625),
+        maintenanceMarginReq: toBigNumberStr(0.05),
         insurancePoolRatio: toBigNumberStr(0.1),
         tickSize: toBigNumberStr(0.000001),
-        makerFee: toBigNumberStr(0.02),
-        takerFee: toBigNumberStr(0.05),
-        maxAllowedFR: toBigNumberStr(1000), // 1000x% max allowed FR
+        defaultMakerFee: toBigNumberStr(0.02),
+        defaultTakerFee: toBigNumberStr(0.05),
+        maxFundingRate: toBigNumberStr(1000), // 1000x% max allowed FR
         maxAllowedPriceDiffInOP: toBigNumberStr(100000),
-        maxPrice: toBigNumberStr(10000000),
+        maxOrderPrice: toBigNumberStr(10000000),
         insurancePool: DEFAULT.INSURANCE_POOL_ADDRESS,
         feePool: DEFAULT.FEE_POOL_ADDRESS
     };

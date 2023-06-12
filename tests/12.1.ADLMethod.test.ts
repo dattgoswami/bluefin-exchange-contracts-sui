@@ -1,36 +1,35 @@
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
-import { DeploymentConfigs } from "../submodules/library-sui";
 import {
+    DeploymentConfigs,
     getProvider,
     getSignerFromSeed,
     createOrder,
     createMarket,
     publishPackage,
     getGenesisMap,
-    packDeploymentData
-} from "../submodules/library-sui";
-import {
+    packDeploymentData,
     OnChainCalls,
     OrderSigner,
-    Transaction
-} from "../submodules/library-sui";
-import { expectTxToFail, expectTxToSucceed } from "./helpers/expect";
-import { ERROR_CODES, OWNERSHIP_ERROR } from "../submodules/library-sui";
-import { toBigNumber, toBigNumberStr } from "../submodules/library-sui";
-import {
+    Transaction,
+    ERROR_CODES,
+    OWNERSHIP_ERROR,
+    toBigNumber,
+    toBigNumberStr,
     createAccount,
     getMakerTakerAccounts,
-    getTestAccounts
-} from "./helpers/accounts";
-import { Trader } from "../submodules/library-sui";
-import { network } from "../submodules/library-sui";
-import { DEFAULT } from "../submodules/library-sui/src/defaults";
-import { Order, UserPositionExtended } from "../submodules/library-sui";
-import { mintAndDeposit } from "./helpers/utils";
+    getTestAccounts,
+    Trader,
+    network,
+    Order,
+    UserPositionExtended
+} from "../submodules/library-sui";
+import {
+    expectTxToFail,
+    expectTxToSucceed,
+    expect,
+    mintAndDeposit
+} from "./helpers";
 
-chai.use(chaiAsPromised);
-const expect = chai.expect;
+import { DEFAULT } from "../submodules/library-sui/src/defaults";
 const provider = getProvider(network.rpc, network.faucet);
 
 describe("Deleveraging Trade Method", () => {

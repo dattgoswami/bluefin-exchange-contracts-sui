@@ -1,4 +1,4 @@
-import BigNumber from "bignumber.js";
+import { BigNumber } from "../../submodules/library-sui";
 
 export interface TestPositionExpect {
     isPosPositive: boolean;

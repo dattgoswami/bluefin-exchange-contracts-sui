@@ -1,7 +1,5 @@
-import { toBigNumberStr } from "../submodules/library-sui";
-import { executeTests } from "./helpers/executor";
-import { MarketDetails } from "../submodules/library-sui";
-import { TestCaseJSON } from "./helpers/interfaces";
+import { toBigNumberStr, MarketDetails } from "../submodules/library-sui";
+import { executeTests, TestCaseJSON } from "./helpers";
 
 // all tests are for taker
 const adjustMargin: TestCaseJSON = {
@@ -829,10 +827,10 @@ const adjustMargin: TestCaseJSON = {
 
 describe("Adjust Margin", () => {
     const marketConfig: MarketDetails = {
-        makerFee: toBigNumberStr(0.05),
-        takerFee: toBigNumberStr(0.05),
-        initialMarginRequired: toBigNumberStr(0.0625),
-        maintenanceMarginRequired: toBigNumberStr(0.05),
+        defaultMakerFee: toBigNumberStr(0.05),
+        defaultTakerFee: toBigNumberStr(0.05),
+        initialMarginReq: toBigNumberStr(0.0625),
+        maintenanceMarginReq: toBigNumberStr(0.05),
         maxAllowedPriceDiffInOP: toBigNumberStr(100)
     };
 

@@ -1,7 +1,5 @@
-import { toBigNumberStr } from "../submodules/library-sui";
-import { MarketDetails } from "../submodules/library-sui";
-import { executeTests } from "./helpers/executor";
-import { TestCaseJSON } from "./helpers/interfaces";
+import { toBigNumberStr, MarketDetails } from "../submodules/library-sui";
+import { executeTests, TestCaseJSON } from "./helpers";
 
 const lossTests: TestCaseJSON = {
     "Test # 69 - Reducing Long Position, abs.Loss > Margin  + Error": [
@@ -360,13 +358,13 @@ const lossTests: TestCaseJSON = {
 
 describe("More Loss Than Margin", () => {
     const marketConfig: MarketDetails = {
-        initialMarginRequired: toBigNumberStr(0.01),
-        maintenanceMarginRequired: toBigNumberStr(0.001),
+        initialMarginReq: toBigNumberStr(0.01),
+        maintenanceMarginReq: toBigNumberStr(0.001),
         tickSize: toBigNumberStr(0.0000001),
         mtbLong: toBigNumberStr(1),
         mtbShort: toBigNumberStr(0.99),
-        makerFee: toBigNumberStr(0.02),
-        takerFee: toBigNumberStr(0.05),
+        defaultMakerFee: toBigNumberStr(0.02),
+        defaultTakerFee: toBigNumberStr(0.05),
         maxAllowedPriceDiffInOP: toBigNumberStr(1000)
     };
     executeTests(lossTests, marketConfig);
