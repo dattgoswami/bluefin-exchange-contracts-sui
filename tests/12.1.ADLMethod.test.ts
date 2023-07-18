@@ -4,7 +4,6 @@ import {
     getSignerFromSeed,
     createOrder,
     createMarket,
-    publishPackage,
     getGenesisMap,
     packDeploymentData,
     OnChainCalls,
@@ -14,14 +13,21 @@ import {
     OWNERSHIP_ERROR,
     toBigNumber,
     toBigNumberStr,
-    createAccount,
-    getMakerTakerAccounts,
     getTestAccounts,
     Trader,
     network,
     Order,
     UserPositionExtended
 } from "../submodules/library-sui";
+
+import { publishPackage } from "../src/helpers";
+
+
+import {
+    getMakerTakerAccounts,
+    createAccount
+} from "../tests/helpers/accounts";
+
 import {
     expectTxToFail,
     expectTxToSucceed,

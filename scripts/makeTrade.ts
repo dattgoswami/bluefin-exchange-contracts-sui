@@ -3,16 +3,17 @@ import {
     readFile,
     getProvider,
     getSignerFromSeed,
-    createOrder
+    createOrder,
+    OnChainCalls,
+    toBigNumberStr,
+    OrderSigner,
+    Trader,
+    Transaction
 } from "../submodules/library-sui";
-import { OnChainCalls } from "../submodules/library-sui";
-import {
-    getMakerTakerAccounts,
-    getTestAccounts
-} from "../tests/helpers/accounts";
-import { OrderSigner, Trader, Transaction } from "../submodules/library-sui";
+
+import { getMakerTakerAccounts } from "../tests/helpers/accounts";
+
 import { mintAndDeposit } from "../tests/helpers/utils";
-import { toBigNumberStr } from "../submodules/library-sui";
 import { expectTxToSucceed } from "../tests/helpers/expect";
 
 const deployment = readFile(DeploymentConfigs.filePath);

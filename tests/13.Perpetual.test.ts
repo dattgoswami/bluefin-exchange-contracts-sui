@@ -177,6 +177,51 @@ describe("Perpetual", () => {
         expect(Transaction.getErrorCode(txResult)).to.be.equal(105);
     });
 
+    describe("Changing IMR/MMR", async () => {
+        it("should revert when trying to set mmr to zero", async () => {
+            const txResult = await onChain.setMaintenanceMarginRequired({
+                mmr: toBigNumberStr(0),
+                gasBudget: 20000000
+            });
+            expectTxToFail(txResult);
+            expect(Transaction.getErrorCode(txResult)).to.be.equal(300);
+        });
+
+        it("should revert when trying to set mmr > imr", async () => {
+            const txResult = await onChain.setMaintenanceMarginRequired({
+                mmr: toBigNumberStr(0.9),
+                gasBudget: 20000000
+            });
+            expectTxToFail(txResult);
+            expect(Transaction.getErrorCode(txResult)).to.be.equal(301);
+        });
+
+        it("should revert when trying to set imr < mmr", async () => {
+            const txResult = await onChain.setInitialMarginRequired({
+                imr: toBigNumberStr(0.01),
+                gasBudget: 20000000
+            });
+            expectTxToFail(txResult);
+            expect(Transaction.getErrorCode(txResult)).to.be.equal(302);
+        });
+
+        it("should set mmr to 0.0295", async () => {
+            const txResult = await onChain.setMaintenanceMarginRequired({
+                mmr: toBigNumberStr(0.0295),
+                gasBudget: 20000000
+            });
+            expectTxToSucceed(txResult);
+        });
+
+        it("should set imr to 0.046", async () => {
+            const txResult = await onChain.setInitialMarginRequired({
+                imr: toBigNumberStr(0.046),
+                gasBudget: 20000000
+            });
+            expectTxToSucceed(txResult);
+        });
+    });
+
     describe("Delist Perpetual", () => {
         beforeEach(async () => {
             // deploy market

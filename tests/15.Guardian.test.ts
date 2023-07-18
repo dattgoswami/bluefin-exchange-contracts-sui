@@ -3,7 +3,6 @@ import {
     getProvider,
     getSignerFromSeed,
     getGenesisMap,
-    publishPackage,
     createMarket,
     packDeploymentData,
     getTestAccounts,
@@ -18,6 +17,8 @@ import {
     expect,
     fundTestAccounts
 } from "./helpers";
+
+import { publishPackage } from "../src/helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,

@@ -1,4 +1,4 @@
-import { Client } from "../submodules/library-sui";
+import { Client } from "../src/Client";
 import path from "path";
 
 async function main() {

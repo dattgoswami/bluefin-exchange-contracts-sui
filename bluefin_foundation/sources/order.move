@@ -30,6 +30,7 @@ module bluefin_foundation::order {
     struct OrderCancel has copy, drop{
         caller: address, 
         sigMaker: address,
+        perpetual: address,
         orderHash: vector<u8>
     }
 
@@ -128,7 +129,7 @@ module bluefin_foundation::order {
         // mark order as cancelled
         order_status.status = false;
 
-        emit(OrderCancel{caller, sigMaker: sig_maker, orderHash:order_hash});
+        emit(OrderCancel{caller, sigMaker: sig_maker, orderHash:order_hash, perpetual});
 
     }
 

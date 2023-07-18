@@ -3,13 +3,14 @@ import {
     getProvider,
     getSignerFromSeed,
     getGenesisMap,
-    publishPackage,
     OnChainCalls,
     Transaction,
     TEST_WALLETS,
     toBigNumberStr,
     ERROR_CODES
 } from "../submodules/library-sui";
+import { publishPackage } from "../src/helpers";
+
 import {
     fundTestAccounts,
     expectTxToFail,

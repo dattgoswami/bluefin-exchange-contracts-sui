@@ -15,9 +15,11 @@ import {
     network,
     Order,
     UserPositionExtended,
-    getMakerTakerAccounts,
     getTestAccounts
 } from "../submodules/library-sui";
+
+import { getMakerTakerAccounts } from "./helpers/accounts";
+
 import {
     expectTxToFail,
     expectTxToSucceed,

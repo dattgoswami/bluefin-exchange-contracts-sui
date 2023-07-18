@@ -5,7 +5,7 @@ import {
     packDeploymentData,
     createMarket
 } from "../../submodules/library-sui";
-import { Client } from "../../submodules/library-sui";
+import { Client } from "../../src/Client";
 import { DeploymentConfigs, market } from "../../submodules/library-sui";
 
 const provider = getProvider(

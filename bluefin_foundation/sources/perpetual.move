@@ -57,7 +57,7 @@ module bluefin_foundation::perpetual {
         account: address
     }
 
-    struct PerpetualDelistEvent has copy, drop {
+    struct DelistEvent has copy, drop {
         id: ID,
         delistingPrice: u128
     }
@@ -65,6 +65,17 @@ module bluefin_foundation::perpetual {
     struct TradingPermissionStatusUpdate has drop, copy {
         status: bool
     }
+
+    struct MMRUpdateEvent has copy, drop {
+        id: ID,
+        mmr: u128
+    }
+
+    struct IMRUpdateEvent has copy, drop {
+        id: ID,
+        imr: u128
+    }
+
 
     //===========================================================//
     //                           STORAGE                         //
@@ -159,6 +170,9 @@ module bluefin_foundation::perpetual {
         );
 
         let funding = funding_rate::initialize(startTime, maxAllowedFR);
+
+        assert!(mmr > 0, error::maintenance_margin_must_be_greater_than_zero());
+        assert!(mmr <= imr, error::maintenance_margin_must_be_less_than_or_equal_to_imr());
 
         let perp = Perpetual {
             id,
@@ -348,7 +362,7 @@ module bluefin_foundation::perpetual {
         perp.delisted = true;
         perp.delistingPrice = price;
 
-        emit(PerpetualDelistEvent{
+        emit(DelistEvent{
             id: object::uid_to_inner(id(perp)),
             delistingPrice: price
         })
@@ -490,6 +504,42 @@ module bluefin_foundation::perpetual {
             clock::timestamp_ms(clock),
             object::uid_to_inner(&perp.id));
     }
+
+    /**
+     * Updates maintenance margin required for the perpetual 
+     * Only Admin can update mmr
+     */
+    public entry fun set_maintenance_margin_required( _: &ExchangeAdminCap, perp: &mut Perpetual, newMMR: u128){
+        
+        assert!(newMMR > 0, error::maintenance_margin_must_be_greater_than_zero());
+        assert!(newMMR <= perp.imr, error::maintenance_margin_must_be_less_than_or_equal_to_imr());
+
+        perp.mmr = newMMR;
+
+        emit(MMRUpdateEvent{
+            id: object::uid_to_inner(id(perp)),
+            mmr: newMMR
+        });
+
+    }   
+
+    /**
+     * Updates initial margin required for the perpetual 
+     * Only Admin can update imr
+     */
+    public entry fun set_initial_margin_required( _: &ExchangeAdminCap, perp: &mut Perpetual, newIMR: u128){
+        
+        assert!(newIMR >= perp.mmr, error::initial_margin_must_be_greater_than_or_equal_to_mmr());
+
+        perp.imr = newIMR;
+
+        emit(IMRUpdateEvent{
+            id: object::uid_to_inner(id(perp)),
+            imr: newIMR
+        });
+
+    }   
+
 
     fun update_global_index(clock: &Clock, perp: &mut Perpetual){
         let perpID = object::uid_to_inner(&perp.id);

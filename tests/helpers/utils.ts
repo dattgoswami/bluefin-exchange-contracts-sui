@@ -96,7 +96,7 @@ export function toExpectedPositionFormat(
 
 export async function waitForTradingToStart(
     provider: JsonRpcProvider,
-    tradeStartTime: Number
+    tradeStartTime: number
 ) {
     let chainTime = 0;
     while (tradeStartTime > chainTime) {

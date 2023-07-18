@@ -3,7 +3,6 @@ import {
     getProvider,
     getSignerFromSeed,
     getGenesisMap,
-    publishPackage,
     packDeploymentData,
     requestGas,
     OnChainCalls,
@@ -12,6 +11,8 @@ import {
     OWNERSHIP_ERROR,
     getTestAccounts
 } from "../submodules/library-sui";
+import { publishPackage } from "../src/helpers";
+
 import {
     expect,
     expectTxToFail,

@@ -3,12 +3,13 @@ import {
     getGenesisMap,
     getSignerFromSeed,
     getProvider,
-    publishPackage,
     packDeploymentData,
     getBankTable
 } from "../../submodules/library-sui";
 import { DeploymentConfigs } from "../../submodules/library-sui";
-import { Client, Transaction } from "../../submodules/library-sui";
+import { Transaction } from "../../submodules/library-sui";
+import { Client } from "../../src/Client";
+import { publishPackage } from "../../src/helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,

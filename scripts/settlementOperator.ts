@@ -8,7 +8,8 @@ import {
     writeFile
 } from "../submodules/library-sui/src/utils";
 import { DeploymentConfigs } from "../submodules/library-sui/src/DeploymentConfig";
-import { Client, OnChainCalls, Transaction } from "../submodules/library-sui";
+import { OnChainCalls, Transaction } from "../submodules/library-sui";
+import { Client } from "../src/Client";
 
 config({ path: ".env" });
 

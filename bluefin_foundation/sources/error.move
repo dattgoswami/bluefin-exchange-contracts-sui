@@ -232,6 +232,18 @@ module bluefin_foundation::error {
         return 113
     }
 
+    public fun maintenance_margin_must_be_greater_than_zero(): u64{
+        return 300
+    }
+
+    public fun maintenance_margin_must_be_less_than_or_equal_to_imr(): u64{
+        return 301
+    }
+
+    public fun initial_margin_must_be_greater_than_or_equal_to_mmr(): u64{
+        return 302
+    }
+
     public fun mr_less_than_imr_can_not_open_or_flip_position(isTaker: u64): u64 {
         return 400 + isTaker
     }
