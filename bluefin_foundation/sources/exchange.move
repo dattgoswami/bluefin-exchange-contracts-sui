@@ -377,10 +377,21 @@ module bluefin_foundation::exchange {
         // all of nothing
         allOrNothing: bool,
 
+        //This is used to get PythInfoObject from whoever is calling this
+        // function, this will get us ORACLE PRICE FROM PYTH 
+        price_info_obj: &PythFeeder,
+
         ctx: &mut TxContext        
 
     ){
 
+        let priceIdentifierBytes = library::get_price_identifier(price_info_obj);  
+        let priceIdentifierPerp = perpetual::priceIdenfitier(perp);
+        assert!(priceIdentifierBytes==priceIdentifierPerp, error::wrong_price_identifier());
+
+        let oraclePrice = library::get_oracle_price(price_info_obj);
+        perpetual::set_oracle_price(perp, oraclePrice);
+        
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
 
@@ -583,8 +594,14 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to add margin to their position
      */
-    entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user:address, amount: u128, ctx: &mut TxContext){
+    entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user:address, amount: u128, price_info_obj: &PythFeeder ,ctx: &mut TxContext){
+        //To ensure that priceOracleFeed Id set in perpetual is same as the one given
+        let priceIdentifierBytes = library::get_price_identifier(price_info_obj);  
+        let priceIdentifierPerp = perpetual::priceIdenfitier(perp);
+        assert!(priceIdentifierBytes==priceIdentifierPerp, error::wrong_price_identifier());
 
+        let oraclePrice = library::get_oracle_price(price_info_obj);
+        perpetual::set_oracle_price(perp, oraclePrice);
         let caller = tx_context::sender(ctx);
 
         // check if caller has permission for account
@@ -714,8 +731,15 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to adjust their leverage
      */
-    entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, leverage: u128, ctx: &mut TxContext){
+    entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, leverage: u128, price_info_obj: &PythFeeder, ctx: &mut TxContext){
+        //To ensure that priceOracleFeed Id set in perpetual is same as the one given
+        let priceIdentifierBytes = library::get_price_identifier(price_info_obj);  
+        let priceIdentifierPerp = perpetual::priceIdenfitier(perp);
+        assert!(priceIdentifierBytes==priceIdentifierPerp, error::wrong_price_identifier());
 
+        let oraclePrice = library::get_oracle_price(price_info_obj);
+        perpetual::set_oracle_price(perp, oraclePrice);
+        
         let caller = tx_context::sender(ctx);
 
         // check if caller has permission for account
