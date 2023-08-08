@@ -346,5 +346,9 @@ module bluefin_foundation::error {
     public fun funding_rate_for_window_already_set(): u64 {
         return 902
     }
+
+    public fun wrong_price_identifier(): u64{
+        return 903
+    }
     
 }

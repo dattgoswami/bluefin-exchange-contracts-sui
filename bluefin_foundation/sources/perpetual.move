@@ -11,10 +11,9 @@ module bluefin_foundation::perpetual {
 
     // custom modules
     use bluefin_foundation::position::{UserPosition};
-    use bluefin_foundation::price_oracle::{Self, PriceOracle};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::funding_rate::{Self, FundingRate, FundingIndex};
-    use bluefin_foundation::roles::{Self, ExchangeAdminCap, PriceOracleOperatorCap, ExchangeGuardianCap, FundingRateCap, CapabilitiesSafe};
+    use bluefin_foundation::roles::{Self, ExchangeAdminCap, ExchangeGuardianCap, FundingRateCap, CapabilitiesSafe};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
 
@@ -23,6 +22,8 @@ module bluefin_foundation::perpetual {
     friend bluefin_foundation::isolated_trading;
     friend bluefin_foundation::isolated_liquidation;
     friend bluefin_foundation::isolated_adl;
+
+    
     
     //===========================================================//
     //                           EVENTS                          //
@@ -112,9 +113,11 @@ module bluefin_foundation::perpetual {
         /// table containing user positions for this market/perpetual
         positions: Table<address, UserPosition>,
         /// price oracle
-        priceOracle: PriceOracle,
+        priceOracle: u128,
         /// Funding Rate
         funding: FundingRate,
+
+        priceIdentifierId: vector<u8>
     }
 
     //===========================================================//
@@ -139,11 +142,12 @@ module bluefin_foundation::perpetual {
         stepSize: u128,
         mtbLong: u128,
         mtbShort: u128,
-        maxAllowedPriceDiffInOP: u128, 
         maxAllowedFR: u128,
         startTime: u64,
         maxAllowedOIOpen: vector<u128>,
         positions: Table<address,UserPosition>,
+        
+        priceIdentifierId: vector<u8>,
 
         ctx: &mut TxContext
         ): ID{
@@ -164,10 +168,8 @@ module bluefin_foundation::perpetual {
             maxAllowedOIOpen
         );
 
-        let priceOracle = price_oracle::initialize(
-            perpID, 
-            maxAllowedPriceDiffInOP,
-        );
+        
+        let priceOracle=0;
 
         let funding = funding_rate::initialize(startTime, maxAllowedFR);
 
@@ -192,6 +194,7 @@ module bluefin_foundation::perpetual {
             positions,
             priceOracle,
             funding,
+            priceIdentifierId,
         };
 
         emit(PerpetualCreationEvent {
@@ -280,12 +283,8 @@ module bluefin_foundation::perpetual {
         return perp.feePool
     }
 
-    public fun priceOracle(perp:&Perpetual):PriceOracle{
+    public fun priceOracle(perp:&Perpetual):u128{
         return perp.priceOracle
-    }
-
-    public fun oraclePrice(perp:&Perpetual):u128{
-        return price_oracle::price(perp.priceOracle)
     }
 
     public fun globalIndex(perp:&Perpetual): FundingIndex{
@@ -306,6 +305,10 @@ module bluefin_foundation::perpetual {
 
     public fun startTime(perp: &Perpetual): u64{
         return perp.startTime
+    }
+
+    public fun priceIdenfitier(perp: &Perpetual): vector<u8>{
+        return perp.priceIdentifierId
     }
 
 
@@ -455,26 +458,8 @@ module bluefin_foundation::perpetual {
     /*
      * Sets PriceOracle  
      */
-    public entry fun set_oracle_price(clock: &Clock, safe: &CapabilitiesSafe, cap: &PriceOracleOperatorCap, perp: &mut Perpetual, price: u128){
-        let perpID = object::uid_to_inner(&perp.id);
-        price_oracle::set_oracle_price(
-            safe,
-            cap, 
-            &mut perp.priceOracle,
-            perpID, 
-            price,
-            clock::timestamp_ms(clock)
-            );
-    }
-
-    /*
-     * Sets Max difference allowed in percentage between New Oracle Price & Old Oracle Price
-     */
-    public entry fun set_oracle_price_max_allowed_diff(_: &ExchangeAdminCap, perp: &mut Perpetual, maxAllowedPriceDifference: u128){
-        price_oracle::set_oracle_price_max_allowed_diff(
-            object::uid_to_inner(&perp.id),
-            &mut perp.priceOracle,
-            maxAllowedPriceDifference);
+    public entry fun set_oracle_price(perp: &mut Perpetual, price: u128){
+        perp.priceOracle=price;
     }
 
     /*
@@ -544,7 +529,7 @@ module bluefin_foundation::perpetual {
     fun update_global_index(clock: &Clock, perp: &mut Perpetual){
         let perpID = object::uid_to_inner(&perp.id);
         // update global index based on last fuding rate
-        let index = funding_rate::compute_new_global_index(clock, perp.funding, oraclePrice(perp));
+        let index = funding_rate::compute_new_global_index(clock, perp.funding, priceOracle(perp));
         funding_rate::set_global_index(&mut perp.funding, index, perpID);
 
     }

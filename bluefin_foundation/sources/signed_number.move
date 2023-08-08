@@ -1,7 +1,7 @@
 module bluefin_foundation::signed_number {
 
     use bluefin_foundation::library::{Self};
-
+   
     struct Number has store, copy, drop {
         value: u128,
         sign: bool

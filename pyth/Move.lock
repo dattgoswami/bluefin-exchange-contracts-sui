@@ -4,21 +4,12 @@
 version = 0
 
 dependencies = [
-  { name = "Pyth" },
   { name = "Sui" },
 ]
 
 [[move.package]]
 name = "MoveStdlib"
 source = { git = "https://github.com/MystenLabs/sui.git", rev = "09b2081498366df936abae26eea4b2d5cafb2788", subdir = "crates/sui-framework/packages/move-stdlib" }
-
-[[move.package]]
-name = "Pyth"
-source = { local = "../pyth" }
-
-dependencies = [
-  { name = "Sui" },
-]
 
 [[move.package]]
 name = "Sui"

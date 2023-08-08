@@ -1,0 +1,11 @@
+[package]
+name = "bluefin_foundation"
+version = "0.0.1"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "09b2081498366df936abae26eea4b2d5cafb2788" }
+Pyth = { local = "../pyth"}
+
+[addresses]
+bluefin_foundation =  "0x0"
+Pyth="0xb41aca7c1da0df65b99d7a0a05e569c2a0a5a73021447d7dfd330ea30c858a84"

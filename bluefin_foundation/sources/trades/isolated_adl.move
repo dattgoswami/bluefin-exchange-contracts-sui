@@ -7,7 +7,6 @@ module bluefin_foundation::isolated_adl {
     // custom modules
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::evaluator::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::library::{Self};
@@ -80,7 +79,7 @@ module bluefin_foundation::isolated_adl {
         let perpID = object::uid_to_inner(perpetual::id(perp));
         let imr = perpetual::imr(perp);
         let mmr = perpetual::mmr(perp);
-        let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
+        let oraclePrice = perpetual::priceOracle(perp);
         let tradeChecks = perpetual::checks(perp);
         let positionsTable = perpetual::positions(perp);
         

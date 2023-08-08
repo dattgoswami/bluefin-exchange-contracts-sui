@@ -14,7 +14,7 @@ import {
 import { getMakerTakerAccounts } from "../tests/helpers/accounts";
 
 import { mintAndDeposit } from "../tests/helpers/utils";
-import { expectTxToSucceed } from "../tests/helpers/expect";
+//import { expectTxToSucceed } from "../tests/helpers/expect";
 
 const deployment = readFile(DeploymentConfigs.filePath);
 
@@ -52,10 +52,10 @@ async function main() {
     await mintAndDeposit(onChain, accounts.taker.address);
 
     // set specific price on oracle
-    const tx3 = await onChain.updateOraclePrice({
-        price: toBigNumberStr(1800)
-    });
-    expectTxToSucceed(tx3);
+  //  const tx3 = await onChain.updateOraclePrice({
+    //    price: toBigNumberStr(1800)
+    //});
+   // expectTxToSucceed(tx3);
 
     // create an order for ETH market
     const order = createOrder({

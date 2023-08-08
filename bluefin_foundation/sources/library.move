@@ -8,6 +8,12 @@ module bluefin_foundation::library {
     const BASE_UINT : u128 = 1000000000;
     const HALF_BASE_UINT : u128 = 500000000;
 
+    use Pyth::price_info::{PriceInfoObject};
+    use Pyth::price::{Price};
+    use Pyth::i64::{I64};
+
+    
+
     /**
      * @dev Getter for constants as reading directly from modules isn't allowed
      */
@@ -137,4 +143,26 @@ module bluefin_foundation::library {
 
         return address::from_bytes(address)
     }
+
+
+    /*
+    Gets the Oracle Price from Pyth Network.
+    Input is PriceInfoObject id for the relevant symbol example "ETH-PERP"
+    It returns the price in u128 format
+    */
+    public entry fun get_oracle_price(price_info_obj: &PriceInfoObject
+    ): u128{
+        let price: Price = Pyth::pyth::get_price_unsafe(price_info_obj);   
+        let price_i64: I64 = Pyth::price::get_price(&price);
+        let price_u64: u64 = Pyth::i64::get_magnitude_if_positive(&price_i64);
+        return (price_u64 as u128)
+    }
+
+    public entry fun get_price_identifier(price_info_obj: &PriceInfoObject): vector<u8>{
+        let priceInfo=Pyth::price_info::get_price_info_from_price_info_object(price_info_obj);
+        let priceIdentifier= Pyth::price_info::get_price_identifier(&priceInfo);
+        let priceIdentifierBytes = Pyth::price_identifier::get_bytes(&priceIdentifier);
+        return priceIdentifierBytes
+    }
+    
 }

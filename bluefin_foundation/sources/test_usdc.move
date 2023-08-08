@@ -32,4 +32,5 @@ module bluefin_foundation::tusdc {
         coin::burn(treasury_cap, coin);
     }
 
+
 }

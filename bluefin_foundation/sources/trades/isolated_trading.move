@@ -12,7 +12,6 @@ module bluefin_foundation::isolated_trading {
     use bluefin_foundation::position::{Self, UserPosition};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::signed_number::{Self, Number};
-    use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::order::{Self, Order, OrderStatus};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
@@ -123,7 +122,7 @@ module bluefin_foundation::isolated_trading {
                 order::isBuy(*takerOrder),
                 error::order_cannot_be_of_same_side());
 
-            let oraclePrice = price_oracle::price(perpetual::priceOracle(perp));
+            let oraclePrice = perpetual::priceOracle(perp);
             let tradeChecks = perpetual::checks(perp);
             let makerFee = perpetual::makerFee(perp);
             let takerFee = perpetual::takerFee(perp);

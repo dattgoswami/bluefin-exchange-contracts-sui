@@ -76,7 +76,8 @@ describe("Evaluator", () => {
             provider,
             {
                 tradingStartTime: Date.now() - 1000
-            }
+            },
+            deployment["markets"]["ETH-PERP"]["Objects"]["PriceOracle"]["id"]
         );
 
         onChain = new OnChainCalls(ownerSigner, deployment);

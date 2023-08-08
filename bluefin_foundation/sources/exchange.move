@@ -11,7 +11,6 @@ module bluefin_foundation::exchange {
 
     // custom modules
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::price_oracle::{Self};
     use bluefin_foundation::perpetual::{Self, Perpetual};
     use bluefin_foundation::margin_bank::{Self, Bank};
     use bluefin_foundation::order::{Self, OrderStatus};
@@ -29,13 +28,19 @@ module bluefin_foundation::exchange {
         CapabilitiesSafe,
         SettlementCap,
         DeleveragingCap,
-        SubAccounts
+        SubAccounts,
         };
 
     // traders
     use bluefin_foundation::isolated_trading::{Self};
     use bluefin_foundation::isolated_liquidation::{Self};
     use bluefin_foundation::isolated_adl::{Self};
+
+
+    //Pyth
+    use Pyth::price_info::{PriceInfoObject as PythFeeder};
+    
+
 
     //===========================================================//
     //                      CONSTANTS                            // 
@@ -121,12 +126,12 @@ module bluefin_foundation::exchange {
         mmr: u128,
         makerFee: u128,
         takerFee: u128,
-        maxAllowedPriceDiffInOP: u128,
         maxAllowedFR: u128,
         insurancePoolRatio: u128,
         insurancePool: address,
         feePool: address,
         startTime: u64,
+        priceIdentifierId: vector<u8>,
         ctx: &mut TxContext
         ){
         
@@ -151,11 +156,11 @@ module bluefin_foundation::exchange {
             stepSize,
             mtbLong,
             mtbShort,
-            maxAllowedPriceDiffInOP,
             maxAllowedFR,
             startTime,
             maxAllowedOIOpen,
             positions,
+            priceIdentifierId,
             ctx
         );
 
@@ -218,11 +223,24 @@ module bluefin_foundation::exchange {
 
         // fill
         quantity: u128, 
-        price: u128,
+        price: u128, 
+
+        //This is used to get PythInfoObject from whoever is calling this
+        // function, this will get us ORACLE PRICE FROM PYTH 
+        price_info_obj: &PythFeeder,
+
         
-        ctx: &mut TxContext        
+        ctx: &mut TxContext
         ){
-            
+            //To ensure that priceOracleFeed Id set in perpetual is same as the one given
+            let priceIdentifierBytes = library::get_price_identifier(price_info_obj);  
+            let priceIdentifierPerp = perpetual::priceIdenfitier(perp);
+            assert!(priceIdentifierBytes==priceIdentifierPerp, error::wrong_price_identifier());
+
+            let oraclePrice = library::get_oracle_price(price_info_obj);
+            perpetual::set_oracle_price(perp, oraclePrice);
+         
+
             let sender = tx_context::sender(ctx);
 
             // ensure perpetual is not delisted
@@ -635,7 +653,7 @@ module bluefin_foundation::exchange {
 
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
 
-        let priceOracle = price_oracle::price(perpetual::priceOracle(perp));
+        let priceOracle = perpetual::priceOracle(perp);
 
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
@@ -714,7 +732,7 @@ module bluefin_foundation::exchange {
 
         assert!(leverage > 0, error::leverage_can_not_be_set_to_zero());
 
-        let priceOracle = price_oracle::price(perpetual::priceOracle(perp));
+        let priceOracle = perpetual::priceOracle(perp);
         let tradeChecks = perpetual::checks(perp);
         let perpID = object::uid_to_inner(perpetual::id(perp));
         let perpAddress = object::id_to_address(&perpID);
@@ -853,7 +871,7 @@ module bluefin_foundation::exchange {
         let perpAddress = object::id_to_address(&perpID);
 
         // oracle price
-        let price = perpetual::oraclePrice(perp);
+        let price = perpetual::priceOracle(perp);
 
         let fundingRate = perpetual::fundingRate(perp);
 
@@ -972,7 +990,5 @@ module bluefin_foundation::exchange {
             fundingRate: funding_rate::rate(fundingRate)
         });
 
-    }
-
-    
+    }    
 }
