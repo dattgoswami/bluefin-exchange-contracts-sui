@@ -154,12 +154,12 @@ module bluefin_foundation::position {
         let balance = library::base_mul(price, position.qPos);
 
         if(position.isPosPositive){
-            // Assuming oiOpen is never < margin
-            let debt = position.oiOpen - position.margin;
-            let debtRatio = library::base_div(debt, balance);
-            marginRatio = signed_number::from_subtraction(
-                library::base_uint(), 
-                debtRatio);
+            let debt = signed_number::from_subtraction(
+                position.oiOpen, 
+                position.margin
+                );
+            let debtRatio = signed_number::mul_uint(debt, balance);
+            marginRatio = signed_number::sub(signed_number::one(), debtRatio);
 
         } else {
             let debt = position.oiOpen + position.margin;
