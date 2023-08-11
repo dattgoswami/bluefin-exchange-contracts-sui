@@ -1,10 +1,11 @@
 {
   "name": "bluefin-exchange-contracts-sui",
   "description": "Repository containing Bluefin core exchange contracts that allow users to do on-chain derivatives trading on **SUI** blockchain.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "scripts": {
     "submodules": "git submodule update --init --recursive",
     "build": "ts-node ./scripts/build.ts",
+    "set:price": "ts-node ./scripts/updateOraclePrice.ts",
     "deploy:pyth": "ts-node ./scripts/deploy/deployPythFake.ts",
     "deploy": "ts-node ./scripts/deploy/full.ts",
     "deploy:package": "ts-node ./scripts/deploy/package.ts",

@@ -1,4 +1,4 @@
-import { DeploymentConfigs } from "../submodules/library-sui";
+import { DeploymentConfigs, market } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
@@ -7,6 +7,7 @@ import {
 } from "../submodules/library-sui";
 import { OnChainCalls } from "../submodules/library-sui";
 import { Transaction } from "../submodules/library-sui";
+import { publishPackage,getFilePathFromEnv } from "../src/helpers";
 
 import { SuiEventFilter } from "@mysten/sui.js";
 
@@ -22,11 +23,17 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const onChain = new OnChainCalls(ownerSigner, deployment);
 
 async function main() {
+    //only suitable for local
+    const pythObj=readFile(getFilePathFromEnv());
+    const pythPackage=readFile("./pythFakeDeployment.json");
+    
+    // get the feed id
+    const ethFeed=pythObj['ETH-PERP-FEED-ID'];
 
-    const priceInfoFeedId="c6c75c89f14810ec1c54c03ab8f1864a4c4032791f05747f560faec380a695d1";
-    const pythPackageId="0x981a6035f22971ea28157be27d3b86477d518ae2bb0e279852c8fedab8229a82";
+    const pythPackagId=pythPackage.objects.package.id;
 
-    const result= await onChain.setOraclePrice("100000000000","10",priceInfoFeedId,"");
+    //calling function.
+    const result= await onChain.setOraclePrice("100000000000","10",ethFeed,pythPackagId);
     console.log(result);
 
 
