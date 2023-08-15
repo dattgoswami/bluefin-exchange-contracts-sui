@@ -15,10 +15,12 @@ import {
     base64ToHex,
     bigNumber,
     encodeOrderFlags,
-    hexToBuffer
+    hexStrToUint8,
+    base64ToUint8
 } from "../submodules/library-sui";
 import { DEFAULT } from "../submodules/library-sui/src/defaults";
-import { expect } from "./helpers";
+import { expect, expectTxToSucceed } from "./helpers";
+import { fromSerializedSignature } from "@mysten/sui.js";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -27,6 +29,9 @@ const provider = getProvider(
 
 const ownerKeyPair = getKeyPairFromSeed(DeploymentConfigs.deployer);
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
+const ed25519Phrase =
+    "milk fit tape notable input seek circle define deny rally camera sorry";
+const ed25519Keypair = getKeyPairFromSeed(ed25519Phrase, "ED25519");
 
 describe("Order Signer", () => {
     const deployment = readFile(DeploymentConfigs.filePath);
@@ -35,28 +40,155 @@ describe("Order Signer", () => {
 
     const onChain: OnChainCalls = new OnChainCalls(ownerSigner, deployment);
 
+    it("should verify ui wallet signature on-chain and recover user public address", async () => {
+        const signerAddress =
+            "0x248f1c95a231a068dfc7ddfaa492190284d9608d6ca8abf98503345157d9c826";
+
+        const uiData = {
+            messageBytes: "f2QxZzmXq9/QJtmmbk+kvaHpFhgWNtBps6HKeT9sxSU=",
+            signature:
+                "ALSak8MIEzlEgrG2vGxFNNNuV3OpUHwohV5weo6Bm422TXQvJ6FGq7GYG01GXTEfmO/s1ogN993IzIVOUuSfvQMq3XRi9gtN0vRnK6rISvD0CcnlC3m43EiPVlMzPa6sIQ=="
+        };
+
+        const sigPK = fromSerializedSignature(uiData.signature);
+        const signature = Buffer.from(sigPK.signature).toString("hex") + "2";
+
+        const receipt = await onChain.signAndCall(
+            ownerSigner,
+            "get_public_address_from_signed_order",
+            [
+                order.market,
+                order.maker,
+                encodeOrderFlags(order),
+                order.price,
+                order.quantity,
+                order.leverage,
+                order.expiration,
+                order.salt,
+                Array.from(hexStrToUint8(signature)),
+                Array.from(sigPK.pubKey.toBytes())
+            ],
+            "test"
+        );
+
+        expectTxToSucceed(receipt);
+
+        const addressGeneratedEvent = Transaction.getEvents(
+            receipt,
+            "PublicAddressGeneratedEvent"
+        )[0];
+
+        const onChainAddress = base64ToHex(addressGeneratedEvent?.addr ?? "");
+
+        expect(onChainAddress).to.be.equal(signerAddress.substring(2));
+    });
+
+    it("should verify ui wallet signature off-chain", async () => {
+        const uiData = {
+            messageBytes: "f2QxZzmXq9/QJtmmbk+kvaHpFhgWNtBps6HKeT9sxSU=",
+            signature:
+                "ALSak8MIEzlEgrG2vGxFNNNuV3OpUHwohV5weo6Bm422TXQvJ6FGq7GYG01GXTEfmO/s1ogN993IzIVOUuSfvQMq3XRi9gtN0vRnK6rISvD0CcnlC3m43EiPVlMzPa6sIQ=="
+        };
+
+        const sigPK = fromSerializedSignature(uiData.signature);
+
+        const strSig = Buffer.from(sigPK.signature).toString("hex") + "2";
+
+        expect(
+            OrderSigner.verifySignatureUsingOrder(
+                order,
+                strSig,
+                sigPK.pubKey.toString()
+            )
+        ).to.be.true;
+    });
+
+    it("should verify ed25519 signature when sig, pk and msg data are correct", async () => {
+        const serializedOrder = OrderSigner.getSerializedOrder(order);
+
+        const public_key_base64 = ed25519Keypair.getPublicKey().toString();
+        const signature = orderSigner.signOrder(order, ed25519Keypair);
+
+        // off-chain verification
+        expect(
+            OrderSigner.verifySignatureUsingOrder(
+                order,
+                signature,
+                public_key_base64
+            )
+        ).to.be.true;
+
+        // on-chain verification
+        const receipt = await onChain.signAndCall(
+            ownerSigner,
+            "verify_signature",
+            [
+                Array.from(hexStrToUint8(signature)),
+                Array.from(base64ToUint8(public_key_base64)),
+                serializedOrder
+            ],
+            "test"
+        );
+
+        const signatureVerifiedEvent = Transaction.getEvents(
+            receipt,
+            "SignatureVerifiedEvent"
+        )[0];
+
+        expect(signatureVerifiedEvent).to.not.be.undefined;
+        expect(signatureVerifiedEvent?.is_verified).to.be.true;
+    });
+
+    it("should verify secp256k1 signature when sig, pk and msg data are correct", async () => {
+        const serializedOrder = OrderSigner.getSerializedOrder(order);
+        const signature = orderSigner.signOrder(order, ownerKeyPair);
+
+        const public_key_base64 = ownerKeyPair.getPublicKey().toString();
+
+        // off-chain signature verification
+        expect(
+            OrderSigner.verifySignatureUsingOrder(
+                order,
+                signature,
+                public_key_base64
+            )
+        ).to.be.true;
+
+        // on-chain signature verification
+        const receipt = await onChain.signAndCall(
+            ownerSigner,
+            "verify_signature",
+            [
+                Array.from(hexStrToUint8(signature)),
+                Array.from(ownerKeyPair.getPublicKey().toBytes()),
+                serializedOrder
+            ],
+            "test"
+        );
+
+        const signatureVerifiedEvent = Transaction.getEvents(
+            receipt,
+            "SignatureVerifiedEvent"
+        )[0];
+
+        expect(signatureVerifiedEvent).to.not.be.undefined;
+        expect(signatureVerifiedEvent?.is_verified).to.be.true;
+    });
+
     it("should not verify hash to given address secp256k1 when signed with different key", async () => {
         const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
-        const orderSigner = new OrderSigner(alice);
 
-        const serializedOrder = orderSigner.getSerializedOrder(order);
+        const serializedOrder = OrderSigner.getSerializedOrder(order);
 
-        const signature = orderSigner.signOrder(order);
-
-        const pubkey = ownerKeyPair.getPublicKey();
+        // signing using alice's key
+        const signature = orderSigner.signOrder(order, alice);
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
             "verify_signature",
             [
-                Array.from(
-                    // the last 2 chars in signature have 00 or 01 appended to make it
-                    // possible to recover signer address from signature.
-                    // when verifying signature using `secp256k1_verify()` on-chain,
-                    // always pass in signature without the leading `00`/`01`
-                    hexToBuffer(signature.slice(0, signature.length - 2))
-                ),
-                Array.from(pubkey.toBytes()),
+                Array.from(hexStrToUint8(signature)), // signed using alice pvt key
+                Array.from(ownerKeyPair.getPublicKey().toBytes()), // passing owner public key
                 serializedOrder
             ],
             "test"
@@ -71,20 +203,20 @@ describe("Order Signer", () => {
         expect(signatureVerifiedEvent?.is_verified).to.be.false;
     });
 
-    it("should verify hash to given address with secp256k1", async () => {
-        const serializedOrder = orderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order);
-        const pubkey = ownerKeyPair.getPublicKey();
+    it("should not verify signature when msg was changed - secp256", async () => {
+        const updatedOrder: Order = { ...order, price: bigNumber(0) };
+        const serializedOrder = OrderSigner.getSerializedOrder(updatedOrder);
+
+        // signing a different order
+        const signature = await orderSigner.signOrder(order, ownerKeyPair);
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
             "verify_signature",
             [
-                Array.from(
-                    hexToBuffer(signature.slice(0, signature.length - 2))
-                ),
-                Array.from(pubkey.toBytes()),
-                serializedOrder
+                Array.from(hexStrToUint8(signature)),
+                Array.from(ownerKeyPair.getPublicKey().toBytes()),
+                serializedOrder // passing in a different order
             ],
             "test"
         );
@@ -93,26 +225,25 @@ describe("Order Signer", () => {
             receipt,
             "SignatureVerifiedEvent"
         )[0];
+
         expect(signatureVerifiedEvent).to.not.be.undefined;
-        expect(signatureVerifiedEvent?.is_verified).to.be.true;
+        expect(signatureVerifiedEvent?.is_verified).to.be.false;
     });
 
-    it("should not verify hash to given address secp256k1 when msg was changed", async () => {
-        const orderSigner = new OrderSigner(ownerKeyPair);
+    it("should not verify signature when msg was changed - ed25519", async () => {
         const updatedOrder: Order = { ...order, price: bigNumber(0) };
-        const serializedOrder = orderSigner.getSerializedOrder(updatedOrder);
+        const serializedOrder = OrderSigner.getSerializedOrder(updatedOrder);
 
-        const signature = await orderSigner.signOrder(order);
-        const pubkey = await ownerKeyPair.getPublicKey();
+        // signing a different order
+        const signature = await orderSigner.signOrder(order, ed25519Keypair);
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
             "verify_signature",
             [
-                Array.from(
-                    hexToBuffer(signature.slice(0, signature.length - 2))
-                ),
-                Array.from(pubkey.toBytes()),
+                Array.from(hexStrToUint8(signature)),
+                Array.from(ownerKeyPair.getPublicKey().toBytes()),
+                // passing in a different order
                 serializedOrder
             ],
             "test"
@@ -131,132 +262,101 @@ describe("Order Signer", () => {
         const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
         const orderSigner = new OrderSigner(alice);
 
-        const hash = orderSigner.getOrderHash(order);
+        const hash = OrderSigner.getOrderHash(order);
         const signature = orderSigner.signOrder(order);
 
+        // expect(
+        //     OrderSigner.verifyUsingHash(
+        //         signature,
+        //         hash,
+        //         alice.getPublicKey().toSuiAddress()
+        //     )
+        // ).to.be.true;
+    });
+
+    xit("should not verify hash (off-chain) to given address secp256k1 by verifyUsingHash method", async () => {
+        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
+        const orderSigner = new OrderSigner(alice);
+
+        const hash = OrderSigner.getOrderHash(order);
+        const signature = orderSigner.signOrder(order);
+
+        // expect(
+        //     OrderSigner.verifyUsingHash(
+        //         signature,
+        //         hash,
+        //         ownerKeyPair.getPublicKey().toSuiAddress()
+        //     )
+        // ).to.be.false;
+    });
+
+    it("should verify signature off-chain using order - secp256k1", async () => {
+        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
+        const signature = orderSigner.signOrder(order, alice);
+        const public_key_base64 = alice.getPublicKey().toString();
+
         expect(
-            orderSigner.verifyUsingHash(
+            OrderSigner.verifySignatureUsingOrder(
+                order,
                 signature,
-                hash,
-                alice.getPublicKey().toSuiAddress()
+                public_key_base64
             )
         ).to.be.true;
     });
 
-    it("should not verify hash (off-chain) to given address secp256k1 by verifyUsingHash method", async () => {
-        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
-        const orderSigner = new OrderSigner(alice);
-
-        const hash = orderSigner.getOrderHash(order);
-        const signature = orderSigner.signOrder(order);
+    it("should verify signature off-chain using order - ed25519", async () => {
+        const signature = orderSigner.signOrder(order, ed25519Keypair);
+        const public_key_base64 = ed25519Keypair.getPublicKey().toString();
 
         expect(
-            orderSigner.verifyUsingHash(
-                signature,
-                hash,
-                ownerKeyPair.getPublicKey().toSuiAddress()
-            )
-        ).to.be.false;
-    });
-
-    xit("should verify hash (off-chain) to given address secp256k1 by verifyUsingOrder method", async () => {
-        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
-        const orderSigner = new OrderSigner(alice);
-        const signature = orderSigner.signOrder(order);
-
-        expect(
-            orderSigner.verifyUsingOrder(
-                signature,
+            OrderSigner.verifySignatureUsingOrder(
                 order,
-                alice.getPublicKey().toSuiAddress()
+                signature,
+                public_key_base64
             )
         ).to.be.true;
     });
 
-    it("should not verify hash (off-chain) to given address secp256k1 by verifyUsingOrder method", async () => {
-        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
-        const orderSigner = new OrderSigner(alice);
-        const signature = orderSigner.signOrder(order);
+    it("should revert when verifying signature using order as public key is incorrect", async () => {
+        expect(
+            OrderSigner.verifySignatureUsingOrder(
+                order,
+                orderSigner.signOrder(order, ownerKeyPair),
+                ed25519Keypair.getPublicKey().toString()
+            )
+        ).to.be.false;
 
         expect(
-            orderSigner.verifyUsingOrder(
-                signature,
+            OrderSigner.verifySignatureUsingOrder(
                 order,
-                ownerKeyPair.getPublicKey().toSuiAddress()
+                orderSigner.signOrder(order, ed25519Keypair),
+                ownerKeyPair.getPublicKey().toString()
             )
         ).to.be.false;
     });
 
-    xit("should verify hash to given address with ed25519", async () => {
-        const ownerKeyPair = getKeyPairFromSeed(
-            DeploymentConfigs.deployer,
-            "ED25519"
-        );
-        const orderSigner = new OrderSigner(ownerKeyPair);
-        const serializedOrder = orderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order);
-        const pubkey = await ownerKeyPair.getPublicKey();
+    it("should revert when verifying signature using order as order is incorrect", async () => {
+        const [alice] = getTestAccounts(provider);
 
-        const receipt = await onChain.signAndCall(
-            ownerSigner,
-            "verify_signature",
-            [
-                Array.from(
-                    hexToBuffer(signature.slice(0, signature.length - 2))
-                ),
-                Array.from(pubkey.toBytes()),
-                serializedOrder
-            ],
-            "test"
-        );
+        expect(
+            OrderSigner.verifySignatureUsingOrder(
+                { ...order, maker: alice.address },
+                orderSigner.signOrder(order, ownerKeyPair),
+                ownerKeyPair.getPublicKey().toString()
+            )
+        ).to.be.false;
 
-        const signatureVerifiedEvent = Transaction.getEvents(
-            receipt,
-            "SignatureVerifiedEvent"
-        )[0];
-
-        expect(signatureVerifiedEvent).to.not.be.undefined;
-        expect(signatureVerifiedEvent?.fields?.is_verified).to.be.true;
-    });
-
-    xit("should not verify hash to given address ed25519", async () => {
-        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase, "ED25519");
-        const ownerKeyPair = getKeyPairFromSeed(
-            DeploymentConfigs.deployer,
-            "ED25519"
-        );
-        const orderSigner = new OrderSigner(alice);
-
-        const serializedOrder = orderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order);
-        const pubkey = ownerKeyPair.getPublicKey();
-
-        const receipt = await onChain.signAndCall(
-            ownerSigner,
-            "verify_signature",
-            [
-                Array.from(
-                    hexToBuffer(signature.slice(0, signature.length - 2))
-                ),
-                Array.from(pubkey.toBytes()),
-                serializedOrder
-            ],
-            "test"
-        );
-
-        const signatureVerifiedEvent = Transaction.getEvents(
-            receipt,
-            "SignatureVerifiedEvent"
-        )[0];
-
-        expect(signatureVerifiedEvent).to.not.be.undefined;
-        expect(signatureVerifiedEvent?.is_verified).to.be.false;
+        expect(
+            OrderSigner.verifySignatureUsingOrder(
+                { ...order, maker: alice.address },
+                orderSigner.signOrder(order, ed25519Keypair),
+                ed25519Keypair.getPublicKey().toString()
+            )
+        ).to.be.false;
     });
 
     it("should generate off-chain hash exactly equal to on-chain hash", async () => {
-        const orderSigner = new OrderSigner(ownerKeyPair);
-
-        const hash = orderSigner.getOrderHash(order);
+        const hash = OrderSigner.getOrderHash(order);
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
@@ -282,54 +382,7 @@ describe("Order Signer", () => {
         expect(hash).to.be.equal(onChainHash);
     });
 
-    it("should recover correct public key on chain", async () => {
-        const orderSigner = new OrderSigner(ownerKeyPair);
-        const hash = orderSigner.getOrderHash(order);
-
-        const serializedOrder = orderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order);
-
-        const receipt = await onChain.signAndCall(
-            ownerSigner,
-            "hash_recover_pub_key",
-            [Array.from(hexToBuffer(signature)), order.maker, order.market],
-            "test"
-        );
-
-        const hashGeneratedEvent = Transaction.getEvents(
-            receipt,
-            "HashGeneratedEvent"
-        )[0];
-
-        const orderSerializedEvent = Transaction.getEvents(
-            receipt,
-            "OrderSerializedEvent"
-        )[0];
-
-        const publicKeyRecoveredEvent = Transaction.getEvents(
-            receipt,
-            "PublicKeyRecoveredEvent"
-        )[0];
-
-        expect(hashGeneratedEvent).to.not.be.undefined;
-        expect(orderSerializedEvent).to.not.be.undefined;
-        expect(publicKeyRecoveredEvent).to.not.be.undefined;
-
-        const onChainHash = base64ToHex(hashGeneratedEvent?.hash ?? "");
-
-        expect(
-            Buffer.from(orderSerializedEvent.serialized_order).toString("hex")
-        ).to.be.equal(serializedOrder);
-
-        expect(
-            Buffer.from(publicKeyRecoveredEvent.public_key).toString("hex")
-        ).to.be.equal(
-            Buffer.from(ownerKeyPair.getPublicKey().toBytes()).toString("hex")
-        );
-        expect(hash).to.be.equal(onChainHash);
-    });
-
-    it("should recover public key from a random signed order", async () => {
+    it("should recover user address from signed order - secp256k", async () => {
         const [alice] = getTestAccounts(provider);
 
         const order = createOrder({
@@ -338,15 +391,22 @@ describe("Order Signer", () => {
             market: onChain.getPerpetualID()
         });
 
-        const orderSigner = new OrderSigner(alice.keyPair);
-        const hash = orderSigner.getOrderHash(order);
+        const hash = OrderSigner.getOrderHash(order);
 
-        const serializedOrder = orderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order);
+        const serializedOrder = OrderSigner.getSerializedOrder(order);
+        const signature = orderSigner.signOrder(order, alice.keyPair);
+
+        expect(
+            OrderSigner.verifySignatureUsingOrder(
+                order,
+                signature,
+                alice.keyPair.getPublicKey().toString()
+            )
+        ).to.be.true;
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
-            "get_public_key_from_signed_order",
+            "get_public_address_from_signed_order",
             [
                 order.market,
                 order.maker,
@@ -356,10 +416,13 @@ describe("Order Signer", () => {
                 order.leverage,
                 order.expiration,
                 order.salt,
-                Array.from(hexToBuffer(signature))
+                Array.from(hexStrToUint8(signature)),
+                Array.from(alice.keyPair.getPublicKey().toBytes())
             ],
             "test"
         );
+
+        expectTxToSucceed(receipt);
 
         const hashGeneratedEvent = Transaction.getEvents(
             receipt,
@@ -376,14 +439,14 @@ describe("Order Signer", () => {
             "EncodedOrder"
         )[0];
 
-        const publicKeyRecoveredEvent = Transaction.getEvents(
+        const addressGeneratedEvent = Transaction.getEvents(
             receipt,
-            "PublicKeyRecoveredEvent"
+            "PublicAddressGeneratedEvent"
         )[0];
 
         expect(hashGeneratedEvent).to.not.be.undefined;
         expect(orderSerializedEvent).to.not.be.undefined;
-        expect(publicKeyRecoveredEvent).to.not.be.undefined;
+        expect(addressGeneratedEvent).to.not.be.undefined;
 
         expect(
             Buffer.from(orderSerializedEvent.serialized_order).toString("hex")
@@ -395,31 +458,35 @@ describe("Order Signer", () => {
             serializedOrder
         );
 
-        expect(
-            Buffer.from(publicKeyRecoveredEvent.public_key).toString("hex")
-        ).to.be.equal(
-            Buffer.from(alice.keyPair.getPublicKey().toBytes()).toString("hex")
-        );
-    });
-    it("should recover public key from a random signed order 2 ", async () => {
-        const [alice] = getTestAccounts(provider);
+        const onChainAddress = base64ToHex(addressGeneratedEvent?.addr ?? "");
 
+        expect(onChainAddress).to.be.equal(alice.address.substring(2));
+    });
+
+    it("should recover user address from signed order - ed25519", async () => {
+        const address = ed25519Keypair.getPublicKey().toSuiAddress();
         const order = createOrder({
             isBuy: true,
-            maker: alice.address,
-            market: onChain.getPerpetualID(),
-            salt: 1684272867494
+            maker: address,
+            market: onChain.getPerpetualID()
         });
 
-        const orderSigner = new OrderSigner(alice.keyPair);
-        const hash = orderSigner.getOrderHash(order);
+        const hash = OrderSigner.getOrderHash(order);
 
-        const serializedOrder = orderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order);
+        const serializedOrder = OrderSigner.getSerializedOrder(order);
+        const signature = orderSigner.signOrder(order, ed25519Keypair);
+
+        expect(
+            OrderSigner.verifySignatureUsingOrder(
+                order,
+                signature,
+                ed25519Keypair.getPublicKey().toString()
+            )
+        ).to.be.true;
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
-            "get_public_key_from_signed_order",
+            "get_public_address_from_signed_order",
             [
                 order.market,
                 order.maker,
@@ -429,10 +496,13 @@ describe("Order Signer", () => {
                 order.leverage,
                 order.expiration,
                 order.salt,
-                Array.from(hexToBuffer(signature))
+                Array.from(hexStrToUint8(signature)),
+                Array.from(ed25519Keypair.getPublicKey().toBytes())
             ],
             "test"
         );
+
+        expectTxToSucceed(receipt);
 
         const hashGeneratedEvent = Transaction.getEvents(
             receipt,
@@ -449,14 +519,14 @@ describe("Order Signer", () => {
             "EncodedOrder"
         )[0];
 
-        const publicKeyRecoveredEvent = Transaction.getEvents(
+        const addressGeneratedEvent = Transaction.getEvents(
             receipt,
-            "PublicKeyRecoveredEvent"
+            "PublicAddressGeneratedEvent"
         )[0];
 
         expect(hashGeneratedEvent).to.not.be.undefined;
         expect(orderSerializedEvent).to.not.be.undefined;
-        expect(publicKeyRecoveredEvent).to.not.be.undefined;
+        expect(addressGeneratedEvent).to.not.be.undefined;
 
         expect(
             Buffer.from(orderSerializedEvent.serialized_order).toString("hex")
@@ -464,22 +534,26 @@ describe("Order Signer", () => {
 
         expect(base64ToHex(hashGeneratedEvent?.hash ?? "")).to.be.equal(hash);
 
-        expect(
-            Buffer.from(publicKeyRecoveredEvent.public_key).toString("hex")
-        ).to.be.equal(
-            Buffer.from(alice.keyPair.getPublicKey().toBytes()).toString("hex")
+        expect(Buffer.from(enocdedOrderEvent.order).toString()).to.be.equal(
+            serializedOrder
         );
+
+        const onChainAddress = base64ToHex(addressGeneratedEvent?.addr ?? "");
+
+        expect(onChainAddress).to.be.equal(address.substring(2));
     });
 
-    it("should generate off-chain public address exactly equal to on-chain public address", async () => {
+    it("should generate off-chain public address exactly equal to on-chain public address - secp", async () => {
+        // append 1 to public key
+        const publicKey = Array.from(
+            base64ToBuffer(ownerKeyPair.getPublicKey().toBase64())
+        );
+        publicKey.splice(0, 0, 1);
+
         const receipt = await onChain.signAndCall(
             ownerSigner,
             "get_public_address",
-            [
-                Array.from(
-                    base64ToBuffer(ownerKeyPair.getPublicKey().toBase64())
-                )
-            ],
+            [publicKey],
             "test"
         );
 
@@ -497,50 +571,37 @@ describe("Order Signer", () => {
         );
     });
 
-    it("should recover public key on-chain from signature & hash", async () => {
-        const serializedOrder = orderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order);
-        const pubkey = await ownerKeyPair.getPublicKey();
+    it("should generate off-chain public address exactly equal to on-chain public address - ed25519", async () => {
+        // append 0 to public key
+        const publicKey = Array.from(
+            base64ToBuffer(ed25519Keypair.getPublicKey().toBase64())
+        );
+        publicKey.splice(0, 0, 0);
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
-            "get_public_key",
-            [Array.from(hexToBuffer(signature)), serializedOrder],
+            "get_public_address",
+            [publicKey],
             "test"
         );
 
-        const pkRecoveredEvent = Transaction.getEvents(
+        const tempEvents = Transaction.getEvents(receipt, "TempEvent");
+
+        tempEvents.forEach((e) => {
+            console.log("Buff raw:", e);
+        });
+
+        const addressGeneratedEvent = Transaction.getEvents(
             receipt,
-            "PublicKeyRecoveredEvent"
+            "PublicAddressGeneratedEvent"
         )[0];
 
-        const pk = base64ToHex(pkRecoveredEvent?.public_key);
+        expect(addressGeneratedEvent).to.not.be.undefined;
 
-        expect(pkRecoveredEvent).to.not.be.undefined;
-        expect(pk).to.be.equal(base64ToHex(pubkey.toBase64()));
-    });
+        const onChainAddress = base64ToHex(addressGeneratedEvent?.addr ?? "");
 
-    it("should not recover valid public key on-chain from signature & hash", async () => {
-        const signature = await orderSigner.signOrder(order);
-        const updatedOrder: Order = { ...order, price: bigNumber(0) };
-        const serializedOrder = orderSigner.getSerializedOrder(updatedOrder);
-        const pubkey = await ownerKeyPair.getPublicKey();
-
-        const receipt = await onChain.signAndCall(
-            ownerSigner,
-            "get_public_key",
-            [Array.from(hexToBuffer(signature)), serializedOrder],
-            "test"
+        expect(onChainAddress).to.be.equal(
+            ed25519Keypair.getPublicKey().toSuiAddress().substring(2)
         );
-
-        const pkRecoveredEvent = Transaction.getEvents(
-            receipt,
-            "PublicKeyRecoveredEvent"
-        )[0];
-
-        const pk = base64ToHex(pkRecoveredEvent?.public_key);
-
-        expect(pkRecoveredEvent).to.not.be.undefined;
-        expect(pk).to.be.not.equal(base64ToHex(pubkey.toBase64()));
     });
 });

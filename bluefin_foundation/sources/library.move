@@ -3,16 +3,27 @@ module bluefin_foundation::library {
     use sui::address;
     use sui::hash;
     use sui::ecdsa_k1;
+    use sui::ed25519;
+    use sui::bcs;
     use std::hash as std_hash;
 
     const BASE_UINT : u128 = 1000000000;
     const HALF_BASE_UINT : u128 = 500000000;
+
+   const SIGNED_USING_SECP_KEYPAIR : u8 = 0;
+   const SIGNED_USING_ED_KEYPAIR : u8 = 1;
+   const SIGNED_USING_ED_UI_WALLET : u8 = 1;
 
     use Pyth::price_info::{PriceInfoObject};
     use Pyth::price::{Price};
     use Pyth::i64::{I64};
 
     
+    struct VerificationResult has copy,drop {
+        is_verified: bool,
+        public_key: vector<u8>
+    }
+
 
     /**
      * @dev Getter for constants as reading directly from modules isn't allowed
@@ -101,38 +112,61 @@ module bluefin_foundation::library {
     }
 
     /**
-     * @dev given a raw message and its signature, returns the public key of signer
-     * assumes the hashing method used is sha256
+     * Returns true if the provided signature is verified
      */
-    public fun recover_public_key_from_signature(rawMsg: vector<u8>, signature: vector<u8>):vector<u8>{
+    public fun verify_signature(signature: vector<u8>, public_key: vector<u8>, raw_msg: vector<u8>): VerificationResult {
 
-        let v = vector::borrow_mut(&mut signature, 64);
+        let element = vector::pop_back(&mut signature);
+        let result = VerificationResult{is_verified: false, public_key: public_key};
+
+        // signature is generated using secp256k1
+        if(element == SIGNED_USING_SECP_KEYPAIR) {
+            // the 1 passed to secp256k1_verify assumes the msg was hashed using sha256
+            // the msg being passed is not hashed
+            result.is_verified = ecdsa_k1::secp256k1_verify(&signature, &public_key, &raw_msg, 1);       
+            vector::insert(&mut result.public_key, 1, 0);
+
+        } 
+        // signature is generated using ed2559
+        else if(element == SIGNED_USING_ED_KEYPAIR) {
+            // take hash of the msh
+            let msg = get_hash(raw_msg);
+            // the msg expected to be hashed
+            result.is_verified = ed25519::ed25519_verify(&signature, &public_key, &msg);       
+            vector::insert(&mut result.public_key, 0, 0);
+
+        }
+         // signature is generated using ed2559 ui wallet (signMessage)
+        else if(element == SIGNED_USING_ED_UI_WALLET) {
         
-        if (*v == 27) {
-            *v = 0;
-        } else if (*v == 28) {
-            *v = 1;
-        } else if (*v > 35) {
-            *v = (*v - 1) % 2;
+            let sha256_msg = get_hash(raw_msg);
+    
+            // serialize the hash    
+            let serialize = bcs::to_bytes(&sha256_msg);
+    
+            // append [3,0,0] intent bytes to msg
+            let intent_bytes = vector::empty<u8>();
+            vector::push_back(&mut intent_bytes, 3);
+            vector::push_back(&mut intent_bytes, 0);
+            vector::push_back(&mut intent_bytes, 0);
+            vector::append(&mut intent_bytes, serialize);
+        
+            let blake_encoded = hash::blake2b256(&intent_bytes);
+    
+            result.is_verified = ed25519::ed25519_verify(&signature, &public_key, &blake_encoded);       
+            vector::insert(&mut result.public_key, 0, 0);
+
         };
 
-        // @dev assumes msg was signed using sha256 hence the last param is 1
-        let public_key = ecdsa_k1::secp256k1_ecrecover(&signature, &rawMsg, 1);
-
-        return public_key
-
+        return result
     }
 
     /**
      * Returns public address from the public key
      */
     public fun get_public_address(public_key: vector<u8>): address{
-        let buff = vector::empty<u8>();
 
-        vector::append(&mut buff, vector[1]); // signature scheme for secp256k1
-        vector::append(&mut buff, public_key);
-
-        let address_ex = hash::blake2b256(&buff);
+        let address_ex = hash::blake2b256(&public_key);
         let address = vector::empty<u8>();
         let i = 0;
         while (i < 32) {
@@ -144,6 +178,13 @@ module bluefin_foundation::library {
         return address::from_bytes(address)
     }
 
+    public fun get_result_status(result:VerificationResult): bool{
+        result.is_verified
+    }
+
+    public fun get_result_public_key(result:VerificationResult): vector<u8>{
+        result.public_key
+    }
 
     /*
     Gets the Oracle Price from Pyth Network.

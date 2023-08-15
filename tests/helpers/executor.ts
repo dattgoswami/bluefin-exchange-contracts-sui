@@ -6,7 +6,6 @@ import {
     getSignerFromSeed,
     readFile,
     requestGas,
-    createAccount,
     getTestAccounts,
     network,
     DeploymentConfigs,
@@ -19,7 +18,8 @@ import {
     MarketDetails,
     ERROR_CODES,
     BigNumber,
-    SuiTransactionBlockResponse
+    SuiTransactionBlockResponse,
+    hexToString
 } from "../../submodules/library-sui";
 import {
     evaluateSystemExpect,
@@ -30,6 +30,8 @@ import {
 } from "./expect";
 import { mintAndDeposit } from "./utils";
 import { TestCaseJSON } from "./interfaces";
+import { createAccount } from "./accounts";
+import { getFilePathFromEnv } from "../../src/helpers";
 
 const provider = getProvider(network.rpc, network.faucet);
 const ownerKeyPair = getKeyPairFromSeed(DeploymentConfigs.deployer);
@@ -46,6 +48,12 @@ export async function executeTests(
     marketConfig: MarketDetails,
     initialBalances?: { traders?: number; liquidator?: number }
 ) {
+    const pythObj = readFile(getFilePathFromEnv());
+
+    marketConfig.priceInfoFeedId = hexToString(
+        pythObj[marketConfig.symbol + "-FEED-ID"]
+    );
+
     const [alice, bob, cat, dog, liquidator] = getTestAccounts(provider);
 
     let tx: SuiTransactionBlockResponse;
@@ -62,6 +70,7 @@ export async function executeTests(
             deployment,
             ownerSigner,
             provider,
+            pythObj[marketConfig.symbol as string],
             {
                 ...marketConfig,
                 feePool: feePoolAddress,

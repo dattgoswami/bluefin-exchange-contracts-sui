@@ -9,7 +9,8 @@ import {
     TEST_WALLETS,
     toBigNumberStr,
     OnChainCalls,
-    Transaction
+    Transaction,
+    packageName
 } from "../submodules/library-sui";
 import {
     expectTxToEmitEvent,
@@ -36,7 +37,11 @@ describe("Guardian", () => {
     });
 
     beforeEach(async () => {
-        const publishTxn = await publishPackage(false, ownerSigner);
+        const publishTxn = await publishPackage(
+            false,
+            ownerSigner,
+            packageName
+        );
         const objects = await getGenesisMap(provider, publishTxn);
         const deployment = packDeploymentData(ownerAddress, objects);
         const enrichedDeployment = {

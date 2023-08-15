@@ -1,8 +1,11 @@
 import { execSync } from "child_process";
 
-import { wallet, RawSigner,
+import {
+    wallet,
+    RawSigner,
     SuiTransactionBlockResponse,
-    TransactionBlock } from "../submodules/library-sui";
+    TransactionBlock
+} from "../submodules/library-sui";
 import * as Networks from "../submodules/library-sui";
 
 export function execCommand(command: string) {

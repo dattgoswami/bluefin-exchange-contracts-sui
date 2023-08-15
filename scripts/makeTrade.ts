@@ -5,7 +5,6 @@ import {
     getSignerFromSeed,
     createOrder,
     OnChainCalls,
-    toBigNumberStr,
     OrderSigner,
     Trader,
     Transaction
@@ -23,7 +22,7 @@ const provider = getProvider(
     DeploymentConfigs.network.faucet
 );
 
-const accounts = getMakerTakerAccounts(provider, true);
+const accounts = getMakerTakerAccounts(provider, false);
 
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
@@ -32,35 +31,30 @@ const onChain = new OnChainCalls(ownerSigner, deployment);
 const signer = new OrderSigner(accounts.maker.keyPair);
 
 async function main() {
+    const tradingPerp = "ETH-PERP";
+
     // Note: Assumes that the deployer is admin, as only admin can make a
     // settlement operator
     // make admin of the exchange settlement operator
     const tx1 = await onChain.createSettlementOperator({
         operator: await ownerSigner.getAddress()
     });
-    const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[0];
-
-    // Note: Assuming deployer is already price oracle operator
-    // make admin of the exchange price oracle operator
-    // const tx2 = await onChain.setPriceOracleOperator({
-    //     operator: await ownerSigner.getAddress()
-    // });
-    // const updateOPCapID = Transaction.getCreatedObjectIDs(tx2)[0];
+    const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[1];
 
     // mint and deposit USDC to test accounts
     await mintAndDeposit(onChain, accounts.maker.address);
     await mintAndDeposit(onChain, accounts.taker.address);
 
     // set specific price on oracle
-  //  const tx3 = await onChain.updateOraclePrice({
+    //  const tx3 = await onChain.updateOraclePrice({
     //    price: toBigNumberStr(1800)
     //});
-   // expectTxToSucceed(tx3);
+    // expectTxToSucceed(tx3);
 
     // create an order for ETH market
     const order = createOrder({
         maker: accounts.maker.address,
-        market: onChain.getPerpetualID("ETH-PERP"),
+        market: onChain.getPerpetualID(tradingPerp),
         isBuy: true,
         price: 1800,
         leverage: 1,
@@ -94,7 +88,7 @@ async function main() {
     );
     console.log(
         "Maker Position: ",
-        await onChain.getUserPosition(accounts.maker.address)
+        await onChain.getUserPosition(tradingPerp, accounts.maker.address)
     );
 
     console.log(
@@ -103,7 +97,7 @@ async function main() {
     );
     console.log(
         "Taker Position: ",
-        await onChain.getUserPosition(accounts.taker.address)
+        await onChain.getUserPosition(tradingPerp, accounts.taker.address)
     );
 }
 

@@ -12,6 +12,7 @@ Cargo.lock
 /node_modules
 
 /bluefin_foundation/build
+/pyth/build
 
 .env
 

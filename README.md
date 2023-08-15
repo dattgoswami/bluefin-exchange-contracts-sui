@@ -18,8 +18,8 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 - Install dependencies using `yarn`
 - Create a wallet on sui using `sui client new-address secp256k1`
 - Create `.env` file using `.env.example` provided. Specify the DEPLOYER_SEED (secp256k1) and DEPLOY_ON (See `networks.json` for available networks to deploy) The Deployer account must be in sui-client addresses.
-- To deploy fake pyth oracle contract for testing purposes run `yarn deploy:pyth`
-Then continue to deploy bluefin_foundation
+- To deploy pyth oracle contract for testing purposes run `yarn deploy:pyth`
+  Then continue to deploy bluefin_foundation
 - To deploy `bluefin_foundation` contracts run `yarn deploy`
   The script will deploy the contracts, and create any markets specified in `DeploymentConfig.ts`, extract created objects and write them to `./deployment.json` file
 

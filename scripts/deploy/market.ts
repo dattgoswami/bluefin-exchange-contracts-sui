@@ -2,11 +2,13 @@ import {
     writeFile,
     getSignerFromSeed,
     getProvider,
-    packDeploymentData,
-    createMarket
+    readFile,
+    hexToString
 } from "../../submodules/library-sui";
+import { packDeploymentData, createMarket } from "../../src/deployment";
 import { Client } from "../../src/Client";
 import { DeploymentConfigs, market } from "../../submodules/library-sui";
+import { getFilePathFromEnv } from "../../src/helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -27,6 +29,9 @@ async function main() {
     if (!Client.switchEnv(DeploymentConfigs.network.name)) {
         process.exit(1);
     }
+
+    console.log("Reading Pyth Object file");
+    const pythObj = readFile(getFilePathFromEnv());
 
     const path = "../../deployment.json";
     const data = await import(path);
@@ -52,10 +57,15 @@ async function main() {
         process.exit(1);
     }
 
+    marketConfig.priceInfoFeedId = hexToString(
+        pythObj[marketConfig.symbol + "-FEED-ID"]
+    );
+
     const marketMap = await createMarket(
         deployment,
         signer,
         provider,
+        pythObj[marketConfig.symbol as string],
         marketConfig
     );
 

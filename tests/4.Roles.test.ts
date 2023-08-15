@@ -9,7 +9,8 @@ import {
     Transaction,
     ERROR_CODES,
     OWNERSHIP_ERROR,
-    getTestAccounts
+    getTestAccounts,
+    packageName
 } from "../submodules/library-sui";
 import { publishPackage } from "../src/helpers";
 
@@ -40,7 +41,11 @@ describe("Roles", () => {
 
     beforeEach(async () => {
         await requestGas(ownerAddress);
-        const publishTxn = await publishPackage(false, ownerSigner);
+        const publishTxn = await publishPackage(
+            false,
+            ownerSigner,
+            packageName
+        );
         const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = await packDeploymentData(ownerAddress, objects);
         onChain = new OnChainCalls(ownerSigner, deploymentData);
@@ -185,39 +190,6 @@ describe("Roles", () => {
             expectTxToFail(tx3);
 
             expect(Transaction.getError(tx3)).to.be.equal(ERROR_CODES[112]);
-        });
-    });
-
-    describe("Price Oracle Operator", () => {
-        it("should revert when non-exchange admin tries to set price oracle operator", async () => {
-            const error = OWNERSHIP_ERROR(
-                onChain.getExchangeAdminCap(),
-                onChain.getDeployerAddress(),
-                alice.address
-            );
-
-            await expect(
-                onChain.setPriceOracleOperator(
-                    {
-                        operator: alice.address
-                    },
-                    alice.signer
-                )
-            ).to.be.eventually.rejectedWith(error);
-        });
-
-        it("should transfer price oracle operator capability to alice", async () => {
-            const tx = await onChain.setPriceOracleOperator({
-                operator: alice.address
-            });
-            expectTxToSucceed(tx);
-
-            const event = Transaction.getEvents(
-                tx,
-                "PriceOracleOperatorUpdate"
-            )[0];
-
-            expect(event.account).to.be.equal(alice.address);
         });
     });
 

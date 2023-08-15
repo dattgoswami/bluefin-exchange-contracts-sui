@@ -37,7 +37,7 @@ module bluefin_foundation::exchange {
     use bluefin_foundation::isolated_adl::{Self};
 
 
-    //Pyth
+    // pyth
     use Pyth::price_info::{PriceInfoObject as PythFeeder};
     
 
@@ -210,6 +210,7 @@ module bluefin_foundation::exchange {
         makerSalt: u128,
         makerAddress: address,
         makerSignature:vector<u8>,
+        makerPublicKey:vector<u8>,
 
         // taker
         takerFlags:u8,
@@ -220,26 +221,21 @@ module bluefin_foundation::exchange {
         takerSalt: u128,
         takerAddress: address,
         takerSignature:vector<u8>,
+        takerPublicKey:vector<u8>,
 
         // fill
         quantity: u128, 
         price: u128, 
 
-        //This is used to get PythInfoObject from whoever is calling this
-        // function, this will get us ORACLE PRICE FROM PYTH 
-        price_info_obj: &PythFeeder,
-
+        // pyth oracle object
+        price_oracle: &PythFeeder,
         
         ctx: &mut TxContext
         ){
-            //To ensure that priceOracleFeed Id set in perpetual is same as the one given
-            let priceIdentifierBytes = library::get_price_identifier(price_info_obj);  
-            let priceIdentifierPerp = perpetual::priceIdenfitier(perp);
-            assert!(priceIdentifierBytes==priceIdentifierPerp, error::wrong_price_identifier());
 
-            let oraclePrice = library::get_oracle_price(price_info_obj);
-            perpetual::set_oracle_price(perp, oraclePrice);
-         
+
+            // checks that provided price oracle is correct and updates perpetual with new price
+            update_oracle_price(perp, price_oracle);
 
             let sender = tx_context::sender(ctx);
 
@@ -254,6 +250,7 @@ module bluefin_foundation::exchange {
                 clock::timestamp_ms(clock) > perpetual::startTime(perp), 
                 error::trading_not_started());
 
+            
             // if the maker or taker order was signed to be executed through 
             // orderbook, it should only be executed by a settlement operator
             if (order::flag_orderbook_only(makerFlags) || order::flag_orderbook_only(takerFlags)){
@@ -307,6 +304,7 @@ module bluefin_foundation::exchange {
                 makerExpiration, 
                 makerSalt, 
                 makerSignature,
+                makerPublicKey,
 
                 // taker
                 takerFlags,
@@ -317,6 +315,7 @@ module bluefin_foundation::exchange {
                 takerExpiration, 
                 takerSalt, 
                 takerSignature,
+                takerPublicKey,
 
                 // fill
                 quantity,
@@ -376,22 +375,16 @@ module bluefin_foundation::exchange {
         leverage: u128,
         // all of nothing
         allOrNothing: bool,
-
-        //This is used to get PythInfoObject from whoever is calling this
-        // function, this will get us ORACLE PRICE FROM PYTH 
-        price_info_obj: &PythFeeder,
+        // pyth oracle object
+        price_oracle: &PythFeeder,
 
         ctx: &mut TxContext        
 
     ){
 
-        let priceIdentifierBytes = library::get_price_identifier(price_info_obj);  
-        let priceIdentifierPerp = perpetual::priceIdenfitier(perp);
-        assert!(priceIdentifierBytes==priceIdentifierPerp, error::wrong_price_identifier());
+        // checks that provided price oracle is correct and updates perpetual with new price
+        update_oracle_price(perp, price_oracle);
 
-        let oraclePrice = library::get_oracle_price(price_info_obj);
-        perpetual::set_oracle_price(perp, oraclePrice);
-        
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
 
@@ -403,14 +396,12 @@ module bluefin_foundation::exchange {
 
         let sender = tx_context::sender(ctx);
 
-        // TODO check if trading is allowed by guardian for given perpetual or not
-
-        assert!(clock::timestamp_ms(clock) > perpetual::startTime(perp), error::trading_not_started());
 
         // check if caller has permission to trade on taker's behalf
         assert!(
             sender == liquidator || roles::is_sub_account(subAccounts, liquidator, sender),
             error::sender_does_not_have_permission_for_account(1));
+
 
         let perpID = object::uid_to_inner(perpetual::id(perp));
         let perpAddress = object::id_to_address(&perpID);
@@ -521,9 +512,14 @@ module bluefin_foundation::exchange {
         quantity: u128,
         // if true, will revert if maker's position is less than the amount
         allOrNothing: bool,
+        // price oracle object
+        price_oracle: &PythFeeder,
         // sender's context
         ctx: &mut TxContext
     ){
+
+        // checks that provided price oracle is correct and updates perpetual with new price
+        update_oracle_price(perp, price_oracle);
 
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
@@ -594,14 +590,11 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to add margin to their position
      */
-    entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user:address, amount: u128, price_info_obj: &PythFeeder ,ctx: &mut TxContext){
-        //To ensure that priceOracleFeed Id set in perpetual is same as the one given
-        let priceIdentifierBytes = library::get_price_identifier(price_info_obj);  
-        let priceIdentifierPerp = perpetual::priceIdenfitier(perp);
-        assert!(priceIdentifierBytes==priceIdentifierPerp, error::wrong_price_identifier());
+    entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user:address, amount: u128, price_oracle: &PythFeeder ,ctx: &mut TxContext){
 
-        let oraclePrice = library::get_oracle_price(price_info_obj);
-        perpetual::set_oracle_price(perp, oraclePrice);
+        // checks that provided price oracle is correct and updates perpetual with new price
+        update_oracle_price(perp, price_oracle);
+     
         let caller = tx_context::sender(ctx);
 
         // check if caller has permission for account
@@ -655,8 +648,11 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to remove margin from their position
      */
-    entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, amount: u128, ctx: &mut TxContext){
+    entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, amount: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
         
+        // checks that provided price oracle is correct and updates perpetual with new price
+        update_oracle_price(perp, price_oracle);
+
         let caller = tx_context::sender(ctx);
 
         // check if caller has permission for account
@@ -731,14 +727,10 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to adjust their leverage
      */
-    entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, leverage: u128, price_info_obj: &PythFeeder, ctx: &mut TxContext){
-        //To ensure that priceOracleFeed Id set in perpetual is same as the one given
-        let priceIdentifierBytes = library::get_price_identifier(price_info_obj);  
-        let priceIdentifierPerp = perpetual::priceIdenfitier(perp);
-        assert!(priceIdentifierBytes==priceIdentifierPerp, error::wrong_price_identifier());
-
-        let oraclePrice = library::get_oracle_price(price_info_obj);
-        perpetual::set_oracle_price(perp, oraclePrice);
+    entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, leverage: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
+     
+        // checks that provided price oracle is correct and updates perpetual with new price
+        update_oracle_price(perp, price_oracle);
         
         let caller = tx_context::sender(ctx);
 
@@ -1014,5 +1006,22 @@ module bluefin_foundation::exchange {
             fundingRate: funding_rate::rate(fundingRate)
         });
 
-    }    
+    }   
+
+    //===========================================================//
+    //                         ORALCE PRICE                      //
+    //===========================================================//
+
+    fun update_oracle_price(perp: &mut Perpetual, price_oracle: &PythFeeder){
+
+        // verify that the incoming oracle object belongs to the provided perpetual        
+        assert!(
+            library::get_price_identifier(price_oracle) == perpetual::priceIdenfitier(perp), 
+            error::wrong_price_identifier());
+        
+        // update oracle price on the perp
+        perpetual::set_oracle_price(perp, library::get_oracle_price(price_oracle));
+
+
+    } 
 }

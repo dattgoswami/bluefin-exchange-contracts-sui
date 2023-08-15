@@ -34,11 +34,6 @@ module bluefin_foundation::roles {
         id: ID
     }
 
-    struct PriceOracleOperatorUpdate has copy, drop {
-        id: ID,
-        account:address
-    }
-
     struct DelevergingOperatorUpdate has copy, drop {
         id: ID,
         account:address
@@ -67,10 +62,6 @@ module bluefin_foundation::roles {
         id: UID,
     }
 
-    struct PriceOracleOperatorCap has key {
-        id: UID
-    }
-
     struct SettlementCap has key {
         id: UID
     }
@@ -87,8 +78,6 @@ module bluefin_foundation::roles {
         id: UID,
         // there can only be one guardian
         guardian: ID,
-        // address of price oracle operator
-        priceOracleOperator: ID,
         // address of deleveraging operator
         deleveraging: ID,
         // address of funding rate operator
@@ -117,9 +106,6 @@ module bluefin_foundation::roles {
         // create exchange guardian 
         let guardianID = create_exchange_guardian(tx_context::sender(ctx), ctx);
 
-        // create exchange price oracle operator
-        let pooID = create_price_oracle_operator(tx_context::sender(ctx), ctx);
-
         // create deleveraging operator
         let deleveragerID = create_deleveraging_operator(tx_context::sender(ctx), ctx);
 
@@ -138,7 +124,6 @@ module bluefin_foundation::roles {
         let safe = CapabilitiesSafe {
             id: object::new(ctx),
             guardian: guardianID,
-            priceOracleOperator: pooID,
             deleveraging: deleveragerID,
             fundingRateOperator: frID,
             publicSettlementCap: psCapID,
@@ -179,23 +164,6 @@ module bluefin_foundation::roles {
         // update new id in safe
         safe.guardian = create_exchange_guardian(newGuardian, ctx);
     }
-
-    /**
-     * Creates price oracle operator
-     * Only exchange admin can invoke this method
-     */
-    public entry fun set_price_oracle_operator(
-        _:&ExchangeAdminCap, 
-        safe: &mut CapabilitiesSafe, 
-        newOperator: address, 
-        ctx: &mut TxContext
-        ){
-
-        // update new id address in safe
-        safe.priceOracleOperator = create_price_oracle_operator(newOperator, ctx);
-
-    }
-
 
     /**
      * Creates deleveraing operator
@@ -346,19 +314,6 @@ module bluefin_foundation::roles {
         return guardianID
     }
 
-    fun create_price_oracle_operator(owner: address, ctx: &mut TxContext): ID {
-
-        let id = object::new(ctx);
-        let pooID = object::uid_to_inner(&id);
-        let operator = PriceOracleOperatorCap {id};
-        
-        transfer::transfer(operator, owner);
-        
-        emit(PriceOracleOperatorUpdate{id: pooID, account: owner});
-
-        return pooID
-    }
-
     fun create_deleveraging_operator(owner: address, ctx: &mut TxContext): ID {
 
         let id = object::new(ctx);
@@ -395,17 +350,6 @@ module bluefin_foundation::roles {
         assert!( 
             safe.guardian == object::uid_to_inner(&cap.id),
             error::invalid_guardian());       
-    }
-
-    public fun check_price_oracle_operator_validity(
-        safe: &CapabilitiesSafe,
-        cap: &PriceOracleOperatorCap
-        ){ 
-        
-        assert!( 
-            safe.priceOracleOperator == object::uid_to_inner(&cap.id),
-            error::invalid_price_oracle_operator()
-        ); 
     }
 
     public fun check_delevearging_operator_validity(

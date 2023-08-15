@@ -651,8 +651,9 @@ describe("Trade", () => {
             market: onChain.getPerpetualID()
         });
 
-        const makerOrderSigned = new OrderSigner(alice.keyPair).getSignedOrder(
-            makerOrder
+        const makerOrderSigned = orderSigner.getSignedOrder(
+            makerOrder,
+            alice.keyPair
         );
 
         const updatedMakerOrder = createOrder({
@@ -662,15 +663,18 @@ describe("Trade", () => {
             market: onChain.getPerpetualID()
         });
 
-        const takerOrderSigned = new OrderSigner(bob.keyPair).getSignedOrder(
-            takerOrder
+        const takerOrderSigned = orderSigner.getSignedOrder(
+            takerOrder,
+            bob.keyPair
         );
 
         const txResponse = await onChain.trade({
             makerOrder: updatedMakerOrder,
             makerSignature: makerOrderSigned.typedSignature,
+            makerPublicKey: alice.keyPair.getPublicKey().toString(),
             takerOrder: takerOrder,
             takerSignature: takerOrderSigned.typedSignature,
+            takerPublicKey: bob.keyPair.getPublicKey().toString(),
             fillQuantity: toBigNumber(5),
             settlementCapID,
             gasBudget: 90000000

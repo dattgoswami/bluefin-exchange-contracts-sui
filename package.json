@@ -5,8 +5,8 @@
   "scripts": {
     "submodules": "git submodule update --init --recursive",
     "build": "ts-node ./scripts/build.ts",
+    "deploy:pyth": "ts-node ./scripts/deploy/pythOracle.ts",
     "set:price": "ts-node ./scripts/updateOraclePrice.ts",
-    "deploy:pyth": "ts-node ./scripts/deploy/deployPythFake.ts",
     "deploy": "ts-node ./scripts/deploy/full.ts",
     "deploy:package": "ts-node ./scripts/deploy/package.ts",
     "deploy:market": "ts-node ./scripts/deploy/market.ts",

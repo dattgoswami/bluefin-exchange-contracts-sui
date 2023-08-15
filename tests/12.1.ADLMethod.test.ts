@@ -17,11 +17,11 @@ import {
     Trader,
     network,
     Order,
-    UserPositionExtended
+    UserPositionExtended,
+    packageName
 } from "../submodules/library-sui";
 
 import { publishPackage } from "../src/helpers";
-
 
 import {
     getMakerTakerAccounts,
@@ -51,7 +51,11 @@ describe("Deleveraging Trade Method", () => {
     let order: Order;
 
     before(async () => {
-        const publishTxn = await publishPackage(false, ownerSigner);
+        const publishTxn = await publishPackage(
+            false,
+            ownerSigner,
+            packageName
+        );
         const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = await packDeploymentData(ownerAddress, objects);
 
@@ -134,7 +138,11 @@ describe("Deleveraging Trade Method", () => {
     });
 
     it("should revert as owner is no longer deleveraging operator", async () => {
-        const publishTxn = await publishPackage(false, ownerSigner);
+        const publishTxn = await publishPackage(
+            false,
+            ownerSigner,
+            packageName
+        );
         const objects = await getGenesisMap(provider, publishTxn);
         const localDeployment = packDeploymentData(ownerAddress, objects);
 
@@ -522,7 +530,11 @@ describe("Deleveraging Trade Method", () => {
     });
 
     it("should successfully partially deleverage taker of adl trade", async () => {
-        const publishTxn = await publishPackage(false, ownerSigner);
+        const publishTxn = await publishPackage(
+            false,
+            ownerSigner,
+            packageName
+        );
         const objects = await getGenesisMap(provider, publishTxn);
         const localDeployment = packDeploymentData(ownerAddress, objects);
 

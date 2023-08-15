@@ -17,6 +17,9 @@ module bluefin_foundation::perpetual {
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
 
+    // pyth
+    use Pyth::price_info::{PriceInfoObject as PythFeeder};
+
     //friend modules
     friend bluefin_foundation::exchange;
     friend bluefin_foundation::isolated_trading;
@@ -356,9 +359,6 @@ module bluefin_foundation::perpetual {
 
         assert!(!perp.delisted, error::perpetual_has_been_already_de_listed());
 
-        // update global index
-        update_global_index(clock, perp);
-
         // verify that price conforms to tick size
         evaluator::verify_price_checks(perp.checks, price);
 
@@ -476,8 +476,16 @@ module bluefin_foundation::perpetual {
     /*
      * Allows funding rate operator to set funding rate for current window
      */
-    public entry fun set_funding_rate(clock: &Clock, safe: &CapabilitiesSafe, cap: &FundingRateCap, perp: &mut Perpetual, rate: u128, sign: bool){
+    public entry fun set_funding_rate(clock: &Clock, safe: &CapabilitiesSafe, cap: &FundingRateCap, perp: &mut Perpetual, rate: u128, sign: bool, price_oracle: &PythFeeder){
+
+        // verify that the incoming oracle object belongs to the provided perpetual        
+        assert!(
+            library::get_price_identifier(price_oracle) == priceIdenfitier(perp), 
+            error::wrong_price_identifier());
         
+        // update oracle price on the perp
+        set_oracle_price(perp, library::get_oracle_price(price_oracle));
+
         update_global_index(clock, perp);
 
         funding_rate::set_funding_rate(

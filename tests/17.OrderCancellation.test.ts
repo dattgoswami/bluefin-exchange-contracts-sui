@@ -69,11 +69,12 @@ describe("Order Cancellation", () => {
             market: onChain.getPerpetualID()
         });
 
-        const orderHash = orderSigner.getOrderHash(order);
+        const orderHash = OrderSigner.getOrderHash(order);
         const signature = orderSigner.signOrder(order);
+        const publicKey = orderSigner.getPublicKeyStr();
 
         const tx = await onChain.cancelOrder(
-            { order, signature },
+            { order, signature, publicKey },
             alice.signer
         );
         expectTxToSucceed(tx);
@@ -91,11 +92,12 @@ describe("Order Cancellation", () => {
         });
 
         const signature = orderSigner.signOrder(order, alice.keyPair);
+        const publicKey = orderSigner.getPublicKeyStr();
 
         const tester = getTestAccounts(provider)[7];
 
         const tx = await onChain.cancelOrder(
-            { order, signature, gasBudget: 500000000 },
+            { order, signature, publicKey, gasBudget: 500000000 },
             tester.signer
         );
         expectTxToFail(tx);
@@ -110,9 +112,10 @@ describe("Order Cancellation", () => {
         });
 
         const signature = orderSigner.signOrder(order);
+        const publicKey = orderSigner.getPublicKeyStr();
 
         const tx = await onChain.cancelOrder(
-            { order, signature },
+            { order, signature, publicKey },
             alice.signer
         );
         expectTxToSucceed(tx);

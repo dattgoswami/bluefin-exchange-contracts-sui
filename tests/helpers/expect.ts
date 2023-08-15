@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 export const expect = chai.expect;
 
-import { SuiTransactionBlockResponse } from "@mysten/sui.js";
+import { SuiTransactionBlockResponse } from "../../submodules/library-sui";
 import { TestPositionExpect } from "./interfaces";
 import { getExpectedTestPosition, toExpectedPositionFormat } from "./utils";
 import {

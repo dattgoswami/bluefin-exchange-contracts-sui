@@ -7,7 +7,8 @@ import {
     Transaction,
     TEST_WALLETS,
     toBigNumberStr,
-    ERROR_CODES
+    ERROR_CODES,
+    packageName
 } from "../submodules/library-sui";
 import { publishPackage } from "../src/helpers";
 
@@ -36,7 +37,11 @@ describe("Margin Bank", () => {
     });
 
     beforeEach(async () => {
-        const publishTxn = await publishPackage(false, ownerSigner);
+        const publishTxn = await publishPackage(
+            false,
+            ownerSigner,
+            packageName
+        );
         const objects = await getGenesisMap(provider, publishTxn);
         const deployment = {
             deployer: ownerAddress,

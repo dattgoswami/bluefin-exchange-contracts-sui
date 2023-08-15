@@ -1,11 +1,16 @@
 import {
     writeFile,
-    getGenesisMap,
     getSignerFromSeed,
     getProvider,
+    packageName
+} from "../../submodules/library-sui";
+
+import {
+    getGenesisMap,
     packDeploymentData,
     getBankTable
-} from "../../submodules/library-sui";
+} from "../../src/deployment";
+
 import { DeploymentConfigs } from "../../submodules/library-sui";
 import { Transaction } from "../../submodules/library-sui";
 import { Client } from "../../src/Client";
@@ -28,7 +33,7 @@ async function main() {
     }
 
     // public package
-    const publishTxn = await publishPackage(false, signer);
+    const publishTxn = await publishPackage(false, signer, packageName);
 
     console.log("Package published");
 

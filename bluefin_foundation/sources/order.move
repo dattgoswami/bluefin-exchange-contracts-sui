@@ -86,6 +86,7 @@ module bluefin_foundation::order {
         orderSalt: u128,
         makerAddress: address,
         signature:vector<u8>,
+        publicKey:vector<u8>,
         ctx: &mut TxContext
         ){
 
@@ -116,7 +117,7 @@ module bluefin_foundation::order {
         let order_hash = library::get_hash(serialized_order);
 
         // verify order signature        
-        let sig_maker = verify_order_signature(subAccounts, makerAddress, serialized_order, signature, 0);
+        let sig_maker = verify_order_signature(subAccounts, makerAddress, serialized_order, signature, publicKey, 0);
 
         // create order entry in orders table if doesn't exist already        
         create_order(ordersTable, order_hash);
@@ -352,11 +353,14 @@ module bluefin_foundation::order {
         });
     }
 
-    public (friend) fun verify_order_signature(subAccounts: &SubAccounts, maker:address, orderSerialized: vector<u8>, signature: vector<u8>, isTaker:u64):address{
+    public (friend) fun verify_order_signature(subAccounts: &SubAccounts, maker:address, orderSerialized: vector<u8>, signature: vector<u8>, publicKey: vector<u8>, isTaker:u64):address{
 
         let encodedOrder = hex::encode(orderSerialized);
-        let publicKey = library::recover_public_key_from_signature(encodedOrder, signature);
-        let publicAddress = library::get_public_address(publicKey);
+        let result = library::verify_signature(signature, publicKey, encodedOrder);
+
+        assert!(library::get_result_status(result), error::order_has_invalid_signature(isTaker));
+
+        let publicAddress = library::get_public_address(library::get_result_public_key(result));
 
         assert!(
             maker == publicAddress || 
