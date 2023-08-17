@@ -61,9 +61,7 @@ async function main() {
         // create perpetual
         console.log("Creating Perpetual Markets");
         for (const marketConfig of DeploymentConfigs.markets) {
-            marketConfig.priceInfoFeedId = hexToString(
-                pythObj[marketConfig.symbol + "-FEED-ID"]
-            );
+            marketConfig.priceInfoFeedId = pythObj[marketConfig.symbol + "-FEED-ID"]
             console.log(`-> ${marketConfig.symbol}`);
             const marketObjects = await createMarket(
                 deploymentData,
