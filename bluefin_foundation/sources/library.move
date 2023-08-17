@@ -6,6 +6,7 @@ module bluefin_foundation::library {
     use sui::ed25519;
     use sui::bcs;
     use std::hash as std_hash;
+    use sui::math::pow;
 
     const BASE_UINT : u128 = 1000000000;
     const HALF_BASE_UINT : u128 = 500000000;
@@ -199,6 +200,14 @@ module bluefin_foundation::library {
         return (price_u64 as u128)
     }
 
+    public entry fun get_oracle_base(price_info_obj: &PriceInfoObject
+    ): u128{
+        let price: Price = Pyth::pyth::get_price_unsafe(price_info_obj);   
+        let expo_i64: I64 = Pyth::price::get_expo(&price);
+        let expo_u64: u64 = Pyth::i64::get_magnitude_if_negative(&expo_i64);
+        return (expo_u64 as u128)
+    }
+
     public entry fun get_price_identifier(price_info_obj: &PriceInfoObject): vector<u8>{
         let priceInfo=Pyth::price_info::get_price_info_from_price_info_object(price_info_obj);
         let priceIdentifier= Pyth::price_info::get_price_identifier(&priceInfo);
@@ -206,4 +215,6 @@ module bluefin_foundation::library {
         return priceIdentifierBytes
     }
     
+    
+
 }
