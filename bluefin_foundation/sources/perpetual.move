@@ -8,6 +8,7 @@ module bluefin_foundation::perpetual {
     use sui::table::{Table};
     use sui::event::{emit};
     use sui::transfer;
+    use sui::math::pow;
 
     // custom modules
     use bluefin_foundation::position::{UserPosition};
@@ -477,14 +478,9 @@ module bluefin_foundation::perpetual {
      * Allows funding rate operator to set funding rate for current window
      */
     public entry fun set_funding_rate(clock: &Clock, safe: &CapabilitiesSafe, cap: &FundingRateCap, perp: &mut Perpetual, rate: u128, sign: bool, price_oracle: &PythFeeder){
-
-        // verify that the incoming oracle object belongs to the provided perpetual        
-        assert!(
-            library::get_price_identifier(price_oracle) == priceIdenfitier(perp), 
-            error::wrong_price_identifier());
-        
-        // update oracle price on the perp
-        set_oracle_price(perp, library::get_oracle_price(price_oracle));
+        // verify that the incoming oracle object belongs to the provided perpetual and 
+        // update oracle price on the perp and also verig
+        update_oracle_price(perp,price_oracle);
 
         update_global_index(clock, perp);
 
@@ -541,4 +537,24 @@ module bluefin_foundation::perpetual {
         funding_rate::set_global_index(&mut perp.funding, index, perpID);
 
     }
+
+
+    //===========================================================//
+    //                         ORACLE PRICE                      //
+    //===========================================================//
+
+    public fun update_oracle_price(perp: &mut Perpetual, price_oracle: &PythFeeder){
+
+        // verify that the incoming oracle object belongs to the provided perpetual        
+        assert!(
+            library::get_price_identifier(price_oracle) == priceIdenfitier(perp), 
+            error::wrong_price_identifier());
+        
+        // update oracle price on the perp
+        let oraclePrice=library::get_oracle_price(price_oracle);
+        let expo= (pow(10,(library::get_oracle_base(price_oracle) as u8)) as u128);
+        set_oracle_price(perp, library::base_div(oraclePrice,expo));
+    }
+
+
 }

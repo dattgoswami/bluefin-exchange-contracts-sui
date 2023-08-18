@@ -7,7 +7,7 @@ module bluefin_foundation::exchange {
     use sui::table::{Self, Table};
     use sui::event::{emit};
     use sui::transfer;
-    use sui::math::pow;
+
 
 
     // custom modules
@@ -236,7 +236,7 @@ module bluefin_foundation::exchange {
 
 
             // checks that provided price oracle is correct and updates perpetual with new price
-            update_oracle_price(perp, price_oracle);
+            perpetual::update_oracle_price(perp, price_oracle);
 
             let sender = tx_context::sender(ctx);
 
@@ -384,7 +384,7 @@ module bluefin_foundation::exchange {
     ){
 
         // checks that provided price oracle is correct and updates perpetual with new price
-        update_oracle_price(perp, price_oracle);
+        perpetual::update_oracle_price(perp, price_oracle);
 
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
@@ -520,7 +520,7 @@ module bluefin_foundation::exchange {
     ){
 
         // checks that provided price oracle is correct and updates perpetual with new price
-        update_oracle_price(perp, price_oracle);
+        perpetual::update_oracle_price(perp, price_oracle);
 
         // ensure perpetual is not delisted
         assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
@@ -594,7 +594,7 @@ module bluefin_foundation::exchange {
     entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user:address, amount: u128, price_oracle: &PythFeeder ,ctx: &mut TxContext){
 
         // checks that provided price oracle is correct and updates perpetual with new price
-        update_oracle_price(perp, price_oracle);
+        perpetual::update_oracle_price(perp, price_oracle);
      
         let caller = tx_context::sender(ctx);
 
@@ -652,7 +652,7 @@ module bluefin_foundation::exchange {
     entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, amount: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
         
         // checks that provided price oracle is correct and updates perpetual with new price
-        update_oracle_price(perp, price_oracle);
+        perpetual::update_oracle_price(perp, price_oracle);
 
         let caller = tx_context::sender(ctx);
 
@@ -731,7 +731,7 @@ module bluefin_foundation::exchange {
     entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, leverage: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
      
         // checks that provided price oracle is correct and updates perpetual with new price
-        update_oracle_price(perp, price_oracle);
+        perpetual::update_oracle_price(perp, price_oracle);
         
         let caller = tx_context::sender(ctx);
 
@@ -1009,22 +1009,4 @@ module bluefin_foundation::exchange {
 
     }   
 
-    //===========================================================//
-    //                         ORALCE PRICE                      //
-    //===========================================================//
-
-    fun update_oracle_price(perp: &mut Perpetual, price_oracle: &PythFeeder){
-
-        // verify that the incoming oracle object belongs to the provided perpetual        
-        assert!(
-            library::get_price_identifier(price_oracle) == perpetual::priceIdenfitier(perp), 
-            error::wrong_price_identifier());
-        
-        // update oracle price on the perp
-        let oraclePrice=library::get_oracle_price(price_oracle);
-        let expo= (pow(10,(library::get_oracle_base(price_oracle) as u8)) as u128);
-        perpetual::set_oracle_price(perp, library::base_div(oraclePrice,expo));
-
-
-    } 
 }

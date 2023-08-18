@@ -214,7 +214,5 @@ module bluefin_foundation::library {
         let priceIdentifierBytes = Pyth::price_identifier::get_bytes(&priceIdentifier);
         return priceIdentifierBytes
     }
-    
-    
 
 }
