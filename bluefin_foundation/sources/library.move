@@ -13,7 +13,7 @@ module bluefin_foundation::library {
 
    const SIGNED_USING_SECP_KEYPAIR : u8 = 0;
    const SIGNED_USING_ED_KEYPAIR : u8 = 1;
-   const SIGNED_USING_ED_UI_WALLET : u8 = 1;
+   const SIGNED_USING_ED_UI_WALLET : u8 = 2;
 
     use Pyth::price_info::{PriceInfoObject};
     use Pyth::price::{Price};
