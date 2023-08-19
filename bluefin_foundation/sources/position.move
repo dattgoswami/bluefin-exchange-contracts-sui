@@ -158,15 +158,25 @@ module bluefin_foundation::position {
                 position.oiOpen, 
                 position.margin
                 );
-            let debtRatio = signed_number::mul_uint(debt, balance);
-            marginRatio = signed_number::sub(signed_number::one(), debtRatio);
+
+            if(balance > 0){
+                let debtRatio = signed_number::div_uint(debt, balance);
+                marginRatio = signed_number::sub(signed_number::one(), debtRatio);
+            } else {
+                marginRatio = signed_number::one()
+            }
 
         } else {
             let debt = position.oiOpen + position.margin;
-            let debtRatio = library::base_div(debt, balance);
-            marginRatio = signed_number::from_subtraction(
-                debtRatio, 
-                library::base_uint());
+
+            if(balance > 0){
+                let debtRatio = library::base_div(debt, balance);
+                marginRatio = signed_number::from_subtraction(
+                    debtRatio, 
+                    library::base_uint());
+            } else {
+                marginRatio = signed_number::one()
+            }
         };  
         return marginRatio
     }
