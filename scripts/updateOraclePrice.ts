@@ -26,18 +26,12 @@ async function main() {
     const pythObj = readFile(getFilePathFromEnv());
     const pythPackage = readFile("./pythFakeDeployment.json");
 
-    // get the feed id
-    const ethFeed = pythObj["ETH-PERP-FEED-ID"];
-
-    const pythPackagId = pythPackage.objects.package.id;
-
     //calling function.
-    const result = await onChain.setOraclePrice(
-        "100000000000",
-        "10",
-        ethFeed,
-        pythPackagId
-    );
+    const result = await onChain.setOraclePrice({
+        price: 100,
+        priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"],
+        pythPackageId: pythPackage.objects.package.id
+    });
     console.log(result);
 }
 

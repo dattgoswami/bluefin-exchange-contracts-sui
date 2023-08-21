@@ -2,7 +2,6 @@ import {
     readFile,
     getProvider,
     getSignerFromSeed,
-    createMarket,
     OnChainCalls,
     DeploymentConfigs,
     getTestAccounts,
@@ -18,9 +17,14 @@ import {
     fundTestAccounts
 } from "./helpers";
 
+import { createMarket } from "../src/deployment";
+import { getFilePathFromEnv } from "../src/helpers";
+
 const provider = getProvider(network.rpc, network.faucet);
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const deployment = readFile(DeploymentConfigs.filePath);
+
+const pythObj = readFile(getFilePathFromEnv());
 
 describe("Funding Oracle", () => {
     let onChain: OnChainCalls;
@@ -35,8 +39,10 @@ describe("Funding Oracle", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -62,12 +68,15 @@ describe("Funding Oracle", () => {
     it("should revert as alice no longer has FR cap, so can not update Funding rate", async () => {
         const localDeployment = { ...deployment };
         // trade starting time, current time + 1000 seconds
+
         localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 
@@ -108,8 +117,10 @@ describe("Funding Oracle", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now()
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 

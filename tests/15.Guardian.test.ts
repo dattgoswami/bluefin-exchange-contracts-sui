@@ -2,15 +2,13 @@ import {
     DeploymentConfigs,
     getProvider,
     getSignerFromSeed,
-    getGenesisMap,
-    createMarket,
-    packDeploymentData,
     getTestAccounts,
     TEST_WALLETS,
     toBigNumberStr,
     OnChainCalls,
     Transaction,
-    packageName
+    packageName,
+    readFile
 } from "../submodules/library-sui";
 import {
     expectTxToEmitEvent,
@@ -19,7 +17,15 @@ import {
     fundTestAccounts
 } from "./helpers";
 
-import { publishPackage } from "../src/helpers";
+import { getFilePathFromEnv, publishPackage } from "../src/helpers";
+
+import {
+    createMarket,
+    packDeploymentData,
+    getGenesisMap
+} from "../src/deployment";
+
+const pythObj = readFile(getFilePathFromEnv());
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -52,8 +58,10 @@ describe("Guardian", () => {
                         deployment,
                         ownerSigner,
                         provider,
+                        pythObj["ETH-PERP"],
                         {
-                            tradingStartTime: Date.now() - 1000
+                            tradingStartTime: Date.now() - 1000,
+                            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
                         }
                     )
                 }

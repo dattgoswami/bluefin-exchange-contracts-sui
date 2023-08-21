@@ -131,7 +131,7 @@ export async function evaluateAccountPositionExpect(
     oraclePrice: BigNumber,
     tx: SuiTransactionBlockResponse
 ) {
-    const position = Transaction.getAccountPositionFromEvent(
+    const position = Transaction.getAccountPosition(
         tx,
         account.address
     ) as UserPositionExtended;

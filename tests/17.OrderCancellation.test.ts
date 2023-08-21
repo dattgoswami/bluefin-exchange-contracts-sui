@@ -3,7 +3,6 @@ import {
     readFile,
     getProvider,
     getSignerFromSeed,
-    createMarket,
     createOrder,
     OnChainCalls,
     OrderSigner,
@@ -12,7 +11,6 @@ import {
     network,
     getTestAccounts,
     base64ToHex,
-    toBigNumberStr,
     ERROR_CODES
 } from "../submodules/library-sui";
 import {
@@ -21,6 +19,13 @@ import {
     expect,
     mintAndDeposit
 } from "./helpers";
+
+import { createMarket } from "../src/deployment";
+import { getFilePathFromEnv } from "../src/helpers";
+
+const pythObj = readFile(getFilePathFromEnv());
+const pythPackage = readFile("./pythFakeDeployment.json");
+const pythPackagId = pythPackage.objects.package.id;
 
 const provider = getProvider(network.rpc, network.faucet);
 
@@ -33,7 +38,6 @@ describe("Order Cancellation", () => {
     const [alice, bob] = getTestAccounts(provider);
     const orderSigner = new OrderSigner(alice.keyPair);
 
-    let priceOracleCapID: string;
     let settlementCapID: string;
 
     before(async () => {
@@ -42,18 +46,14 @@ describe("Order Cancellation", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);
         ownerAddress = await ownerSigner.getAddress();
-
-        const tx = await onChain.setPriceOracleOperator({
-            operator: ownerAddress
-        });
-
-        priceOracleCapID = Transaction.getCreatedObjectIDs(tx)[0];
 
         // make admin operator
         const tx2 = await onChain.createSettlementOperator(
@@ -70,11 +70,10 @@ describe("Order Cancellation", () => {
         });
 
         const orderHash = OrderSigner.getOrderHash(order);
-        const signature = orderSigner.signOrder(order);
-        const publicKey = orderSigner.getPublicKeyStr();
+        const sigPK = orderSigner.signOrder(order);
 
         const tx = await onChain.cancelOrder(
-            { order, signature, publicKey },
+            { order, signature: sigPK.signature, publicKey: sigPK.publicKey },
             alice.signer
         );
         expectTxToSucceed(tx);
@@ -91,13 +90,17 @@ describe("Order Cancellation", () => {
             market: onChain.getPerpetualID()
         });
 
-        const signature = orderSigner.signOrder(order, alice.keyPair);
-        const publicKey = orderSigner.getPublicKeyStr();
+        const sigPK = orderSigner.signOrder(order, alice.keyPair);
 
         const tester = getTestAccounts(provider)[7];
 
         const tx = await onChain.cancelOrder(
-            { order, signature, publicKey, gasBudget: 500000000 },
+            {
+                order,
+                signature: sigPK.signature,
+                publicKey: sigPK.publicKey,
+                gasBudget: 500000000
+            },
             tester.signer
         );
         expectTxToFail(tx);
@@ -111,11 +114,10 @@ describe("Order Cancellation", () => {
             market: onChain.getPerpetualID()
         });
 
-        const signature = orderSigner.signOrder(order);
-        const publicKey = orderSigner.getPublicKeyStr();
+        const sigPK = orderSigner.signOrder(order);
 
         const tx = await onChain.cancelOrder(
-            { order, signature, publicKey },
+            { order, signature: sigPK.signature, publicKey: sigPK.publicKey },
             alice.signer
         );
         expectTxToSucceed(tx);
@@ -123,9 +125,10 @@ describe("Order Cancellation", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);

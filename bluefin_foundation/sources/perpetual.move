@@ -552,7 +552,7 @@ module bluefin_foundation::perpetual {
         
         // update oracle price on the perp
         let oraclePrice=library::get_oracle_price(price_oracle);
-        let expo= (pow(10,(library::get_oracle_base(price_oracle) as u8)) as u128);
+        let expo = (pow(10,(library::get_oracle_base(price_oracle) as u8)) as u128);
         set_oracle_price(perp, library::base_div(oraclePrice,expo));
     }
 

@@ -1,3 +1,5 @@
+import { createMarket } from "../src/deployment";
+import { getFilePathFromEnv } from "../src/helpers";
 import {
     DeploymentConfigs,
     OnChainCalls,
@@ -7,7 +9,6 @@ import {
     readFile,
     getProvider,
     getSignerFromSeed,
-    createMarket,
     createOrder,
     requestGas,
     toBigNumberStr,
@@ -33,6 +34,10 @@ const provider = getProvider(
 
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
+const pythObj = readFile(getFilePathFromEnv());
+const pythPackage = readFile("./pythFakeDeployment.json");
+const pythPackagId = pythPackage.objects.package.id;
+
 describe("Evaluator", () => {
     const deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls;
@@ -40,7 +45,6 @@ describe("Evaluator", () => {
     const [alice, bob] = getTestAccounts(provider);
     const orderSigner = new OrderSigner(alice.keyPair);
     let settlementCapID: string;
-    let priceOracleCapID: string;
 
     before(async () => {
         ownerAddress = await ownerSigner.getAddress();
@@ -49,13 +53,6 @@ describe("Evaluator", () => {
         await fundTestAccounts();
 
         onChain = new OnChainCalls(ownerSigner, deployment);
-
-        // make owner, the price oracle operator
-        const tx = await onChain.setPriceOracleOperator({
-            operator: ownerAddress
-        });
-
-        priceOracleCapID = Transaction.getCreatedObjectIDs(tx)[0];
 
         const tx2 = await onChain.createSettlementOperator(
             { operator: ownerAddress },
@@ -74,10 +71,11 @@ describe("Evaluator", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 1000
-            },
-            deployment["markets"]["ETH-PERP"]["Objects"]["PriceOracle"]["id"]
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            }
         );
 
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -187,9 +185,11 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade price is < min price", async () => {
             await onChain.setMinPrice({ minPrice: 1 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(26),
-                updateOPCapID: priceOracleCapID
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 26,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -228,9 +228,11 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade price is > max price", async () => {
             await onChain.setMaxPrice({ maxPrice: 100 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(100),
-                updateOPCapID: priceOracleCapID
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 100,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -269,9 +271,11 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade price does not confirm to tick size # 1", async () => {
             await onChain.setTickSize({ tickSize: 0.1 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -310,9 +314,11 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade price does not confirm to tick size # 2", async () => {
             await onChain.setTickSize({ tickSize: 0.01 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -348,10 +354,12 @@ describe("Evaluator", () => {
             expectTxToFail(tx);
             expect(Transaction.getError(tx)).to.be.equal(ERROR_CODES[5]);
         });
+
         it("should successfully execute the trade when all price checks are met", async () => {
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -498,9 +506,11 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade quantity is < min trade quantity", async () => {
             await onChain.setMinQty({ minQty: 0.1 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -539,9 +549,11 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade quantity is > max trade quantity (limit)", async () => {
             await onChain.setMaxQtyLimit({ maxQtyLimit: 100 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -580,9 +592,11 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade quantity is > max trade quantity (market)", async () => {
             await onChain.setMaxQtyMarket({ maxQtyMarket: 50 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -621,9 +635,10 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade quantity does not conform to step size # 1", async () => {
             await onChain.setStepSize({ stepSize: 0.1 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -662,9 +677,10 @@ describe("Evaluator", () => {
 
         it("should revert trade as trade quantity does not conform to step size # 2", async () => {
             await onChain.setStepSize({ stepSize: 0.01 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -702,9 +718,10 @@ describe("Evaluator", () => {
         });
 
         it("should successfully execute the trade when all quantity checks are met", async () => {
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -833,11 +850,14 @@ describe("Evaluator", () => {
                 onChain.setMTBShort({ mtbShort: 0.2 }, alice)
             ).to.eventually.be.rejectedWith(expectedError);
         });
+
         it("should revert when trying to trade at price < short take bound", async () => {
-            await onChain.setMTBShort({ mtbShort: 0.2, gasBudget: 90000000 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(20),
-                updateOPCapID: priceOracleCapID
+            await onChain.setMTBShort({ mtbShort: 0.2 });
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 20,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -877,9 +897,11 @@ describe("Evaluator", () => {
         it("should successfully trade when trying to trade at price > long take bound when taker is going short", async () => {
             await onChain.setMTBShort({ mtbShort: 0.2 });
             await onChain.setMTBLong({ mtbLong: 0.2 }); // 20%
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(20),
-                updateOPCapID: priceOracleCapID
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 20,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -916,11 +938,11 @@ describe("Evaluator", () => {
         });
         it("should revert when trying to trade at price > long take bound", async () => {
             await onChain.setMTBLong({ mtbLong: 0.2 });
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(20),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 20,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
-
             expectTxToSucceed(priceTx);
 
             const makerOrder = createOrder({
@@ -958,9 +980,10 @@ describe("Evaluator", () => {
         it("should successfully trade when trying to trade at price < short take bound when taker is going long", async () => {
             await onChain.setMTBLong({ mtbLong: 0.2 });
             await onChain.setMTBShort({ mtbShort: 0.2 }); // 20 %
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(20),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 20,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -1038,9 +1061,10 @@ describe("Evaluator", () => {
 
             await onChain.setMaxQtyMarket({ maxQtyMarket: 300000 });
 
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -1087,9 +1111,10 @@ describe("Evaluator", () => {
             await onChain.setMaxAllowedOIOpen({ maxLimit });
             await onChain.setMaxQtyMarket({ maxQtyMarket: 300000 });
 
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -1137,9 +1162,10 @@ describe("Evaluator", () => {
 
             await onChain.setMaxQtyMarket({ maxQtyMarket: 300000 });
 
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -1194,9 +1220,10 @@ describe("Evaluator", () => {
             await onChain.setMaxAllowedOIOpen({ maxLimit });
             await onChain.setMaxQtyMarket({ maxQtyMarket: 300000 });
 
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -1251,9 +1278,10 @@ describe("Evaluator", () => {
             await onChain.setMaxAllowedOIOpen({ maxLimit });
             await onChain.setMaxQtyMarket({ maxQtyMarket: 1_000_000 });
 
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(10),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 10,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);

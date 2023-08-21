@@ -46,7 +46,7 @@ describe("Sanity Tests", () => {
 
     it("should allow admin to create a perpetual", async () => {
         const txResponse = await onChain.createPerpetual({
-            symbol: "TEST-PERP"
+            symbol: "ETH-PERP"
         });
         const event = Transaction.getEvents(
             txResponse,

@@ -3,7 +3,6 @@ import {
     getProvider,
     getSignerFromSeed,
     createOrder,
-    createMarket,
     requestGas,
     OnChainCalls,
     OrderSigner,
@@ -25,15 +24,20 @@ import {
     expectTxToSucceed,
     mintAndDeposit
 } from "./helpers";
+import { createMarket } from "../src/deployment";
+import { getFilePathFromEnv } from "../src/helpers";
 
 const provider = getProvider(network.rpc, network.faucet);
+
+const pythObj = readFile(getFilePathFromEnv());
+const pythPackage = readFile("./pythFakeDeployment.json");
+const pythPackagId = pythPackage.objects.package.id;
 
 describe("Trade", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
     const deployment = readFile(DeploymentConfigs.filePath);
     let onChain: OnChainCalls;
     let ownerAddress: string;
-    let priceOracleCapID: string;
     let settlementCapID: string;
 
     const [alice, bob] = getTestAccounts(provider);
@@ -51,21 +55,16 @@ describe("Trade", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
                 maxAllowedPriceDiffInOP: toBigNumberStr(1000),
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 
         onChain = new OnChainCalls(ownerSigner, deployment);
         ownerAddress = await ownerSigner.getAddress();
-
-        // make owner, the price oracle operator
-        const tx = await onChain.setPriceOracleOperator({
-            operator: ownerAddress
-        });
-
-        priceOracleCapID = Transaction.getCreatedObjectIDs(tx)[0];
 
         // make admin operator
         const tx2 = await onChain.createSettlementOperator(
@@ -85,9 +84,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -106,9 +106,10 @@ describe("Trade", () => {
     it("should execute trade call and fill alice`s order but opens no position as its a self trade", async () => {
         await mintAndDeposit(onChain, alice.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -204,9 +205,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -373,9 +375,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         defaultOrder.salt = bigNumber(Date.now());
@@ -428,9 +431,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         defaultOrder.salt = bigNumber(Date.now());
@@ -552,9 +556,10 @@ describe("Trade", () => {
     });
 
     it("should revert as taker/bob order is being over filled", async () => {
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(26),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 26,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -594,9 +599,10 @@ describe("Trade", () => {
     });
 
     it("should revert as maker/alice order is being over filled", async () => {
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(26),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 26,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -685,9 +691,10 @@ describe("Trade", () => {
     });
 
     it("should revert as alice signed order for ETH market but is getting executed on BTC market", async () => {
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -704,9 +711,16 @@ describe("Trade", () => {
 
         // deploying a new market
         deployment["markets"]["BTC-PERP"] = {
-            Objects: await createMarket(deployment, ownerSigner, provider, {
-                tradingStartTime: Date.now() - 1000
-            })
+            Objects: await createMarket(
+                deployment,
+                ownerSigner,
+                provider,
+                pythObj["BTC-PERP"],
+                {
+                    tradingStartTime: Date.now() - 1000,
+                    priceInfoFeedId: pythObj["BTC-PERP-FEED-ID"]
+                }
+            )
         };
 
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -715,6 +729,7 @@ describe("Trade", () => {
             ...trade,
             perpID: onChain.getPerpetualID("BTC-PERP"),
             settlementCapID,
+            market: "BTC-PERP",
             gasBudget: 90000000
         });
 
@@ -729,9 +744,10 @@ describe("Trade", () => {
         const tester = getTestAccounts(provider)[2];
         await mintAndDeposit(onChain, tester.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -781,9 +797,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -809,9 +826,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -847,9 +865,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -881,9 +900,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -920,9 +940,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -951,9 +972,10 @@ describe("Trade", () => {
         await mintAndDeposit(onChain, alice.address, 2000);
         await mintAndDeposit(onChain, bob.address, 2000);
 
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(1),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 1,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);

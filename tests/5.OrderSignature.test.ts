@@ -107,7 +107,10 @@ describe("Order Signer", () => {
         const serializedOrder = OrderSigner.getSerializedOrder(order);
 
         const public_key_base64 = ed25519Keypair.getPublicKey().toString();
-        const signature = orderSigner.signOrder(order, ed25519Keypair);
+        const signature = orderSigner.signOrder(
+            order,
+            ed25519Keypair
+        ).signature;
 
         // off-chain verification
         expect(
@@ -141,7 +144,7 @@ describe("Order Signer", () => {
 
     it("should verify secp256k1 signature when sig, pk and msg data are correct", async () => {
         const serializedOrder = OrderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order, ownerKeyPair);
+        const signature = orderSigner.signOrder(order, ownerKeyPair).signature;
 
         const public_key_base64 = ownerKeyPair.getPublicKey().toString();
 
@@ -181,7 +184,7 @@ describe("Order Signer", () => {
         const serializedOrder = OrderSigner.getSerializedOrder(order);
 
         // signing using alice's key
-        const signature = orderSigner.signOrder(order, alice);
+        const signature = orderSigner.signOrder(order, alice).signature;
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
@@ -208,7 +211,8 @@ describe("Order Signer", () => {
         const serializedOrder = OrderSigner.getSerializedOrder(updatedOrder);
 
         // signing a different order
-        const signature = await orderSigner.signOrder(order, ownerKeyPair);
+        const signature = await orderSigner.signOrder(order, ownerKeyPair)
+            .signature;
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
@@ -235,7 +239,8 @@ describe("Order Signer", () => {
         const serializedOrder = OrderSigner.getSerializedOrder(updatedOrder);
 
         // signing a different order
-        const signature = await orderSigner.signOrder(order, ed25519Keypair);
+        const signature = await orderSigner.signOrder(order, ed25519Keypair)
+            .signature;
 
         const receipt = await onChain.signAndCall(
             ownerSigner,
@@ -258,41 +263,9 @@ describe("Order Signer", () => {
         expect(signatureVerifiedEvent?.is_verified).to.be.false;
     });
 
-    xit("should verify hash (off-chain) to given address secp256k1 by verifyUsingHash method", async () => {
-        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
-        const orderSigner = new OrderSigner(alice);
-
-        const hash = OrderSigner.getOrderHash(order);
-        const signature = orderSigner.signOrder(order);
-
-        // expect(
-        //     OrderSigner.verifyUsingHash(
-        //         signature,
-        //         hash,
-        //         alice.getPublicKey().toSuiAddress()
-        //     )
-        // ).to.be.true;
-    });
-
-    xit("should not verify hash (off-chain) to given address secp256k1 by verifyUsingHash method", async () => {
-        const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
-        const orderSigner = new OrderSigner(alice);
-
-        const hash = OrderSigner.getOrderHash(order);
-        const signature = orderSigner.signOrder(order);
-
-        // expect(
-        //     OrderSigner.verifyUsingHash(
-        //         signature,
-        //         hash,
-        //         ownerKeyPair.getPublicKey().toSuiAddress()
-        //     )
-        // ).to.be.false;
-    });
-
     it("should verify signature off-chain using order - secp256k1", async () => {
         const alice = getKeyPairFromSeed(TEST_WALLETS[0].phrase);
-        const signature = orderSigner.signOrder(order, alice);
+        const signature = orderSigner.signOrder(order, alice).signature;
         const public_key_base64 = alice.getPublicKey().toString();
 
         expect(
@@ -305,7 +278,10 @@ describe("Order Signer", () => {
     });
 
     it("should verify signature off-chain using order - ed25519", async () => {
-        const signature = orderSigner.signOrder(order, ed25519Keypair);
+        const signature = orderSigner.signOrder(
+            order,
+            ed25519Keypair
+        ).signature;
         const public_key_base64 = ed25519Keypair.getPublicKey().toString();
 
         expect(
@@ -321,7 +297,7 @@ describe("Order Signer", () => {
         expect(
             OrderSigner.verifySignatureUsingOrder(
                 order,
-                orderSigner.signOrder(order, ownerKeyPair),
+                orderSigner.signOrder(order, ownerKeyPair).signature,
                 ed25519Keypair.getPublicKey().toString()
             )
         ).to.be.false;
@@ -329,7 +305,7 @@ describe("Order Signer", () => {
         expect(
             OrderSigner.verifySignatureUsingOrder(
                 order,
-                orderSigner.signOrder(order, ed25519Keypair),
+                orderSigner.signOrder(order, ed25519Keypair).signature,
                 ownerKeyPair.getPublicKey().toString()
             )
         ).to.be.false;
@@ -341,7 +317,7 @@ describe("Order Signer", () => {
         expect(
             OrderSigner.verifySignatureUsingOrder(
                 { ...order, maker: alice.address },
-                orderSigner.signOrder(order, ownerKeyPair),
+                orderSigner.signOrder(order, ownerKeyPair).signature,
                 ownerKeyPair.getPublicKey().toString()
             )
         ).to.be.false;
@@ -349,7 +325,7 @@ describe("Order Signer", () => {
         expect(
             OrderSigner.verifySignatureUsingOrder(
                 { ...order, maker: alice.address },
-                orderSigner.signOrder(order, ed25519Keypair),
+                orderSigner.signOrder(order, ed25519Keypair).signature,
                 ed25519Keypair.getPublicKey().toString()
             )
         ).to.be.false;
@@ -394,7 +370,7 @@ describe("Order Signer", () => {
         const hash = OrderSigner.getOrderHash(order);
 
         const serializedOrder = OrderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order, alice.keyPair);
+        const signature = orderSigner.signOrder(order, alice.keyPair).signature;
 
         expect(
             OrderSigner.verifySignatureUsingOrder(
@@ -474,7 +450,10 @@ describe("Order Signer", () => {
         const hash = OrderSigner.getOrderHash(order);
 
         const serializedOrder = OrderSigner.getSerializedOrder(order);
-        const signature = orderSigner.signOrder(order, ed25519Keypair);
+        const signature = orderSigner.signOrder(
+            order,
+            ed25519Keypair
+        ).signature;
 
         expect(
             OrderSigner.verifySignatureUsingOrder(

@@ -1,5 +1,4 @@
 import {
-    createMarket,
     createOrder,
     getKeyPairFromSeed,
     getProvider,
@@ -21,7 +20,14 @@ import {
     BigNumber
 } from "../submodules/library-sui";
 
+import { createMarket } from "../src/deployment";
+
 import { expect, expectTxToSucceed, mintAndDeposit } from "./helpers";
+import { getFilePathFromEnv } from "../src/helpers";
+
+const pythObj = readFile(getFilePathFromEnv());
+const pythPackage = readFile("./pythFakeDeployment.json");
+const pythPackagId = pythPackage.objects.package.id;
 
 const testCases = {
     "Test # 1": [
@@ -395,7 +401,6 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
     let ownerAddress: string;
     let onChain: OnChainCalls;
     let settlementCapID: string;
-    let priceOracleCapID: string;
     const accounts = getTestAccounts(provider);
 
     let tx: SuiTransactionBlockResponse;
@@ -447,9 +452,10 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
                     !oraclePrice.isEqualTo(lastOraclePrice)
                 ) {
                     expectTxToSucceed(
-                        await onChain.updateOraclePrice({
-                            price: oraclePrice.toFixed(),
-                            updateOPCapID: priceOracleCapID
+                        await onChain.setOraclePrice({
+                            price: testCase.pOracle as number,
+                            pythPackageId: pythPackagId,
+                            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
                         })
                     );
                     lastOraclePrice = oraclePrice;
@@ -543,13 +549,6 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
         expectTxToSucceed(tx);
 
         settlementCapID = Transaction.getCreatedObjectIDs(tx)[0];
-
-        // make owner, the price oracle operator
-        const tx1 = await onChain.setPriceOracleOperator({
-            operator: ownerAddress
-        });
-
-        priceOracleCapID = Transaction.getCreatedObjectIDs(tx1)[0];
     });
 
     const setupTest = async () => {
@@ -558,13 +557,15 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
                 initialMarginReq: toBigNumberStr(0.0625),
                 maintenanceMarginReq: toBigNumberStr(0.05),
                 maxOrderPrice: toBigNumberStr(2000),
                 defaultMakerFee: toBigNumberStr(0.01),
                 defaultTakerFee: toBigNumberStr(0.02),
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 

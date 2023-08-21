@@ -2,7 +2,6 @@ import {
     DeploymentConfigs,
     getProvider,
     getSignerFromSeed,
-    getGenesisMap,
     OnChainCalls,
     Transaction,
     TEST_WALLETS,
@@ -18,6 +17,8 @@ import {
     expectTxToSucceed,
     expect
 } from "./helpers";
+
+import { getGenesisMap } from "../src/deployment";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,

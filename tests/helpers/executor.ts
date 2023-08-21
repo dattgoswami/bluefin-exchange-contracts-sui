@@ -1,5 +1,4 @@
 import {
-    createMarket,
     createOrder,
     getKeyPairFromSeed,
     getProvider,
@@ -17,9 +16,7 @@ import {
     Transaction,
     MarketDetails,
     ERROR_CODES,
-    BigNumber,
-    SuiTransactionBlockResponse,
-    hexToString
+    SuiTransactionBlockResponse
 } from "../../submodules/library-sui";
 import {
     evaluateSystemExpect,
@@ -33,6 +30,8 @@ import { TestCaseJSON } from "./interfaces";
 import { createAccount } from "./accounts";
 import { getFilePathFromEnv } from "../../src/helpers";
 
+import { createMarket } from "../../src/deployment";
+
 const provider = getProvider(network.rpc, network.faucet);
 const ownerKeyPair = getKeyPairFromSeed(DeploymentConfigs.deployer);
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
@@ -40,29 +39,28 @@ const orderSigner = new OrderSigner(ownerKeyPair);
 const deployment = readFile(DeploymentConfigs.filePath);
 let onChain: OnChainCalls;
 let settlementCapID: string;
-let priceOracleCapID: string;
 let deleveragingCapID: string;
+
+const pythObj = readFile(getFilePathFromEnv());
+const pythPackage = readFile("./pythFakeDeployment.json");
+const pythPackagId = pythPackage.objects.package.id;
 
 export async function executeTests(
     testCases: TestCaseJSON,
     marketConfig: MarketDetails,
     initialBalances?: { traders?: number; liquidator?: number }
 ) {
-    const pythObj = readFile(getFilePathFromEnv());
-
-    marketConfig.priceInfoFeedId = hexToString(
-        pythObj[marketConfig.symbol + "-FEED-ID"]
-    );
+    marketConfig.symbol = "ETH-PERP";
 
     const [alice, bob, cat, dog, liquidator] = getTestAccounts(provider);
 
     let tx: SuiTransactionBlockResponse;
-    let lastOraclePrice: BigNumber;
+    let lastOraclePrice: number;
     let feePoolAddress: string;
     let insurancePoolAddress: string;
 
     const setupTest = async () => {
-        lastOraclePrice = new BigNumber(0);
+        lastOraclePrice = 0;
         feePoolAddress = createAccount(provider).address;
         insurancePoolAddress = createAccount(provider).address;
 
@@ -73,6 +71,7 @@ export async function executeTests(
             pythObj[marketConfig.symbol as string],
             {
                 ...marketConfig,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"],
                 feePool: feePoolAddress,
                 insurancePool: insurancePoolAddress,
                 tradingStartTime: Date.now() - 1000
@@ -131,12 +130,6 @@ export async function executeTests(
             //fund the admin with Sui
             await requestGas(address);
 
-            // make owner, the price oracle operator
-            const tx1 = await onChain.setPriceOracleOperator({
-                operator: address
-            });
-            priceOracleCapID = Transaction.getCreatedObjectIDs(tx1)[0];
-
             // make admin settlement operator
             const tx2 = await onChain.createSettlementOperator({
                 operator: address
@@ -158,7 +151,7 @@ export async function executeTests(
                 });
 
                 testCases[testName].forEach(async (testCase) => {
-                    testCase.size = testCase.size as any as number;
+                    testCase.size = testCase.size as number;
 
                     const testCaseName =
                         testCase.tradeType == "liquidation"
@@ -220,16 +213,15 @@ export async function executeTests(
                             : `Price oracle updated to ${testCase.pOracle}`;
 
                     it(testCaseName, async () => {
-                        testCase.size = testCase.size as any as number;
-                        const oraclePrice = toBigNumber(
-                            testCase.pOracle as any as number
-                        );
+                        const oraclePrice = testCase.pOracle as number;
+                        testCase.size = testCase.size as number;
 
                         // set oracle price if need be
-                        if (!oraclePrice.isEqualTo(lastOraclePrice)) {
-                            const priceTx = await onChain.updateOraclePrice({
-                                price: oraclePrice.toFixed(),
-                                updateOPCapID: priceOracleCapID
+                        if (oraclePrice != lastOraclePrice) {
+                            const priceTx = await onChain.setOraclePrice({
+                                price: oraclePrice,
+                                pythPackageId: pythPackagId,
+                                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
                             });
                             expectTxToSucceed(priceTx);
                             lastOraclePrice = oraclePrice;
@@ -354,7 +346,6 @@ export async function executeTests(
                             return;
                         }
 
-                        // console.log(JSON.stringify(tx));
                         expectTxToSucceed(tx);
 
                         // if an expect for maker or taker exists
@@ -368,7 +359,7 @@ export async function executeTests(
                                 onChain,
                                 account,
                                 testCase.expectMaker || testCase.expectTaker,
-                                oraclePrice,
+                                toBigNumber(oraclePrice),
                                 tx
                             );
                         }
@@ -379,7 +370,7 @@ export async function executeTests(
                                 onChain,
                                 liquidator,
                                 testCase.expectLiquidator,
-                                oraclePrice,
+                                toBigNumber(oraclePrice),
                                 tx
                             );
                         }
@@ -391,7 +382,7 @@ export async function executeTests(
                                 onChain,
                                 cat,
                                 testCase.expectCat,
-                                oraclePrice,
+                                toBigNumber(oraclePrice),
                                 tx
                             );
                         }
@@ -411,6 +402,7 @@ export async function executeTests(
             });
         });
     });
+
     // helper method to extract maker/taker of trade
     function getMakerTakerOfTrade(testCase: any) {
         if (testCase.tradeType == "liquidator_bob") {

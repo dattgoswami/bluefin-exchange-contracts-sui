@@ -1,9 +1,10 @@
+import { createMarket } from "../src/deployment";
+import { getFilePathFromEnv } from "../src/helpers";
 import {
     DeploymentConfigs,
     readFile,
     getProvider,
     getSignerFromSeed,
-    createMarket,
     createOrder,
     OnChainCalls,
     OrderSigner,
@@ -25,6 +26,10 @@ import {
 
 const provider = getProvider(network.rpc, network.faucet);
 
+const pythObj = readFile(getFilePathFromEnv());
+const pythPackage = readFile("./pythFakeDeployment.json");
+const pythPackagId = pythPackage.objects.package.id;
+
 describe("Perpetual", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
     const deployment = readFile(DeploymentConfigs.filePath);
@@ -39,8 +44,10 @@ describe("Perpetual", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -54,8 +61,10 @@ describe("Perpetual", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() + 1000000
+                tradingStartTime: Date.now() + 1000000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 
@@ -229,9 +238,11 @@ describe("Perpetual", () => {
                 deployment,
                 ownerSigner,
                 provider,
+                pythObj["ETH-PERP"],
                 {
                     tickSize: toBigNumberStr(0.1),
-                    tradingStartTime: Date.now() - 1000
+                    tradingStartTime: Date.now() - 1000,
+                    priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
                 }
             );
 
@@ -356,15 +367,10 @@ describe("Perpetual", () => {
 
             const settlementCapID = Transaction.getCreatedObjectIDs(txs)[0];
 
-            const tx = await onChain.setPriceOracleOperator({
-                operator: ownerAddress
-            });
-
-            const priceOracleCapID = Transaction.getCreatedObjectIDs(tx)[0];
-
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(100),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 100,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -398,13 +404,6 @@ describe("Perpetual", () => {
         });
 
         it("should allow guardian to toggle trading on a perpetual", async () => {
-            // make owner, the price oracle operator
-            const tx = await onChain.setPriceOracleOperator({
-                operator: ownerAddress
-            });
-
-            const priceOracleCapID = Transaction.getCreatedObjectIDs(tx)[0];
-
             // make admin operator
             const tx2 = await onChain.createSettlementOperator(
                 { operator: ownerAddress },
@@ -429,9 +428,10 @@ describe("Perpetual", () => {
             await mintAndDeposit(onChain, alice.address, 2000);
             await mintAndDeposit(onChain, bob.address, 2000);
 
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(1),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 1,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);
@@ -470,8 +470,10 @@ describe("Perpetual", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 10000
+                tradingStartTime: Date.now() - 10000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 
@@ -561,20 +563,15 @@ describe("Perpetual", () => {
                 deployment,
                 ownerSigner,
                 provider,
+                pythObj["ETH-PERP"],
                 {
                     tickSize: toBigNumberStr(0.1),
-                    tradingStartTime: Date.now() - 1000
+                    tradingStartTime: Date.now() - 1000,
+                    priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
                 }
             );
 
             onChain = new OnChainCalls(ownerSigner, deployment);
-
-            // make owner, the price oracle operator
-            const tx1 = await onChain.setPriceOracleOperator({
-                operator: ownerAddress
-            });
-
-            priceOracleCapID = Transaction.getCreatedObjectIDs(tx1)[0];
 
             // make admin operator
             const tx2 = await onChain.createSettlementOperator(
@@ -585,9 +582,10 @@ describe("Perpetual", () => {
             settlementCapID = Transaction.getCreatedObjectIDs(tx2)[0];
 
             // set oracle price
-            const priceTx = await onChain.updateOraclePrice({
-                price: toBigNumberStr(100),
-                updateOPCapID: priceOracleCapID
+            const priceTx = await onChain.setOraclePrice({
+                price: 100,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             });
 
             expectTxToSucceed(priceTx);

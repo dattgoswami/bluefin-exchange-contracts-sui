@@ -4,7 +4,6 @@ import {
     getProvider,
     getSignerFromSeed,
     createOrder,
-    createMarket,
     requestGas,
     OnChainCalls,
     OrderSigner,
@@ -17,6 +16,7 @@ import {
     UserPositionExtended,
     getTestAccounts
 } from "../submodules/library-sui";
+import { createMarket } from "../src/deployment";
 
 import { getMakerTakerAccounts } from "./helpers/accounts";
 
@@ -26,15 +26,19 @@ import {
     expect,
     mintAndDeposit
 } from "./helpers";
+import { getFilePathFromEnv } from "../src/helpers";
 
 const provider = getProvider(network.rpc, network.faucet);
 const deployment = readFile(DeploymentConfigs.filePath);
+
+const pythObj = readFile(getFilePathFromEnv());
+const pythPackage = readFile("./pythFakeDeployment.json");
+const pythPackagId = pythPackage.objects.package.id;
 
 describe("Liquidation Trade Method", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
     let onChain: OnChainCalls;
     let ownerAddress: string;
-    let priceOracleCapID: string;
     let settlementCapID: string;
 
     const [alice, bob] = getTestAccounts(provider);
@@ -49,8 +53,10 @@ describe("Liquidation Trade Method", () => {
             deployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 
@@ -58,12 +64,6 @@ describe("Liquidation Trade Method", () => {
 
         // will be using owner as liquidator
         ownerAddress = await ownerSigner.getAddress();
-
-        // make owner, the price oracle operator
-        const tx1 = await onChain.setPriceOracleOperator({
-            operator: ownerAddress
-        });
-        priceOracleCapID = Transaction.getCreatedObjectIDs(tx1)[0];
 
         // make admin operator
         const tx2 = await onChain.createSettlementOperator(
@@ -73,9 +73,10 @@ describe("Liquidation Trade Method", () => {
         settlementCapID = Transaction.getCreatedObjectIDs(tx2)[0];
 
         // set oracle price
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(100),
-            updateOPCapID: priceOracleCapID
+        const priceTx = await onChain.setOraclePrice({
+            price: 100,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -106,10 +107,10 @@ describe("Liquidation Trade Method", () => {
     });
 
     beforeEach(async () => {
-        // set oracle price to 100
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(100),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 100,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
     });
 
@@ -239,9 +240,10 @@ describe("Liquidation Trade Method", () => {
 
     it("should revert as all or nothing flag is set and liquidatee's qPos < liquidation quantity", async () => {
         // set oracle price to 89, alice becomes liquidate-able
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(89),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 89,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const txResponse = await onChain.liquidate(
@@ -293,9 +295,10 @@ describe("Liquidation Trade Method", () => {
         // ==================================================
 
         // set oracle price to 89, alice becomes liquidate-able
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(89),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 89,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         // try to liquidate alice at 4x leverage using maker account
@@ -317,9 +320,10 @@ describe("Liquidation Trade Method", () => {
 
     it("should successfuLiquidation Trade Methodlly completely liquidate alice/maker", async () => {
         // set oracle price to 89, alice becomes liquidate-able
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(89),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 89,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const txResponse = await onChain.liquidate(
@@ -335,12 +339,12 @@ describe("Liquidation Trade Method", () => {
 
         expectTxToSucceed(txResponse);
 
-        const liqPosition = Transaction.getAccountPositionFromEvent(
+        const liqPosition = Transaction.getAccountPosition(
             txResponse,
             ownerAddress
         );
 
-        const alicePosition = Transaction.getAccountPositionFromEvent(
+        const alicePosition = Transaction.getAccountPosition(
             txResponse,
             alice.address
         );
@@ -357,16 +361,19 @@ describe("Liquidation Trade Method", () => {
             localDeployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(100),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 100,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const makerTaker = await getMakerTakerAccounts(provider, true);
@@ -397,9 +404,10 @@ describe("Liquidation Trade Method", () => {
         // ==================================================
 
         // set oracle price to 115, taker becomes liquidate-able
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(115),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 115,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const txResponse = await onChain.liquidate(
@@ -414,12 +422,12 @@ describe("Liquidation Trade Method", () => {
 
         expectTxToSucceed(txResponse);
 
-        const liqPosition = Transaction.getAccountPositionFromEvent(
+        const liqPosition = Transaction.getAccountPosition(
             txResponse,
             ownerAddress
         ) as UserPositionExtended;
 
-        const takerPosition = Transaction.getAccountPositionFromEvent(
+        const takerPosition = Transaction.getAccountPosition(
             txResponse,
             makerTaker.taker.address
         ) as UserPositionExtended;
@@ -436,16 +444,19 @@ describe("Liquidation Trade Method", () => {
             localDeployment,
             ownerSigner,
             provider,
+            pythObj["ETH-PERP"],
             {
-                tradingStartTime: Date.now() - 1000
+                tradingStartTime: Date.now() - 1000,
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
             }
         );
 
         const onChain = new OnChainCalls(ownerSigner, localDeployment);
 
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(100),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 100,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const makerTaker = await getMakerTakerAccounts(provider, true);
@@ -476,9 +487,10 @@ describe("Liquidation Trade Method", () => {
         // ==================================================
 
         // set oracle price to 115, taker becomes liquidate-able
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(115),
-            updateOPCapID: priceOracleCapID
+        await onChain.setOraclePrice({
+            price: 115,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const tester = getTestAccounts(provider)[0];

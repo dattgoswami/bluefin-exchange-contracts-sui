@@ -3,9 +3,6 @@ import {
     getProvider,
     getSignerFromSeed,
     createOrder,
-    createMarket,
-    getGenesisMap,
-    packDeploymentData,
     OnChainCalls,
     OrderSigner,
     Transaction,
@@ -18,10 +15,11 @@ import {
     network,
     Order,
     UserPositionExtended,
-    packageName
+    packageName,
+    readFile
 } from "../submodules/library-sui";
 
-import { publishPackage } from "../src/helpers";
+import { getFilePathFromEnv, publishPackage } from "../src/helpers";
 
 import {
     getMakerTakerAccounts,
@@ -35,8 +33,18 @@ import {
     mintAndDeposit
 } from "./helpers";
 
+import {
+    getGenesisMap,
+    createMarket,
+    packDeploymentData
+} from "../src/deployment";
+
 import { DEFAULT } from "../submodules/library-sui/src/defaults";
 const provider = getProvider(network.rpc, network.faucet);
+
+const pythObj = readFile(getFilePathFromEnv());
+const pythPackage = readFile("./pythFakeDeployment.json");
+const pythPackagId = pythPackage.objects.package.id;
 
 describe("Deleveraging Trade Method", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
@@ -65,7 +73,11 @@ describe("Deleveraging Trade Method", () => {
         deploymentData["markets"]["ETH-PERP"].Objects = await createMarket(
             deploymentData,
             ownerSigner,
-            provider
+            provider,
+            pythObj["ETH-PERP"],
+            {
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            }
         );
 
         onChain = new OnChainCalls(ownerSigner, deploymentData);
@@ -81,8 +93,10 @@ describe("Deleveraging Trade Method", () => {
         settlementCapID = Transaction.getCreatedObjectIDs(txs)[0];
 
         // set oracle price
-        const priceTx = await onChain.updateOraclePrice({
-            price: toBigNumberStr(100)
+        const priceTx = await onChain.setOraclePrice({
+            price: 100,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         expectTxToSucceed(priceTx);
@@ -112,9 +126,10 @@ describe("Deleveraging Trade Method", () => {
     });
 
     beforeEach(async () => {
-        // set oracle price to 100
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(100)
+        await onChain.setOraclePrice({
+            price: 100,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
     });
 
@@ -151,7 +166,8 @@ describe("Deleveraging Trade Method", () => {
         localDeployment["markets"]["ETH-PERP"].Objects = await createMarket(
             localDeployment,
             ownerSigner,
-            provider
+            provider,
+            pythObj["ETH-PERP"]
         );
 
         const onChainCaller = new OnChainCalls(ownerSigner, localDeployment);
@@ -377,8 +393,10 @@ describe("Deleveraging Trade Method", () => {
     });
 
     it("should revert as maker(alice) is above under water - can not be deleveraged", async () => {
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(92)
+        await onChain.setOraclePrice({
+            price: 92,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const txResponse = await onChain.deleverage(
@@ -417,8 +435,10 @@ describe("Deleveraging Trade Method", () => {
         expectTxToSucceed(tx1);
 
         // at this price bob becomes under water and so does accounts.taker
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(112)
+        await onChain.setOraclePrice({
+            price: 112,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const txResponse = await onChain.deleverage(
@@ -458,8 +478,10 @@ describe("Deleveraging Trade Method", () => {
         expectTxToSucceed(tx1);
 
         // at this price bob becomes under water
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(112)
+        await onChain.setOraclePrice({
+            price: 112,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const txResponse = await onChain.deleverage(
@@ -500,8 +522,10 @@ describe("Deleveraging Trade Method", () => {
         expectTxToSucceed(tx1);
 
         // set oracle price to 89, alice becomes under water
-        await onChain.updateOraclePrice({
-            price: toBigNumberStr(89)
+        await onChain.setOraclePrice({
+            price: 89,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const txResponse = await onChain.deleverage(
@@ -515,12 +539,12 @@ describe("Deleveraging Trade Method", () => {
 
         expectTxToSucceed(txResponse);
 
-        const catPosition = Transaction.getAccountPositionFromEvent(
+        const catPosition = Transaction.getAccountPosition(
             txResponse,
             accounts.maker.address
         ) as UserPositionExtended;
 
-        const alicePosition = Transaction.getAccountPositionFromEvent(
+        const alicePosition = Transaction.getAccountPosition(
             txResponse,
             alice.address
         ) as UserPositionExtended;
@@ -543,7 +567,11 @@ describe("Deleveraging Trade Method", () => {
         localDeployment["markets"]["ETH-PERP"].Objects = await createMarket(
             localDeployment,
             ownerSigner,
-            provider
+            provider,
+            pythObj["ETH-PERP"],
+            {
+                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            }
         );
 
         const onChainCaller = new OnChainCalls(ownerSigner, localDeployment);
@@ -557,8 +585,10 @@ describe("Deleveraging Trade Method", () => {
 
         await mintAndDeposit(onChainCaller, alice.address);
         await mintAndDeposit(onChainCaller, bob.address);
-        await onChainCaller.updateOraclePrice({
-            price: toBigNumberStr(100)
+        await onChain.setOraclePrice({
+            price: 100,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const order = createOrder({
@@ -608,8 +638,10 @@ describe("Deleveraging Trade Method", () => {
         // ==================================================
 
         // set oracle price to 115, taker/bob becomes under water
-        await onChainCaller.updateOraclePrice({
-            price: toBigNumberStr(115)
+        await onChain.setOraclePrice({
+            price: 115,
+            pythPackageId: pythPackagId,
+            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
         });
 
         const txResponse = await onChainCaller.deleverage(
@@ -623,12 +655,12 @@ describe("Deleveraging Trade Method", () => {
 
         expectTxToSucceed(txResponse);
 
-        const adlTakerPos = Transaction.getAccountPositionFromEvent(
+        const adlTakerPos = Transaction.getAccountPosition(
             txResponse,
             accounts.taker.address
         ) as UserPositionExtended;
 
-        const bobPos = Transaction.getAccountPositionFromEvent(
+        const bobPos = Transaction.getAccountPosition(
             txResponse,
             bob.address
         ) as UserPositionExtended;
