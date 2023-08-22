@@ -2,8 +2,6 @@
 module bluefin_foundation::test {
 
     use std::hash;
-    use sui::ecdsa_k1;
-    use sui::ed25519;
     use sui::event;
     use sui::hex;
     use sui::address::{to_bytes};

@@ -30,13 +30,13 @@ export async function getGenesisMap(
         // get object id
         const id = obj.reference.objectId;
 
-        const suiObjectResponse = await provider.getObject({
-            id,
-            options: { showType: true, showOwner: true, showContent: true }
-        });
-
         let objDetails = undefined;
         while (objDetails == undefined) {
+            const suiObjectResponse = await provider.getObject({
+                id,
+                options: { showType: true, showOwner: true, showContent: true }
+            });
+
             objDetails = getSuiObjectData(suiObjectResponse);
         }
 

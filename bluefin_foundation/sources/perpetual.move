@@ -356,7 +356,7 @@ module bluefin_foundation::perpetual {
     }
 
 
-    public entry fun delist_perpetual(_: &ExchangeAdminCap, clock:&Clock, perp: &mut Perpetual, price: u128){
+    public entry fun delist_perpetual(_: &ExchangeAdminCap, perp: &mut Perpetual, price: u128){
 
         assert!(!perp.delisted, error::perpetual_has_been_already_de_listed());
 

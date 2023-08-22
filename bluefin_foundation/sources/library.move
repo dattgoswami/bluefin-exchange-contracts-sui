@@ -6,7 +6,6 @@ module bluefin_foundation::library {
     use sui::ed25519;
     use sui::bcs;
     use std::hash as std_hash;
-    use sui::math::pow;
 
     const BASE_UINT : u128 = 1000000000;
     const HALF_BASE_UINT : u128 = 500000000;
