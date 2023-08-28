@@ -1,3 +1,9 @@
 [submodule "submodules/library-sui"]
 	path = submodules/library-sui
 	url = https://github.com/fireflyprotocol/library-sui.git
+[submodule "submodules/pyth-crosschain"]
+	path = submodules/pyth-crosschain
+	url = https://github.com/pyth-network/pyth-crosschain
+[submodule "submodules/wormhole"]
+	path = submodules/wormhole
+	url = https://github.com/wormhole-foundation/wormhole.git

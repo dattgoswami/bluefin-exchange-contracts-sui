@@ -5,9 +5,12 @@ import {
     readFile,
     packageName,
     DeploymentConfigs,
-    Transaction
+    Transaction,
+    market
 } from "../../submodules/library-sui";
-
+import { SuiEventFilter , Connection,JsonRpcProvider} from "@mysten/sui.js";
+import { SuiPriceServiceConnection } from "@pythnetwork/pyth-sui-js";
+import { SuiPythClient } from "@pythnetwork/pyth-sui-js";
 import { Client } from "../../src/Client";
 import { publishPackage, getFilePathFromEnv } from "../../src/helpers";
 import {
@@ -16,7 +19,8 @@ import {
     packDeploymentData,
     createMarket
 } from "../../src/deployment";
-
+import { exit, parse } from "yargs";
+import { editTomlFile, syncingTomlFiles } from "../../src/helpers";
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
     DeploymentConfigs.network.faucet
@@ -24,9 +28,35 @@ const provider = getProvider(
 
 const signer = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
+
 async function main() {
+
+    // Updating object id from feed id
     console.log("Reading Pyth Object file");
-    const pythObj = readFile(getFilePathFromEnv());
+    const pythObj = readFile("./pythfiles/priceInfoObject.json");
+    let deployEnv=process.env.DEPLOY_ON+'_pyth'
+    console.log("Updating price object ids from price feed ids from respective network");
+    const provider_pyth= new JsonRpcProvider(new Connection({ fullnode: DeploymentConfigs.network.rpc, faucet: DeploymentConfigs.network.faucet }));
+    
+    const pythclient = new SuiPythClient(provider_pyth, pythObj[deployEnv]["pyth_state"], pythObj[deployEnv]["wormhole_state"]);
+
+    for (const marketConfig of DeploymentConfigs.markets) {
+        const res=await pythclient.getPriceFeedObjectId("0x"+pythObj[marketConfig.symbol as string][process.env.DEPLOY_ON as string]["feed_id"])
+        if (res==undefined){
+            console.log("cannot fetch price object id");
+            process.exit(1);
+            
+        }
+        pythObj[marketConfig.symbol as string][process.env.DEPLOY_ON as string]["object_id"]=res;
+    }
+    writeFile("./pythfiles/priceInfoObject.json", pythObj); 
+
+    console.log("Syncing Toml file with package ids from json file");
+    syncingTomlFiles(pythObj[deployEnv]);
+
+    
+
+
 
     // info
     console.log(
@@ -60,14 +90,14 @@ async function main() {
         // create perpetual
         console.log("Creating Perpetual Markets");
         for (const marketConfig of DeploymentConfigs.markets) {
-            marketConfig.priceInfoFeedId =
-                pythObj[marketConfig.symbol + "-FEED-ID"];
+            let deployEnv=process.env.DEPLOY_ON as string;
+            marketConfig.priceInfoFeedId =pythObj[marketConfig.symbol as string][deployEnv]['feed_id'];
             console.log(`-> ${marketConfig.symbol}`);
             const marketObjects = await createMarket(
                 deploymentData,
                 signer,
                 provider,
-                pythObj[marketConfig.symbol as string],
+                pythObj[marketConfig.symbol as string][deployEnv]['object_id'],
                 marketConfig
             );
 

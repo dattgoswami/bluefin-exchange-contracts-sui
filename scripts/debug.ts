@@ -8,8 +8,9 @@ import {
 import { OnChainCalls } from "../submodules/library-sui";
 import { Transaction } from "../submodules/library-sui";
 
-import { SuiEventFilter } from "@mysten/sui.js";
-
+import { SuiEventFilter , Connection} from "@mysten/sui.js";
+import { SuiPythClient } from "@pythnetwork/pyth-sui-js";
+import { JsonRpcProvider} from "@mysten/sui.js"
 const deployment = readFile(DeploymentConfigs.filePath);
 
 const provider = getProvider(
@@ -21,18 +22,14 @@ const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const onChain = new OnChainCalls(ownerSigner, deployment);
 
 async function main() {
-    const priceInfoFeedId =
-        "c6c75c89f14810ec1c54c03ab8f1864a4c4032791f05747f560faec380a695d1";
-    const pythPackageId =
-        "0x981a6035f22971ea28157be27d3b86477d518ae2bb0e279852c8fedab8229a82";
+const wormholeStateId = "0xebba4cc4d614f7a7cdbe883acc76d1cc767922bc96778e7b68be0d15fce27c02";
+const pythStateId = "0xd8afde3a48b4ff7212bd6829a150f43f59043221200d63504d981f62bff2e27a";
+const provider= new JsonRpcProvider(new Connection({ fullnode: DeploymentConfigs.network.rpc, faucet: DeploymentConfigs.network.faucet }));
+const client = new SuiPythClient(provider, pythStateId, wormholeStateId);
+const res=await client.getPriceFeedObjectId("0xca80ba6dc32e08d06f1aa886011eed1d77c77be9eb761cc10d72b7d0a2fd57a6")
 
-    const result = await onChain.setOraclePrice(
-        "100000000000",
-        "10",
-        priceInfoFeedId,
-        ""
-    );
-    console.log(result);
+console.log(client); 
+
 }
 
 main();

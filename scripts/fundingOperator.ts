@@ -6,7 +6,8 @@ import {
     getSignerFromSeed,
     DeploymentConfigs,
     OnChainCalls,
-    network
+    network,
+    Transaction
 } from "../submodules/library-sui";
 
 config({ path: ".env" });
@@ -33,5 +34,7 @@ async function main() {
         operator: argv.account as string
     });
     console.log("funding rate cap successfully transferred", resp);
+    const capID = Transaction.getCreatedObjectIDs(resp)[0]
+    console.log("funding rate cap successfully transferred", capID);
 }
 main();

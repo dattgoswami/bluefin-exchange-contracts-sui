@@ -4,7 +4,8 @@ import {
     getProvider,
     getSignerFromSeed,
     DeploymentConfigs,
-    Transaction
+    Transaction,
+    readFile
 } from "../../submodules/library-sui";
 
 import { getGenesisMap, packDeploymentData } from "../../src/deployment";
@@ -103,14 +104,17 @@ async function main() {
         const objBtc = await onChain.getOnChainObject(objectIdBTC);
         const btcFeedId = getFeedIdFromObj(objBtc);
 
-        const dataToWrite: KeyValue = {
-            "ETH-PERP": objectIdETH,
-            "BTC-PERP": objectIdBTC,
-            "ETH-PERP-FEED-ID": ethFeedId,
-            "BTC-PERP-FEED-ID": btcFeedId
-        };
+        let pythFileObj=readFile("./pythfiles/priceInfoObject.json");
+        const deployEnv=process.env.DEPLOY_ON
+        pythFileObj["BTC-PERP"][deployEnv as string]['feed_id']=btcFeedId;
+        pythFileObj["BTC-PERP"][deployEnv as string]['object_id']=objectIdBTC;
 
-        writeFile(getFilePathFromEnv(), dataToWrite);
+
+        pythFileObj["ETH-PERP"][deployEnv as string]['feed_id']=ethFeedId;
+        pythFileObj["ETH-PERP"][deployEnv as string]['object_id']=objectIdETH;
+
+
+        writeFile("./pythfiles/priceInfoObject.json",pythFileObj );
 
         console.log(
             "Pyth Fake conrtracts deployed successfully and objects written to file"

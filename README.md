@@ -58,3 +58,24 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 | Market Deployment             | Deploys the market specified in .env                              | `yarn deploy:market`     |
 | Faucet                        | Sends SUI coin to provided address coin                           | `yarn faucet -a "0x..."` |
 | Make Trade                    | Performs a trade between 2 accounts                               | `yarn make:trade`        |
+
+
+
+## Move.toml file when deploying pyth to mainnet/testnet with Pyth network
+Basically when we deploy bluefin_foundation to mainnet or testnet we use Pyth integration to get
+the oracle price. For that We need 
+1. to have CODE of Pyth available which is a dependency of bluefin_foundation.
+2. to have CODE of wormhole available which is a dependency of Pyth.
+3. these code are there in submodules.
+4. When we run `yarn deploy` what happens is that first it reads the `pythfiles/priceInfoObject.json` and in that it gets the price feed id of btc and eth and gets the object id using pyth feed id and updates it inplace there to ensure that our feed id are correct.
+5. You need to ensure that the following values in in `pythfiles/priceInfoObject.json` are correct for both testnet and mainnet
+    1. Pyth Package ID 
+    2. Wormhole State ID
+    3. Wormhole Package ID
+    4. Pyth State ID
+    5. BTC price feed id
+    6. ETH price feed id
+
+6. The code will pick up the package id from here and automatically update the Move.toml file of pyth network and wormhole. 
+7. IT WILL NOT UPDATE THE BLUEFIN_FOUNDATION file and you need to manually update the bluefin_foundation file in that replace the Pyth id with the relevant pyth id.
+8. These instructions are only relevant when we are deploying to mainnet/testnet with real pyth integrated.

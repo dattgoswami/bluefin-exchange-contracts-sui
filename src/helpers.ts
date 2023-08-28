@@ -73,3 +73,45 @@ export function getFilePathFromEnv(): string {
         return "./pythfiles/priceInfoObjectLocalnet.json";
     }
 }
+
+export function createMoveFilename(){
+    return "Move."+process.env.DEPLOY_ON as string+".toml";
+}
+
+
+export function syncingTomlFiles(pythObj: any){
+    const menv=process.env.DEPLOY_ON as string;
+    if( menv=="localnet"){
+        console.log("On local net we do not have real pyth hence toml file updating already have been done")
+        return;
+    }else{
+
+        const filename=createMoveFilename()
+        const pythFileDir="./submodules/pyth-crosschain/target_chains/sui/contracts/";
+        let data = fs.readFileSync(pythFileDir+filename, "utf8");
+
+        let parsedData = toml.parse(data);
+        //@ts-ignore
+        parsedData.addresses.pyth=pythObj["package_id"];
+        //@ts-ignore
+        parsedData.package["published-at"]=pythObj["package_id"];
+        //@ts-ignore
+        parsedData.addresses.wormhole=pythObj["wormhole_id"];
+        const modifiedToml = toml.stringify(parsedData);
+        fs.writeFileSync(pythFileDir+"Move.toml", modifiedToml, "utf8");
+
+        const wormholeDir="./submodules/wormhole/sui/wormhole/"
+        data = fs.readFileSync(wormholeDir+filename, "utf8"); 
+        parsedData=toml.parse(data);
+        //@ts-ignore
+        parsedData.addresses.wormhole=pythObj["wormhole_id"];
+        //@ts-ignore
+        parsedData.package["published-at"]=pythObj["wormhole_id"];
+        //@ts-ignore
+        parsedData.addresses["sui"]="0x2";
+
+        const modifiedTomlWormhole = toml.stringify(parsedData);
+        fs.writeFileSync(wormholeDir+"Move.toml", modifiedTomlWormhole, "utf8");
+    }
+
+}
