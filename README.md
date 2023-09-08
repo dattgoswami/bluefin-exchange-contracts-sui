@@ -79,3 +79,16 @@ the oracle price. For that We need
 6. The code will pick up the package id from here and automatically update the Move.toml file of pyth network and wormhole. 
 7. IT WILL NOT UPDATE THE BLUEFIN_FOUNDATION file and you need to manually update the bluefin_foundation file in that replace the Pyth id with the relevant pyth id.
 8. These instructions are only relevant when we are deploying to mainnet/testnet with real pyth integrated.
+
+
+
+## For Deploying FAke Pyth on TESTNET /MAINNET
+1. First ensure that your .env file looks like this
+```
+DEPLOY_ON = testnet/mainnet
+ENV = DEV
+DEPLOYER_SEED = 
+```
+2. Then run `yarn deploy:pyth`
+3. Then verify if pyth package id is same in Move.toml file of bluefin foundation. It will be same but just for sanity check. Ensure that path is pointing to local pyth and package id mentioned there is same as that in `pythFakeDeployment.json`
+4. Then run `yarn deploy`

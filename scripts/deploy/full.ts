@@ -35,24 +35,27 @@ async function main() {
     console.log("Reading Pyth Object file");
     const pythObj = readFile("./pythfiles/priceInfoObject.json");
     let deployEnv=process.env.DEPLOY_ON+'_pyth'
-    console.log("Updating price object ids from price feed ids from respective network");
-    const provider_pyth= new JsonRpcProvider(new Connection({ fullnode: DeploymentConfigs.network.rpc, faucet: DeploymentConfigs.network.faucet }));
     
-    const pythclient = new SuiPythClient(provider_pyth, pythObj[deployEnv]["pyth_state"], pythObj[deployEnv]["wormhole_state"]);
+    if (process.env.ENV=="PROD"){
+        console.log("Updating price object ids from price feed ids from respective network");
+        const provider_pyth= new JsonRpcProvider(new Connection({ fullnode: DeploymentConfigs.network.rpc, faucet: DeploymentConfigs.network.faucet }));
+    
+        const pythclient = new SuiPythClient(provider_pyth, pythObj[deployEnv]["pyth_state"], pythObj[deployEnv]["wormhole_state"]);
 
-    for (const marketConfig of DeploymentConfigs.markets) {
-        const res=await pythclient.getPriceFeedObjectId("0x"+pythObj[marketConfig.symbol as string][process.env.DEPLOY_ON as string]["feed_id"])
-        if (res==undefined){
-            console.log("cannot fetch price object id");
-            process.exit(1);
-            
+        for (const marketConfig of DeploymentConfigs.markets) {
+            const res=await pythclient.getPriceFeedObjectId("0x"+pythObj[marketConfig.symbol as string][process.env.DEPLOY_ON as string]["feed_id"])
+            if (res==undefined){
+                console.log("cannot fetch price object id");
+                process.exit(1);
+                
+            }
+            pythObj[marketConfig.symbol as string][process.env.DEPLOY_ON as string]["object_id"]=res;
         }
-        pythObj[marketConfig.symbol as string][process.env.DEPLOY_ON as string]["object_id"]=res;
+        writeFile("./pythfiles/priceInfoObject.json", pythObj); 
+        console.log("Syncing Toml file with package ids from json file");
+        syncingTomlFiles(pythObj[deployEnv]);
     }
-    writeFile("./pythfiles/priceInfoObject.json", pythObj); 
-
-    console.log("Syncing Toml file with package ids from json file");
-    syncingTomlFiles(pythObj[deployEnv]);
+    
 
     
 
