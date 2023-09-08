@@ -8,7 +8,8 @@ import {
     JsonRpcProvider,
     OnChainCalls,
     BigNumber,
-    requestGas
+    requestGas,
+    BASE_DECIMALS_ON_CHAIN
 } from "../../submodules/library-sui";
 import { expectTxToSucceed } from "./expect";
 import { TestPositionExpect } from "./interfaces";
@@ -81,16 +82,20 @@ export function toExpectedPositionFormat(
 ): TestPositionExpect {
     return {
         isPosPositive: balance.isPosPositive,
-        mro: balance.mro.shiftedBy(-BASE_DECIMALS),
-        oiOpen: balance.oiOpen.shiftedBy(-BASE_DECIMALS),
-        qPos: balance.qPos.shiftedBy(-BASE_DECIMALS),
-        margin: balance.margin.shiftedBy(-BASE_DECIMALS),
-        pPos: balance.pPos().shiftedBy(-BASE_DECIMALS),
-        marginRatio: balance.marginRatio(oraclePrice).shiftedBy(-BASE_DECIMALS),
+        mro: balance.mro.shiftedBy(-BASE_DECIMALS_ON_CHAIN),
+        oiOpen: balance.oiOpen.shiftedBy(-BASE_DECIMALS_ON_CHAIN),
+        qPos: balance.qPos.shiftedBy(-BASE_DECIMALS_ON_CHAIN),
+        margin: balance.margin.shiftedBy(-BASE_DECIMALS_ON_CHAIN),
+        pPos: balance.pPos().shiftedBy(-BASE_DECIMALS_ON_CHAIN),
+        marginRatio: balance
+            .marginRatio(oraclePrice)
+            .shiftedBy(-BASE_DECIMALS_ON_CHAIN),
         bankBalance: args?.bankBalance
-            ? args?.bankBalance.shiftedBy(-BASE_DECIMALS)
+            ? args?.bankBalance.shiftedBy(-BASE_DECIMALS_ON_CHAIN)
             : bigNumber(0),
-        pnl: args?.pnl ? args?.pnl.shiftedBy(-BASE_DECIMALS) : bigNumber(0)
+        pnl: args?.pnl
+            ? args?.pnl.shiftedBy(-BASE_DECIMALS_ON_CHAIN)
+            : bigNumber(0)
     } as TestPositionExpect;
 }
 

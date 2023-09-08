@@ -33,3 +33,6 @@ package-lock.json
 .eslintcache
 
 *.js
+
+pythFakeDeployment.json
+operators

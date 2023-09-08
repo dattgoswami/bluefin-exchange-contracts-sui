@@ -50,68 +50,48 @@ export function editTomlFile(
     fs.writeFileSync(filePath, modifiedToml, "utf8");
 }
 
-export function readPythObjectFiles(): any {
-    if (process.env.DEPLOY_ON == "testnet") {
-        const data = readFile("./pythfiles/priceInfoObjectTestnet.json");
-        return data;
-    } else if (process.env.DEPLOY_ON == "mainnet") {
-        const data = readFile("./pythfiles/priceInfoObjectMainnet.json");
-        return data;
-    } else if (process.env.DEPLOY_ON == "local") {
-        const data = readFile("./pythfiles/priceInfoObjectLocalnet.json");
-        return data;
-    }
+export function createMoveFilename() {
+    return (("Move." + process.env.DEPLOY_ON) as string) + ".toml";
 }
 
-//based on name of env like testnet or localnet get me the filepath
-export function getFilePathFromEnv(): string {
-    if (process.env.DEPLOY_ON == "testnet") {
-        return "./pythfiles/priceInfoObjectTestnet.json";
-    } else if (process.env.DEPLOY_ON == "mainnet") {
-        return "./pythfiles/priceInfoObjectMainnet.json";
-    } else {
-        return "./pythfiles/priceInfoObjectLocalnet.json";
-    }
-}
-
-export function createMoveFilename(){
-    return "Move."+process.env.DEPLOY_ON as string+".toml";
-}
-
-
-export function syncingTomlFiles(pythObj: any){
-    const menv=process.env.DEPLOY_ON as string;
-    if( menv=="localnet"){
-        console.log("On local net we do not have real pyth hence toml file updating already have been done")
+export function syncingTomlFiles(pythObj: any) {
+    const menv = process.env.DEPLOY_ON as string;
+    if (menv == "localnet") {
+        console.log(
+            "On local net we do not have real pyth hence toml file updating already have been done"
+        );
         return;
-    }else{
-
-        const filename=createMoveFilename()
-        const pythFileDir="./submodules/pyth-crosschain/target_chains/sui/contracts/";
-        let data = fs.readFileSync(pythFileDir+filename, "utf8");
+    } else {
+        const filename = createMoveFilename();
+        const pythFileDir =
+            "./submodules/pyth-crosschain/target_chains/sui/contracts/";
+        let data = fs.readFileSync(pythFileDir + filename, "utf8");
 
         let parsedData = toml.parse(data);
         //@ts-ignore
-        parsedData.addresses.pyth=pythObj["package_id"];
+        parsedData.addresses.pyth = pythObj["package_id"];
         //@ts-ignore
-        parsedData.package["published-at"]=pythObj["package_id"];
+        parsedData.package["published-at"] = pythObj["package_id"];
         //@ts-ignore
-        parsedData.addresses.wormhole=pythObj["wormhole_id"];
+        parsedData.addresses.wormhole = pythObj["wormhole_id"];
         const modifiedToml = toml.stringify(parsedData);
-        fs.writeFileSync(pythFileDir+"Move.toml", modifiedToml, "utf8");
+        fs.writeFileSync(pythFileDir + "Move.toml", modifiedToml, "utf8");
 
-        const wormholeDir="./submodules/wormhole/sui/wormhole/"
-        data = fs.readFileSync(wormholeDir+filename, "utf8"); 
-        parsedData=toml.parse(data);
+        const wormholeDir = "./submodules/wormhole/sui/wormhole/";
+        data = fs.readFileSync(wormholeDir + filename, "utf8");
+        parsedData = toml.parse(data);
         //@ts-ignore
-        parsedData.addresses.wormhole=pythObj["wormhole_id"];
+        parsedData.addresses.wormhole = pythObj["wormhole_id"];
         //@ts-ignore
-        parsedData.package["published-at"]=pythObj["wormhole_id"];
+        parsedData.package["published-at"] = pythObj["wormhole_id"];
         //@ts-ignore
-        parsedData.addresses["sui"]="0x2";
+        parsedData.addresses["sui"] = "0x2";
 
         const modifiedTomlWormhole = toml.stringify(parsedData);
-        fs.writeFileSync(wormholeDir+"Move.toml", modifiedTomlWormhole, "utf8");
+        fs.writeFileSync(
+            wormholeDir + "Move.toml",
+            modifiedTomlWormhole,
+            "utf8"
+        );
     }
-
 }

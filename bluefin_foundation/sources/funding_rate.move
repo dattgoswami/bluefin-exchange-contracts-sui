@@ -107,6 +107,11 @@ module bluefin_foundation::funding_rate {
     }
 
     public (friend) fun set_max_allowed_funding_rate(funding: &mut FundingRate, rate: u128, perpetual: ID){
+
+        assert!(
+            rate <= library::base_uint(), 
+            error::can_not_be_greater_than_hundred_percent());
+
         funding.maxFunding = rate;
 
         emit(MaxAllowedFRUpdateEvent {

@@ -109,7 +109,8 @@ module bluefin_foundation::order {
             orderExpiration,
             orderSalt
             );
-
+        
+        
         // get serialized order
         let serialized_order = get_serialized_order(order);
 
@@ -229,6 +230,26 @@ module bluefin_foundation::order {
                 leverage,
                 expiration,
                 salt
+        }
+    }
+
+    public fun to_1x9(
+        order: Order
+    ): Order {
+        return Order {
+                market:order.market,
+                maker:order.maker,
+                isBuy: order.isBuy,
+                postOnly: order.postOnly,
+                orderbookOnly: order.orderbookOnly,
+                reduceOnly: order.reduceOnly,
+                ioc: order.ioc,
+                flags: order.flags,
+                price: order.price / library::base_uint(),
+                quantity: order.quantity / library::base_uint(),
+                leverage: order.leverage / library::base_uint(),
+                expiration: order.expiration,
+                salt: order.salt
         }
     }
 

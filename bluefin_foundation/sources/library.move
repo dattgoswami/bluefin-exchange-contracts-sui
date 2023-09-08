@@ -186,6 +186,21 @@ module bluefin_foundation::library {
         result.public_key
     }
 
+    public fun to_1x9_vec(vec:vector<u128>):vector<u128>{
+
+        let count = vector::length(&vec);
+        let new_vec = vector::empty<u128>();
+
+        let i = 0;
+        while (i < count){
+            let elem = vector::borrow(&vec, i);
+            vector::push_back(&mut new_vec, *elem / BASE_UINT);
+            i = i+1;
+        };
+
+        return new_vec
+    }
+
     /*
     Gets the Oracle Price from Pyth Network.
     Input is PriceInfoObject id for the relevant symbol example "ETH-PERP"

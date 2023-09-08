@@ -19,6 +19,7 @@
     "prepare": "husky install",
     "create:settlement:operator": "ts-node ./scripts/settlementOperator.ts",
     "lint": "yarn eslint --fix --cache --max-warnings=-1 .",
+    "ci:code-style": "yarn eslint .",
     "format": "prettier --ignore-path .prettierignore --write \"**/*.+(js|ts|json)\""
   },
   "directories": {

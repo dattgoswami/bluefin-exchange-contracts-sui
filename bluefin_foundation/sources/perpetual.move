@@ -1,6 +1,6 @@
 
 module bluefin_foundation::perpetual {
-
+    
     use sui::clock::{Self, Clock};
     use sui::object::{Self, ID, UID};
     use std::string::{Self, String};
@@ -321,9 +321,12 @@ module bluefin_foundation::perpetual {
     //===========================================================//
 
     public entry fun set_insurance_pool_percentage(_: &ExchangeAdminCap, perp: &mut Perpetual,  percentage: u128){
+        percentage = percentage / library::base_uint();
+        
         assert!(
             percentage <= library::base_uint(), 
             error::can_not_be_greater_than_hundred_percent());
+
         let perpID = object::uid_to_inner(id(perp));
         perp.insurancePoolRatio = percentage;
 
@@ -358,6 +361,9 @@ module bluefin_foundation::perpetual {
 
     public entry fun delist_perpetual(_: &ExchangeAdminCap, perp: &mut Perpetual, price: u128){
 
+        // convert price to base 1e9;
+        price = price / library::base_uint();
+
         assert!(!perp.delisted, error::perpetual_has_been_already_de_listed());
 
         // verify that price conforms to tick size
@@ -382,14 +388,14 @@ module bluefin_foundation::perpetual {
         evaluator::set_min_price(
             object::uid_to_inner(&perp.id), 
             &mut perp.checks, 
-            minPrice);
+            minPrice / library::base_uint());
     }   
 
     /** Updates maximum price of the perpetual 
      * Only Admin can update price
      */
     public entry fun set_max_price( _: &ExchangeAdminCap, perp: &mut Perpetual, maxPrice: u128){
-        evaluator::set_max_price(object::uid_to_inner(&perp.id), &mut perp.checks, maxPrice);
+        evaluator::set_max_price(object::uid_to_inner(&perp.id), &mut perp.checks, maxPrice / library::base_uint());
     }   
 
     /**
@@ -397,7 +403,7 @@ module bluefin_foundation::perpetual {
      * Only Admin can update size
      */
     public entry fun set_step_size( _: &ExchangeAdminCap, perp: &mut Perpetual, stepSize: u128){
-        evaluator::set_step_size(object::uid_to_inner(&perp.id), &mut perp.checks, stepSize);
+        evaluator::set_step_size(object::uid_to_inner(&perp.id), &mut perp.checks, stepSize / library::base_uint());
     }   
 
     /**
@@ -405,7 +411,7 @@ module bluefin_foundation::perpetual {
      * Only Admin can update size
      */
     public entry fun set_tick_size( _: &ExchangeAdminCap, perp: &mut Perpetual, tickSize: u128){
-        evaluator::set_tick_size(object::uid_to_inner(&perp.id), &mut perp.checks, tickSize);
+        evaluator::set_tick_size(object::uid_to_inner(&perp.id), &mut perp.checks, tickSize / library::base_uint());
     }   
 
     /**
@@ -413,7 +419,7 @@ module bluefin_foundation::perpetual {
      * Only Admin can update MTB long
      */
     public entry fun set_mtb_long( _: &ExchangeAdminCap, perp: &mut Perpetual, mtbLong: u128){
-        evaluator::set_mtb_long(object::uid_to_inner(&perp.id), &mut perp.checks, mtbLong);
+        evaluator::set_mtb_long(object::uid_to_inner(&perp.id), &mut perp.checks, mtbLong / library::base_uint());
     }  
 
     /**
@@ -421,7 +427,7 @@ module bluefin_foundation::perpetual {
      * Only Admin can update MTB short
      */
     public entry fun set_mtb_short( _: &ExchangeAdminCap, perp: &mut Perpetual, mtbShort: u128){
-        evaluator::set_mtb_short(object::uid_to_inner(&perp.id), &mut perp.checks, mtbShort);
+        evaluator::set_mtb_short(object::uid_to_inner(&perp.id), &mut perp.checks, mtbShort / library::base_uint());
     }   
 
     /**
@@ -429,7 +435,7 @@ module bluefin_foundation::perpetual {
      * Only Admin can update max qty
      */
     public entry fun set_max_qty_limit( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
-        evaluator::set_max_qty_limit(object::uid_to_inner(&perp.id), &mut perp.checks, quantity);
+        evaluator::set_max_qty_limit(object::uid_to_inner(&perp.id), &mut perp.checks, quantity / library::base_uint());
     }   
 
     /**
@@ -437,7 +443,7 @@ module bluefin_foundation::perpetual {
      * Only Admin can update max qty
      */
     public entry fun set_max_qty_market( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
-        evaluator::set_max_qty_market(object::uid_to_inner(&perp.id), &mut perp.checks, quantity);
+        evaluator::set_max_qty_market(object::uid_to_inner(&perp.id), &mut perp.checks, quantity / library::base_uint());
     }  
 
     /**
@@ -445,7 +451,7 @@ module bluefin_foundation::perpetual {
      * Only Admin can update max qty
      */
     public entry fun set_min_qty( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
-        evaluator::set_min_qty(object::uid_to_inner(&perp.id), &mut perp.checks, quantity);
+        evaluator::set_min_qty(object::uid_to_inner(&perp.id), &mut perp.checks, quantity / library::base_uint());
     }   
 
     /**
@@ -453,25 +459,24 @@ module bluefin_foundation::perpetual {
      * Only Admin can update max allowed OI open
      */
     public entry fun set_max_oi_open( _: &ExchangeAdminCap, perp: &mut Perpetual, maxLimit: vector<u128>){
-        evaluator::set_max_oi_open(object::uid_to_inner(&perp.id), &mut perp.checks, maxLimit);
+
+
+        // convert max oi opens to 1e9
+        let maxOIOpen = library::to_1x9_vec(maxLimit);
+
+        evaluator::set_max_oi_open(object::uid_to_inner(&perp.id), &mut perp.checks, maxOIOpen);
     }
 
-    /*
-     * Sets PriceOracle  
-     */
-    public entry fun set_oracle_price(perp: &mut Perpetual, price: u128){
-        perp.priceOracle=price;
-    }
 
     /*
      * Updates max allowed funding rate to the provided one
      */
     public entry fun set_max_allowed_funding_rate(_: &ExchangeAdminCap, perp: &mut Perpetual,  maxAllowedFR: u128){
         let perpID = object::uid_to_inner(id(perp));
-        assert!(
-            maxAllowedFR <= library::base_uint(), 
-            error::can_not_be_greater_than_hundred_percent());
-        funding_rate::set_max_allowed_funding_rate(&mut perp.funding, maxAllowedFR, perpID);
+        funding_rate::set_max_allowed_funding_rate(
+            &mut perp.funding, 
+            maxAllowedFR / library::base_uint(), 
+            perpID);
     }
 
     /*
@@ -480,7 +485,7 @@ module bluefin_foundation::perpetual {
     public entry fun set_funding_rate(clock: &Clock, safe: &CapabilitiesSafe, cap: &FundingRateCap, perp: &mut Perpetual, rate: u128, sign: bool, price_oracle: &PythFeeder){
         // verify that the incoming oracle object belongs to the provided perpetual and 
         // update oracle price on the perp and also verig
-        update_oracle_price(perp,price_oracle);
+        update_oracle_price(perp, price_oracle);
 
         update_global_index(clock, perp);
 
@@ -488,7 +493,7 @@ module bluefin_foundation::perpetual {
             safe,
             cap,
             &mut perp.funding,
-            rate,
+            rate / library::base_uint(),
             sign,
             clock::timestamp_ms(clock),
             object::uid_to_inner(&perp.id));
@@ -500,6 +505,8 @@ module bluefin_foundation::perpetual {
      */
     public entry fun set_maintenance_margin_required( _: &ExchangeAdminCap, perp: &mut Perpetual, newMMR: u128){
         
+        newMMR = newMMR / library::base_uint();
+
         assert!(newMMR > 0, error::maintenance_margin_must_be_greater_than_zero());
         assert!(newMMR <= perp.imr, error::maintenance_margin_must_be_less_than_or_equal_to_imr());
 
@@ -518,6 +525,8 @@ module bluefin_foundation::perpetual {
      */
     public entry fun set_initial_margin_required( _: &ExchangeAdminCap, perp: &mut Perpetual, newIMR: u128){
         
+        newIMR = newIMR / library::base_uint();
+
         assert!(newIMR >= perp.mmr, error::initial_margin_must_be_greater_than_or_equal_to_mmr());
 
         perp.imr = newIMR;
@@ -543,7 +552,7 @@ module bluefin_foundation::perpetual {
     //                         ORACLE PRICE                      //
     //===========================================================//
 
-    public fun update_oracle_price(perp: &mut Perpetual, price_oracle: &PythFeeder){
+    public (friend) fun update_oracle_price(perp: &mut Perpetual, price_oracle: &PythFeeder){
 
         // verify that the incoming oracle object belongs to the provided perpetual        
         assert!(
@@ -551,9 +560,10 @@ module bluefin_foundation::perpetual {
             error::wrong_price_identifier());
         
         // update oracle price on the perp
-        let oraclePrice=library::get_oracle_price(price_oracle);
+        let oraclePrice = library::get_oracle_price(price_oracle);
         let expo = (pow(10,(library::get_oracle_base(price_oracle) as u8)) as u128);
-        set_oracle_price(perp, library::base_div(oraclePrice,expo));
+        perp.priceOracle = library::base_div(oraclePrice, expo);
+
     }
 
 

@@ -3,7 +3,11 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 export const expect = chai.expect;
 
-import { SuiTransactionBlockResponse } from "../../submodules/library-sui";
+import {
+    BASE_DECIMALS_ON_CHAIN,
+    SuiTransactionBlockResponse,
+    USDC_BASE_DECIMALS
+} from "../../submodules/library-sui";
 import { TestPositionExpect } from "./interfaces";
 import { getExpectedTestPosition, toExpectedPositionFormat } from "./utils";
 import {
@@ -100,9 +104,13 @@ export async function evaluateSystemExpect(
 ) {
     if (expectedSystemValues.fee) {
         const feePoolBalance = await onChain.getUserBankBalance(feePoolAddress);
-        expect(bnToBaseStr(feePoolBalance)).to.be.equal(
-            bigNumber(expectedSystemValues.fee).toFixed(6)
-        );
+        expect(
+            bnToBaseStr(
+                feePoolBalance,
+                USDC_BASE_DECIMALS,
+                BASE_DECIMALS_ON_CHAIN
+            )
+        ).to.be.equal(bigNumber(expectedSystemValues.fee).toFixed(6));
     }
 
     if (expectedSystemValues.insurancePool) {

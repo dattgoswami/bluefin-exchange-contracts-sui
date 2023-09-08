@@ -110,8 +110,17 @@ module bluefin_foundation::isolated_trading {
         perp: &mut Perpetual,
         ordersTable: &mut Table<vector<u8>,OrderStatus>,
         subAccounts: &SubAccounts,
-        data: TradeData):TradeResponse
+        data1x18: TradeData):TradeResponse
         {
+            let data = data1x18;
+
+            // convert data to 1x9 base
+            data.fill.quantity = data.fill.quantity / library::base_uint();
+            data.fill.price = data.fill.price / library::base_uint();
+            data.makerOrder = order::to_1x9(data.makerOrder);
+            data.takerOrder = order::to_1x9(data.takerOrder);
+
+
             let fill = data.fill;
             let currentTime  = data.currentTime;
             let makerSignature = data.makerSignature;
@@ -138,9 +147,10 @@ module bluefin_foundation::isolated_trading {
             let positionsTable = perpetual::positions(perp);
 
 
-            // // get order hashes
-            let makerOrderSerialized = order::get_serialized_order(*makerOrder);
-            let takerOrderSerialized = order::get_serialized_order(*takerOrder);
+            // get order hashes
+            // Note, order hash is computed using order values in 1x18 base as its signed in this base
+            let makerOrderSerialized = order::get_serialized_order(* &mut data1x18.makerOrder);
+            let takerOrderSerialized = order::get_serialized_order(* &mut data1x18.takerOrder);
 
             let makerHash = library::get_hash(makerOrderSerialized);
             let takerHash = library::get_hash(takerOrderSerialized);

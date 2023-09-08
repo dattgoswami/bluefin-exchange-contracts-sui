@@ -1,0 +1,44 @@
+{
+  "ETH-PERP": {
+    "mainnet": {
+      "feed_id": "ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+      "object_id": "0xaa6adc565636860729907ef3e7fb7808d80c8a425a5fd417ae47bb68e2dcc2e3"
+    },
+    "testnet": {
+      "feed_id": "ca80ba6dc32e08d06f1aa886011eed1d77c77be9eb761cc10d72b7d0a2fd57a6",
+      "object_id": "0x8deeebad0a8fb86d97e6ad396cc84639da5a52ae4bbc91c78eb7abbf3e641ed6"
+    },
+    "local": { "feed_id": "", "object_id": "" },
+    "devnet": {
+      "feed_id": "c6c75c89f14810ec1c54c03ab8f1864a4c4032791f05747f560faec380a695d1",
+      "object_id": "0xa5d841848939057727a1ffad14e184351e90bc8f191ff658028a36f107a7f8d2"
+    }
+  },
+  "BTC-PERP": {
+    "mainnet": {
+      "feed_id": "e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+      "object_id": "0x144ec4135c65af207b97b3d2dfea9972efc7d80cc13a960ae1d808a3307d90ca"
+    },
+    "testnet": {
+      "feed_id": "f9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b",
+      "object_id": "0x878b118488aeb5763b5f191675c3739a844ce132cb98150a465d9407d7971e7c"
+    },
+    "local": { "feed_id": "", "object_id": "" },
+    "devnet": {
+      "feed_id": "3b9551a68d01d954d6387aff4df1529027ffb2fee413082e509feb29cc4904fe",
+      "object_id": "0xbedf055ccd0323e6ecb3a9039e6b14165411afe82e0bd3778c8d22a2241405f7"
+    }
+  },
+  "mainnet_pyth": {
+    "package_id": "0x00b53b0f4174108627fbee72e2498b58d6a2714cded53fac537034c220d26302",
+    "wormhole_state": "0xaeab97f96cf9877fee2883315d459552b2b921edc16d7ceac6eab944dd88919c",
+    "pyth_state": "0xf9ff3ef935ef6cdfb659a203bf2754cebeb63346e29114a535ea6f41315e5a3f",
+    "wormhole_id": "0x5306f64e312b581766351c07af79c72fcb1cd25147157fdc2f8ad76de9a3fb6a"
+  },
+  "testnet_pyth": {
+    "package_id": "0x975e063f398f720af4f33ec06a927f14ea76ca24f7f8dd544aa62ab9d5d15f44",
+    "wormhole_state": "0xebba4cc4d614f7a7cdbe883acc76d1cc767922bc96778e7b68be0d15fce27c02",
+    "pyth_state": "0xd8afde3a48b4ff7212bd6829a150f43f59043221200d63504d981f62bff2e27a",
+    "wormhole_id": "0xcc029e2810f17f9f43f52262f40026a71fbdca40ed3803ad2884994361910b7e"
+  }
+}

@@ -9,7 +9,6 @@ module bluefin_foundation::exchange {
     use sui::transfer;
 
 
-
     // custom modules
     use bluefin_foundation::position::{Self, UserPosition};
     use bluefin_foundation::perpetual::{Self, Perpetual};
@@ -135,9 +134,31 @@ module bluefin_foundation::exchange {
         priceIdentifierId: vector<u8>,
         ctx: &mut TxContext
         ){
-        
+
+        // input values are in 1e18, convert to 1e9
+        minPrice = minPrice / library::base_uint();
+        maxPrice = maxPrice / library::base_uint();
+        tickSize = tickSize / library::base_uint();
+        minQty = minQty / library::base_uint();
+        maxQtyLimit = maxQtyLimit / library::base_uint();
+        maxQtyMarket = maxQtyMarket / library::base_uint();
+        stepSize = stepSize / library::base_uint();
+        mtbLong = mtbLong / library::base_uint();
+        mtbShort = mtbShort / library::base_uint();
+        imr = imr / library::base_uint();
+        mmr = mmr / library::base_uint();
+        makerFee = makerFee / library::base_uint();
+        takerFee = takerFee / library::base_uint();
+        maxAllowedFR = maxAllowedFR / library::base_uint();
+        insurancePoolRatio = insurancePoolRatio / library::base_uint();
+
+
+        // convert max oi opens to 1e9
+        let maxOIOpen = library::to_1x9_vec(maxAllowedOIOpen);
+
+
         let positions = table::new<address, UserPosition>(ctx);
-            
+
         // creates perpetual and shares it
         let perpID = perpetual::initialize(
             name,
@@ -159,7 +180,7 @@ module bluefin_foundation::exchange {
             mtbShort,
             maxAllowedFR,
             startTime,
-            maxAllowedOIOpen,
+            maxOIOpen,
             positions,
             priceIdentifierId,
             ctx
@@ -333,7 +354,7 @@ module bluefin_foundation::exchange {
             let tradeResponse = isolated_trading::trade(sender, perp, ordersTable, subAccounts, data);
 
 
-             // transfer margins between perp and accounts
+            // transfer margins between perp and accounts
             margin_bank::transfer_trade_margin(
                 bank,
                 perpAddress,
@@ -382,6 +403,9 @@ module bluefin_foundation::exchange {
         ctx: &mut TxContext        
 
     ){
+
+        quantity = quantity / library::base_uint();
+        leverage = leverage / library::base_uint();
 
         // checks that provided price oracle is correct and updates perpetual with new price
         perpetual::update_oracle_price(perp, price_oracle);
@@ -519,6 +543,8 @@ module bluefin_foundation::exchange {
         ctx: &mut TxContext
     ){
 
+        quantity = quantity / library::base_uint();
+
         // checks that provided price oracle is correct and updates perpetual with new price
         perpetual::update_oracle_price(perp, price_oracle);
 
@@ -593,6 +619,8 @@ module bluefin_foundation::exchange {
      */
     entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user:address, amount: u128, price_oracle: &PythFeeder ,ctx: &mut TxContext){
 
+        amount = amount / library::base_uint();
+
         // checks that provided price oracle is correct and updates perpetual with new price
         perpetual::update_oracle_price(perp, price_oracle);
      
@@ -651,6 +679,8 @@ module bluefin_foundation::exchange {
      */
     entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, amount: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
         
+        amount = amount / library::base_uint();
+
         // checks that provided price oracle is correct and updates perpetual with new price
         perpetual::update_oracle_price(perp, price_oracle);
 
@@ -730,6 +760,8 @@ module bluefin_foundation::exchange {
      */
     entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, leverage: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
      
+        leverage = leverage / library::base_uint();
+
         // checks that provided price oracle is correct and updates perpetual with new price
         perpetual::update_oracle_price(perp, price_oracle);
         

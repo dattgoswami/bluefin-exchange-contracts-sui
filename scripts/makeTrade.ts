@@ -80,6 +80,7 @@ async function main() {
 
     if (status == "failure") {
         console.log("Error:", Transaction.getError(tx));
+        return;
     }
 
     console.log(

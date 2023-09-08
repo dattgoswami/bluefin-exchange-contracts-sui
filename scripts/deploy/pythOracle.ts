@@ -10,12 +10,7 @@ import {
 
 import { getGenesisMap, packDeploymentData } from "../../src/deployment";
 import { Client } from "../../src/Client";
-import {
-    publishPackage,
-    editTomlFile,
-    KeyValue,
-    getFilePathFromEnv
-} from "../../src/helpers";
+import { publishPackage, editTomlFile } from "../../src/helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -104,17 +99,19 @@ async function main() {
         const objBtc = await onChain.getOnChainObject(objectIdBTC);
         const btcFeedId = getFeedIdFromObj(objBtc);
 
-        let pythFileObj=readFile("./pythfiles/priceInfoObject.json");
-        const deployEnv=process.env.DEPLOY_ON
-        pythFileObj["BTC-PERP"][deployEnv as string]['feed_id']=btcFeedId;
-        pythFileObj["BTC-PERP"][deployEnv as string]['object_id']=objectIdBTC;
+        const pythFileObj = readFile("./pyth/priceInfoObject.json");
 
+        pythFileObj["BTC-PERP"][process.env.DEPLOY_ON as string]["feed_id"] =
+            btcFeedId;
+        pythFileObj["BTC-PERP"][process.env.DEPLOY_ON as string]["object_id"] =
+            objectIdBTC;
 
-        pythFileObj["ETH-PERP"][deployEnv as string]['feed_id']=ethFeedId;
-        pythFileObj["ETH-PERP"][deployEnv as string]['object_id']=objectIdETH;
+        pythFileObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"] =
+            ethFeedId;
+        pythFileObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"] =
+            objectIdETH;
 
-
-        writeFile("./pythfiles/priceInfoObject.json",pythFileObj );
+        writeFile("./pyth/priceInfoObject.json", pythFileObj);
 
         console.log(
             "Pyth Fake conrtracts deployed successfully and objects written to file"

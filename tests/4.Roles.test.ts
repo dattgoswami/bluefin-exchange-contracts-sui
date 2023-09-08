@@ -97,19 +97,12 @@ describe("Roles", () => {
                 bob.address
             );
 
-            const resp = await onChain.setExchangeGuardian(
-                { address: alice.address, gasBudget: 900000 },
-                bob.signer
-            );
-
-            console.log(resp);
-
-            // await expect(
-            //     onChain.setExchangeGuardian(
-            //         { address: alice.address, gasBudget: 900000 },
-            //         bob.signer
-            //     )
-            // ).to.be.eventually.rejectedWith(error);
+            await expect(
+                onChain.setExchangeGuardian(
+                    { address: alice.address, gasBudget: 9000000 },
+                    bob.signer
+                )
+            ).to.be.eventually.rejectedWith(error);
         });
 
         it("should transfer guardian ship to alice", async () => {

@@ -1,5 +1,4 @@
 import { createMarket } from "../src/deployment";
-import { getFilePathFromEnv } from "../src/helpers";
 import {
     DeploymentConfigs,
     readFile,
@@ -26,7 +25,7 @@ import {
 
 const provider = getProvider(network.rpc, network.faucet);
 
-const pythObj = readFile(getFilePathFromEnv());
+const pythObj = readFile("./pyth/priceInfoObject.json");
 const pythPackage = readFile("./pythFakeDeployment.json");
 const pythPackagId = pythPackage.objects.package.id;
 
@@ -44,10 +43,13 @@ describe("Perpetual", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -61,10 +63,13 @@ describe("Perpetual", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() + 1000000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -238,11 +243,16 @@ describe("Perpetual", () => {
                 deployment,
                 ownerSigner,
                 provider,
-                pythObj["ETH-PERP"],
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                    "object_id"
+                ],
                 {
                     tickSize: toBigNumberStr(0.1),
                     tradingStartTime: Date.now() - 1000,
-                    priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                    priceInfoFeedId:
+                        pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                            "feed_id"
+                        ]
                 }
             );
 
@@ -370,7 +380,10 @@ describe("Perpetual", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 100,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -431,7 +444,10 @@ describe("Perpetual", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 1,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -470,10 +486,13 @@ describe("Perpetual", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 10000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -554,7 +573,6 @@ describe("Perpetual", () => {
     });
 
     describe("Sub account adjusting parent's position", () => {
-        let priceOracleCapID: string;
         let settlementCapID: string;
 
         before(async () => {
@@ -563,11 +581,16 @@ describe("Perpetual", () => {
                 deployment,
                 ownerSigner,
                 provider,
-                pythObj["ETH-PERP"],
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                    "object_id"
+                ],
                 {
                     tickSize: toBigNumberStr(0.1),
                     tradingStartTime: Date.now() - 1000,
-                    priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                    priceInfoFeedId:
+                        pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                            "feed_id"
+                        ]
                 }
             );
 
@@ -585,7 +608,10 @@ describe("Perpetual", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 100,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);

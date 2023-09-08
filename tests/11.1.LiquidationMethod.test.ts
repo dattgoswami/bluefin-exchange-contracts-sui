@@ -14,7 +14,8 @@ import {
     network,
     Order,
     UserPositionExtended,
-    getTestAccounts
+    getTestAccounts,
+    BASE_DECIMALS_ON_CHAIN
 } from "../submodules/library-sui";
 import { createMarket } from "../src/deployment";
 
@@ -26,12 +27,11 @@ import {
     expect,
     mintAndDeposit
 } from "./helpers";
-import { getFilePathFromEnv } from "../src/helpers";
 
 const provider = getProvider(network.rpc, network.faucet);
 const deployment = readFile(DeploymentConfigs.filePath);
 
-const pythObj = readFile(getFilePathFromEnv());
+const pythObj = readFile("./pyth/priceInfoObject.json");
 const pythPackage = readFile("./pythFakeDeployment.json");
 const pythPackagId = pythPackage.objects.package.id;
 
@@ -53,10 +53,13 @@ describe("Liquidation Trade Method", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -76,7 +79,8 @@ describe("Liquidation Trade Method", () => {
         const priceTx = await onChain.setOraclePrice({
             price: 100,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         expectTxToSucceed(priceTx);
@@ -110,7 +114,8 @@ describe("Liquidation Trade Method", () => {
         await onChain.setOraclePrice({
             price: 100,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
     });
 
@@ -243,7 +248,8 @@ describe("Liquidation Trade Method", () => {
         await onChain.setOraclePrice({
             price: 89,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const txResponse = await onChain.liquidate(
@@ -298,7 +304,8 @@ describe("Liquidation Trade Method", () => {
         await onChain.setOraclePrice({
             price: 89,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         // try to liquidate alice at 4x leverage using maker account
@@ -323,7 +330,8 @@ describe("Liquidation Trade Method", () => {
         await onChain.setOraclePrice({
             price: 89,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const txResponse = await onChain.liquidate(
@@ -349,8 +357,12 @@ describe("Liquidation Trade Method", () => {
             alice.address
         );
 
-        expect(liqPosition.qPos).to.be.equal(toBigNumberStr(1));
-        expect(alicePosition.qPos).to.be.equal(toBigNumberStr(0));
+        expect(liqPosition.qPos).to.be.equal(
+            toBigNumberStr(1, BASE_DECIMALS_ON_CHAIN)
+        );
+        expect(alicePosition.qPos).to.be.equal(
+            toBigNumberStr(0, BASE_DECIMALS_ON_CHAIN)
+        );
     });
 
     it("should partially liquidate the taker(bob)", async () => {
@@ -361,10 +373,13 @@ describe("Liquidation Trade Method", () => {
             localDeployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -373,7 +388,8 @@ describe("Liquidation Trade Method", () => {
         await onChain.setOraclePrice({
             price: 100,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const makerTaker = await getMakerTakerAccounts(provider, true);
@@ -407,7 +423,8 @@ describe("Liquidation Trade Method", () => {
         await onChain.setOraclePrice({
             price: 115,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const txResponse = await onChain.liquidate(
@@ -432,8 +449,12 @@ describe("Liquidation Trade Method", () => {
             makerTaker.taker.address
         ) as UserPositionExtended;
 
-        expect(liqPosition.qPos).to.be.equal(toBigNumberStr(1.5));
-        expect(takerPosition.qPos).to.be.equal(toBigNumberStr(0.5));
+        expect(liqPosition.qPos).to.be.equal(
+            toBigNumberStr(1.5, BASE_DECIMALS_ON_CHAIN)
+        );
+        expect(takerPosition.qPos).to.be.equal(
+            toBigNumberStr(0.5, BASE_DECIMALS_ON_CHAIN)
+        );
     });
 
     it("should allow sub account to liquidate on parent's behalf", async () => {
@@ -444,10 +465,13 @@ describe("Liquidation Trade Method", () => {
             localDeployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -456,7 +480,8 @@ describe("Liquidation Trade Method", () => {
         await onChain.setOraclePrice({
             price: 100,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const makerTaker = await getMakerTakerAccounts(provider, true);
@@ -490,7 +515,8 @@ describe("Liquidation Trade Method", () => {
         await onChain.setOraclePrice({
             price: 115,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const tester = getTestAccounts(provider)[0];

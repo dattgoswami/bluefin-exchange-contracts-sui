@@ -16,7 +16,8 @@ import {
     Transaction,
     MarketDetails,
     ERROR_CODES,
-    SuiTransactionBlockResponse
+    SuiTransactionBlockResponse,
+    BASE_DECIMALS_ON_CHAIN
 } from "../../submodules/library-sui";
 import {
     evaluateSystemExpect,
@@ -28,7 +29,6 @@ import {
 import { mintAndDeposit } from "./utils";
 import { TestCaseJSON } from "./interfaces";
 import { createAccount } from "./accounts";
-import { getFilePathFromEnv } from "../../src/helpers";
 
 import { createMarket } from "../../src/deployment";
 
@@ -41,7 +41,7 @@ let onChain: OnChainCalls;
 let settlementCapID: string;
 let deleveragingCapID: string;
 
-const pythObj = readFile(getFilePathFromEnv());
+const pythObj = readFile("./pyth/priceInfoObject.json");
 const pythPackage = readFile("./pythFakeDeployment.json");
 const pythPackagId = pythPackage.objects.package.id;
 
@@ -68,10 +68,13 @@ export async function executeTests(
             deployment,
             ownerSigner,
             provider,
-            pythObj[marketConfig.symbol as string],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 ...marketConfig,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"],
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ],
                 feePool: feePoolAddress,
                 insurancePool: insurancePoolAddress,
                 tradingStartTime: Date.now() - 1000
@@ -221,7 +224,10 @@ export async function executeTests(
                             const priceTx = await onChain.setOraclePrice({
                                 price: oraclePrice,
                                 pythPackageId: pythPackagId,
-                                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                                priceInfoFeedId:
+                                    pythObj["ETH-PERP"][
+                                        process.env.DEPLOY_ON as string
+                                    ]["feed_id"]
                             });
                             expectTxToSucceed(priceTx);
                             lastOraclePrice = oraclePrice;
@@ -359,7 +365,10 @@ export async function executeTests(
                                 onChain,
                                 account,
                                 testCase.expectMaker || testCase.expectTaker,
-                                toBigNumber(oraclePrice),
+                                toBigNumber(
+                                    oraclePrice,
+                                    BASE_DECIMALS_ON_CHAIN
+                                ),
                                 tx
                             );
                         }
@@ -370,7 +379,10 @@ export async function executeTests(
                                 onChain,
                                 liquidator,
                                 testCase.expectLiquidator,
-                                toBigNumber(oraclePrice),
+                                toBigNumber(
+                                    oraclePrice,
+                                    BASE_DECIMALS_ON_CHAIN
+                                ),
                                 tx
                             );
                         }
@@ -382,7 +394,10 @@ export async function executeTests(
                                 onChain,
                                 cat,
                                 testCase.expectCat,
-                                toBigNumber(oraclePrice),
+                                toBigNumber(
+                                    oraclePrice,
+                                    BASE_DECIMALS_ON_CHAIN
+                                ),
                                 tx
                             );
                         }

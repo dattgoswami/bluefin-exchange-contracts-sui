@@ -18,13 +18,12 @@ import {
 } from "./helpers";
 
 import { createMarket } from "../src/deployment";
-import { getFilePathFromEnv } from "../src/helpers";
 
 const provider = getProvider(network.rpc, network.faucet);
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 const deployment = readFile(DeploymentConfigs.filePath);
 
-const pythObj = readFile(getFilePathFromEnv());
+const pythObj = readFile("./pyth/priceInfoObject.json");
 
 describe("Funding Oracle", () => {
     let onChain: OnChainCalls;
@@ -39,10 +38,13 @@ describe("Funding Oracle", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -73,10 +75,13 @@ describe("Funding Oracle", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -117,10 +122,13 @@ describe("Funding Oracle", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 

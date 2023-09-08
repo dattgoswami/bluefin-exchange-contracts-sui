@@ -8,7 +8,6 @@ import {
     getTestAccounts,
     network,
     DeploymentConfigs,
-    BASE_DECIMALS,
     toBigNumber,
     toBigNumberStr,
     BankAccountDetails,
@@ -17,15 +16,15 @@ import {
     Trader,
     Transaction,
     SuiTransactionBlockResponse,
-    BigNumber
+    BigNumber,
+    BASE_DECIMALS_ON_CHAIN
 } from "../submodules/library-sui";
 
 import { createMarket } from "../src/deployment";
 
 import { expect, expectTxToSucceed, mintAndDeposit } from "./helpers";
-import { getFilePathFromEnv } from "../src/helpers";
 
-const pythObj = readFile(getFilePathFromEnv());
+const pythObj = readFile("./pyth/priceInfoObject.json");
 const pythPackage = readFile("./pythFakeDeployment.json");
 const pythPackagId = pythPackage.objects.package.id;
 
@@ -455,7 +454,10 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
                         await onChain.setOraclePrice({
                             price: testCase.pOracle as number,
                             pythPackageId: pythPackagId,
-                            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                            priceInfoFeedId:
+                                pythObj["ETH-PERP"][
+                                    process.env.DEPLOY_ON as string
+                                ]["feed_id"]
                         })
                     );
                     lastOraclePrice = oraclePrice;
@@ -528,7 +530,7 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
 
                     expect(
                         bankAcctDetails.balance
-                            .shiftedBy(-BASE_DECIMALS)
+                            .shiftedBy(-BASE_DECIMALS_ON_CHAIN)
                             .toFixed(6)
                     ).to.be.equal(
                         new BigNumber(testCase.expect.balance).toFixed(6)
@@ -557,7 +559,7 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 initialMarginReq: toBigNumberStr(0.0625),
                 maintenanceMarginReq: toBigNumberStr(0.05),
@@ -565,7 +567,10 @@ describe("Position Closure Traders After De-listing Perpetual", () => {
                 defaultMakerFee: toBigNumberStr(0.01),
                 defaultTakerFee: toBigNumberStr(0.02),
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 

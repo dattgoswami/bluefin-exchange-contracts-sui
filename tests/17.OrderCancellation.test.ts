@@ -21,9 +21,8 @@ import {
 } from "./helpers";
 
 import { createMarket } from "../src/deployment";
-import { getFilePathFromEnv } from "../src/helpers";
 
-const pythObj = readFile(getFilePathFromEnv());
+const pythObj = readFile("./pyth/priceInfoObject.json");
 const pythPackage = readFile("./pythFakeDeployment.json");
 const pythPackagId = pythPackage.objects.package.id;
 
@@ -46,10 +45,13 @@ describe("Order Cancellation", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
         onChain = new OnChainCalls(ownerSigner, deployment);
@@ -128,7 +130,8 @@ describe("Order Cancellation", () => {
         const priceTx = await onChain.setOraclePrice({
             price: 1,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         expectTxToSucceed(priceTx);

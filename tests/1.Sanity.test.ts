@@ -16,6 +16,7 @@ const provider = getProvider(
     DeploymentConfigs.network.faucet
 );
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
+const pythObj = readFile("./pyth/priceInfoObject.json");
 
 describe("Sanity Tests", () => {
     const deployment = readFile(DeploymentConfigs.filePath);
@@ -46,12 +47,16 @@ describe("Sanity Tests", () => {
 
     it("should allow admin to create a perpetual", async () => {
         const txResponse = await onChain.createPerpetual({
-            symbol: "ETH-PERP"
+            symbol: "ETH-PERP",
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
+
         const event = Transaction.getEvents(
             txResponse,
             "PerpetualCreationEvent"
         )[0];
+
         expect(event).to.not.be.undefined;
     });
 

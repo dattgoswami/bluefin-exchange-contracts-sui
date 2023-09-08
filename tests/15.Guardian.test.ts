@@ -17,7 +17,7 @@ import {
     fundTestAccounts
 } from "./helpers";
 
-import { getFilePathFromEnv, publishPackage } from "../src/helpers";
+import { publishPackage } from "../src/helpers";
 
 import {
     createMarket,
@@ -25,7 +25,7 @@ import {
     getGenesisMap
 } from "../src/deployment";
 
-const pythObj = readFile(getFilePathFromEnv());
+const pythObj = readFile("./pyth/priceInfoObject.json");
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -58,10 +58,15 @@ describe("Guardian", () => {
                         deployment,
                         ownerSigner,
                         provider,
-                        pythObj["ETH-PERP"],
+                        pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                            "object_id"
+                        ],
                         {
                             tradingStartTime: Date.now() - 1000,
-                            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                            priceInfoFeedId:
+                                pythObj["ETH-PERP"][
+                                    process.env.DEPLOY_ON as string
+                                ]["feed_id"]
                         }
                     )
                 }

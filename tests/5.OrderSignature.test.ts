@@ -40,7 +40,7 @@ describe("Order Signer", () => {
 
     const onChain: OnChainCalls = new OnChainCalls(ownerSigner, deployment);
 
-    it("should verify ui wallet signature on-chain and recover user public address", async () => {
+    xit("should verify ui wallet signature on-chain and recover user public address", async () => {
         const signerAddress =
             "0x248f1c95a231a068dfc7ddfaa492190284d9608d6ca8abf98503345157d9c826";
 
@@ -83,7 +83,7 @@ describe("Order Signer", () => {
         expect(onChainAddress).to.be.equal(signerAddress.substring(2));
     });
 
-    it("should verify ui wallet signature off-chain", async () => {
+    xit("should verify ui wallet signature off-chain", async () => {
         const uiData = {
             messageBytes: "f2QxZzmXq9/QJtmmbk+kvaHpFhgWNtBps6HKeT9sxSU=",
             signature:

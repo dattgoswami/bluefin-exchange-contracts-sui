@@ -16,10 +16,9 @@ import {
     Order,
     UserPositionExtended,
     packageName,
-    readFile
+    readFile,
+    BASE_DECIMALS_ON_CHAIN
 } from "../submodules/library-sui";
-
-import { getFilePathFromEnv, publishPackage } from "../src/helpers";
 
 import {
     getMakerTakerAccounts,
@@ -40,9 +39,10 @@ import {
 } from "../src/deployment";
 
 import { DEFAULT } from "../submodules/library-sui/src/defaults";
+import { publishPackage } from "../src/helpers";
 const provider = getProvider(network.rpc, network.faucet);
 
-const pythObj = readFile(getFilePathFromEnv());
+const pythObj = readFile("./pyth/priceInfoObject.json");
 const pythPackage = readFile("./pythFakeDeployment.json");
 const pythPackagId = pythPackage.objects.package.id;
 
@@ -74,9 +74,12 @@ describe("Deleveraging Trade Method", () => {
             deploymentData,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -96,7 +99,8 @@ describe("Deleveraging Trade Method", () => {
         const priceTx = await onChain.setOraclePrice({
             price: 100,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         expectTxToSucceed(priceTx);
@@ -129,7 +133,8 @@ describe("Deleveraging Trade Method", () => {
         await onChain.setOraclePrice({
             price: 100,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
     });
 
@@ -167,7 +172,14 @@ describe("Deleveraging Trade Method", () => {
             localDeployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"]
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
+            {
+                tradingStartTime: Date.now() - 10000,
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
+            }
         );
 
         const onChainCaller = new OnChainCalls(ownerSigner, localDeployment);
@@ -396,7 +408,8 @@ describe("Deleveraging Trade Method", () => {
         await onChain.setOraclePrice({
             price: 92,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const txResponse = await onChain.deleverage(
@@ -438,7 +451,8 @@ describe("Deleveraging Trade Method", () => {
         await onChain.setOraclePrice({
             price: 112,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const txResponse = await onChain.deleverage(
@@ -481,7 +495,8 @@ describe("Deleveraging Trade Method", () => {
         await onChain.setOraclePrice({
             price: 112,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const txResponse = await onChain.deleverage(
@@ -525,7 +540,8 @@ describe("Deleveraging Trade Method", () => {
         await onChain.setOraclePrice({
             price: 89,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const txResponse = await onChain.deleverage(
@@ -549,8 +565,12 @@ describe("Deleveraging Trade Method", () => {
             alice.address
         ) as UserPositionExtended;
 
-        expect(catPosition.qPos).to.be.equal(toBigNumberStr(1));
-        expect(alicePosition.qPos).to.be.equal(toBigNumberStr(0));
+        expect(catPosition.qPos).to.be.equal(
+            toBigNumberStr(1, BASE_DECIMALS_ON_CHAIN)
+        );
+        expect(alicePosition.qPos).to.be.equal(
+            toBigNumberStr(0, BASE_DECIMALS_ON_CHAIN)
+        );
     });
 
     it("should successfully partially deleverage taker of adl trade", async () => {
@@ -568,9 +588,12 @@ describe("Deleveraging Trade Method", () => {
             localDeployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -588,7 +611,8 @@ describe("Deleveraging Trade Method", () => {
         await onChain.setOraclePrice({
             price: 100,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const order = createOrder({
@@ -641,7 +665,8 @@ describe("Deleveraging Trade Method", () => {
         await onChain.setOraclePrice({
             price: 115,
             pythPackageId: pythPackagId,
-            priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+            priceInfoFeedId:
+                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
         });
 
         const txResponse = await onChainCaller.deleverage(
@@ -665,7 +690,11 @@ describe("Deleveraging Trade Method", () => {
             bob.address
         ) as UserPositionExtended;
 
-        expect(adlTakerPos.qPos).to.be.equal(toBigNumberStr(1.5));
-        expect(bobPos.qPos).to.be.equal(toBigNumberStr(0.5));
+        expect(adlTakerPos.qPos).to.be.equal(
+            toBigNumberStr(1.5, BASE_DECIMALS_ON_CHAIN)
+        );
+        expect(bobPos.qPos).to.be.equal(
+            toBigNumberStr(0.5, BASE_DECIMALS_ON_CHAIN)
+        );
     });
 });

@@ -1,5 +1,4 @@
 import { createMarket } from "../src/deployment";
-import { getFilePathFromEnv } from "../src/helpers";
 import {
     DeploymentConfigs,
     OnChainCalls,
@@ -16,7 +15,8 @@ import {
     ERROR_CODES,
     OWNERSHIP_ERROR,
     getTestAccounts,
-    TEST_WALLETS
+    TEST_WALLETS,
+    BASE_DECIMALS_ON_CHAIN
 } from "../submodules/library-sui";
 
 import {
@@ -34,8 +34,8 @@ const provider = getProvider(
 
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
-const pythObj = readFile(getFilePathFromEnv());
 const pythPackage = readFile("./pythFakeDeployment.json");
+const pythObj = readFile("./pyth/priceInfoObject.json");
 const pythPackagId = pythPackage.objects.package.id;
 
 describe("Evaluator", () => {
@@ -71,10 +71,13 @@ describe("Evaluator", () => {
             deployment,
             ownerSigner,
             provider,
-            pythObj["ETH-PERP"],
+            pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["object_id"],
             {
                 tradingStartTime: Date.now() - 1000,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             }
         );
 
@@ -90,7 +93,7 @@ describe("Evaluator", () => {
             );
 
             expect(details.checks.fields["minPrice"]).to.be.equal(
-                toBigNumberStr(0.02)
+                toBigNumberStr(0.02, BASE_DECIMALS_ON_CHAIN)
             );
         });
 
@@ -128,7 +131,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
             expect(details.checks.fields["maxPrice"]).to.be.equal(
-                toBigNumberStr(20000)
+                toBigNumberStr(20000, BASE_DECIMALS_ON_CHAIN)
             );
         });
 
@@ -159,7 +162,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
             expect(details.checks.fields["tickSize"]).to.be.equal(
-                toBigNumberStr(0.1)
+                toBigNumberStr(0.1, BASE_DECIMALS_ON_CHAIN)
             );
         });
 
@@ -189,7 +192,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 26,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -232,7 +238,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 100,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -275,7 +284,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -318,7 +330,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -359,7 +374,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -402,7 +420,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
             expect(details.checks.fields.maxQtyLimit).to.be.equal(
-                toBigNumberStr(20000)
+                toBigNumberStr(20000, BASE_DECIMALS_ON_CHAIN)
             );
         });
         it("should set maximum quantity (market) as 20000", async () => {
@@ -411,7 +429,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
             expect(details.checks.fields.maxQtyMarket).to.be.equal(
-                toBigNumberStr(20000)
+                toBigNumberStr(20000, BASE_DECIMALS_ON_CHAIN)
             );
         });
         it("should revert when trying to set maximum quantity for limit trade < minimum trade quantity", async () => {
@@ -480,7 +498,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
             expect(details.checks.fields.stepSize).to.be.equal(
-                toBigNumberStr(0.1)
+                toBigNumberStr(0.1, BASE_DECIMALS_ON_CHAIN)
             );
         });
 
@@ -510,7 +528,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -553,7 +574,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -596,7 +620,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -638,7 +665,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -680,7 +710,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -721,7 +754,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -789,7 +825,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
             expect(details.checks.fields["mtbLong"]).to.be.equal(
-                toBigNumberStr(0.2)
+                toBigNumberStr(0.2, BASE_DECIMALS_ON_CHAIN)
             );
         });
 
@@ -819,7 +855,7 @@ describe("Evaluator", () => {
                 onChain.getPerpetualID()
             );
             expect(details.checks.fields["mtbShort"]).to.be.equal(
-                toBigNumberStr(0.2)
+                toBigNumberStr(0.2, BASE_DECIMALS_ON_CHAIN)
             );
         });
 
@@ -857,7 +893,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 20,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -901,7 +940,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 20,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -941,7 +983,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 20,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
             expectTxToSucceed(priceTx);
 
@@ -983,7 +1028,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 20,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -1026,17 +1074,24 @@ describe("Evaluator", () => {
             maxLimit.push(toBigNumberStr(10000));
             maxLimit.push(toBigNumberStr(20000));
             maxLimit.push(toBigNumberStr(30000));
+
             await onChain.setMaxAllowedOIOpen({ maxLimit });
+
             const details = await onChain.getPerpDetails(
                 onChain.getPerpetualID()
             );
-            maxLimit.unshift(toBigNumberStr(0));
+
+            const maxLimitBase9 = [toBigNumberStr(0, BASE_DECIMALS_ON_CHAIN)];
+            maxLimitBase9.push(toBigNumberStr(10000, BASE_DECIMALS_ON_CHAIN));
+            maxLimitBase9.push(toBigNumberStr(20000, BASE_DECIMALS_ON_CHAIN));
+            maxLimitBase9.push(toBigNumberStr(30000, BASE_DECIMALS_ON_CHAIN));
+
             expect(details.checks.fields["maxAllowedOIOpen"]).deep.equal(
-                maxLimit
+                maxLimitBase9
             );
         });
 
-        it("should revert when non-admin account tries to max Allowed OI Open values", async () => {
+        it("should revert when non-admin account tries to set max Allowed OI Open values", async () => {
             const alice = getSignerFromSeed(TEST_WALLETS[0].phrase, provider);
             const expectedError = OWNERSHIP_ERROR(
                 onChain.getExchangeAdminCap(),
@@ -1064,7 +1119,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -1114,7 +1172,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -1165,7 +1226,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -1223,7 +1287,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
@@ -1281,7 +1348,10 @@ describe("Evaluator", () => {
             const priceTx = await onChain.setOraclePrice({
                 price: 10,
                 pythPackageId: pythPackagId,
-                priceInfoFeedId: pythObj["ETH-PERP-FEED-ID"]
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
             });
 
             expectTxToSucceed(priceTx);
