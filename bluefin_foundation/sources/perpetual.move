@@ -5,7 +5,7 @@ module bluefin_foundation::perpetual {
     use sui::object::{Self, ID, UID};
     use std::string::{Self, String};
     use sui::tx_context::{TxContext};
-    use sui::table::{Table};
+    use sui::table::{Self, Table};
     use sui::event::{emit};
     use sui::transfer;
     use sui::math::pow;
@@ -47,6 +47,12 @@ module bluefin_foundation::perpetual {
         funding: FundingRate
     }
 
+    struct SpecialFee has copy, drop, store {
+        status: bool,
+        makerFee: u128,
+        takerFee: u128
+    }
+
     struct InsurancePoolRatioUpdateEvent has copy, drop {
         id: ID,
         ratio: u128
@@ -81,6 +87,13 @@ module bluefin_foundation::perpetual {
         imr: u128
     }
 
+    struct SpecialFeeEvent has copy, drop {
+        perp: ID,
+        account:address,
+        status: bool,
+        makerFee: u128,
+        takerFee: u128
+    }
 
     //===========================================================//
     //                           STORAGE                         //
@@ -116,6 +129,8 @@ module bluefin_foundation::perpetual {
         checks: TradeChecks,
         /// table containing user positions for this market/perpetual
         positions: Table<address, UserPosition>,
+        /// table containing special fee for users
+        specialFee: Table<address, SpecialFee>,
         /// price oracle
         priceOracle: u128,
         /// Funding Rate
@@ -150,7 +165,8 @@ module bluefin_foundation::perpetual {
         startTime: u64,
         maxAllowedOIOpen: vector<u128>,
         positions: Table<address,UserPosition>,
-        
+        specialFee: Table<address,SpecialFee>,
+
         priceIdentifierId: vector<u8>,
 
         ctx: &mut TxContext
@@ -173,7 +189,7 @@ module bluefin_foundation::perpetual {
         );
 
         
-        let priceOracle=0;
+        let priceOracle = 0;
 
         let funding = funding_rate::initialize(startTime, maxAllowedFR);
 
@@ -196,6 +212,7 @@ module bluefin_foundation::perpetual {
             startTime,
             checks,
             positions,
+            specialFee,
             priceOracle,
             funding,
             priceIdentifierId,
@@ -313,6 +330,21 @@ module bluefin_foundation::perpetual {
 
     public fun priceIdenfitier(perp: &Perpetual): vector<u8>{
         return perp.priceIdentifierId
+    }
+
+    // returns fee to be applied to the user
+    public fun get_fee(user:address, perp: &Perpetual, isMaker: bool): u128{
+        
+        let feeAmount = if (isMaker) { perp.makerFee } else { perp.takerFee };
+
+        if(table::contains(&perp.specialFee, user)){
+            let fee = table::borrow(&perp.specialFee, user);
+            if(fee.status == true){
+                feeAmount = if (isMaker) { fee.makerFee } else { fee.takerFee };
+            };
+        };
+
+        return feeAmount
     }
 
 
@@ -546,6 +578,47 @@ module bluefin_foundation::perpetual {
         funding_rate::set_global_index(&mut perp.funding, index, perpID);
 
     }
+
+    /*
+     * @notice allows exchange admin to set a specific maker/taker tx fee for a user
+     * @param perp: Perpetual for which to set specific maker/taker fee
+     * @param account: address of the user
+     * @param status: staus indicating if the maker/taker fee are to be applied or not
+     * @param makerFee: the maker fee to be charged from user on each tx
+     * @param takerFee: the taker fee to be charged from user on each tx
+     */
+    public entry fun set_special_fee(_: &ExchangeAdminCap, perp: &mut Perpetual, account: address, status:bool, makerFee: u128, takerFee:u128){
+
+        let specialFee = SpecialFee {
+                status,
+                makerFee,
+                takerFee
+            };
+
+        // if table already has an entry update it
+        if(table::contains(&perp.specialFee, account)){
+
+            let entry = table::borrow_mut(&mut perp.specialFee, account);
+            *entry = specialFee;
+
+        } else {
+            // if table does not contain entry create it
+            table::add(
+                &mut perp.specialFee, 
+                account, 
+                specialFee     
+            );
+        };
+
+        emit(SpecialFeeEvent{
+            perp: object::uid_to_inner(id(perp)),
+            account,
+            status,
+            makerFee,
+            takerFee
+        });
+    }
+
 
 
     //===========================================================//

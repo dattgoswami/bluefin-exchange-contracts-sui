@@ -711,4 +711,97 @@ describe("Perpetual", () => {
             );
         });
     });
+
+    describe("Special Fee tiers", () => {
+        it("should allow owner to set special fee tier for an account", async () => {
+            const tx = await onChain.setSpecialFee({
+                marketName: "ETH-PERP",
+                account: alice.address,
+                status: true,
+                makerFee: 0,
+                takerFee: 0.025
+            });
+
+            expectTxToSucceed(tx);
+        });
+
+        it("should revert when non admin tries to set a special fee tier", async () => {
+            // should fail as alice has its own guardian cap, this guardian cap belongs to the admin/owner
+            const error = OWNERSHIP_ERROR(
+                onChain.getExchangeAdminCap(),
+                onChain.getDeployerAddress(),
+                alice.address
+            );
+
+            expect(
+                onChain.setSpecialFee(
+                    {
+                        marketName: "ETH-PERP",
+                        account: alice.address,
+                        status: true,
+                        makerFee: 0,
+                        takerFee: 0.025
+                    },
+                    alice.signer
+                )
+            ).to.be.eventually.rejectedWith(error);
+        });
+
+        it("should charge alice zero maker fee due to special fee tier", async () => {
+            // make admin operator
+            const txOp = await onChain.createSettlementOperator(
+                { operator: ownerAddress },
+                ownerSigner
+            );
+
+            const settlementCapID = Transaction.getCreatedObjectIDs(txOp)[0];
+
+            const tx = await onChain.setSpecialFee({
+                marketName: "ETH-PERP",
+                account: alice.address,
+                status: true,
+                makerFee: 0,
+                takerFee: 0.025
+            });
+
+            expectTxToSucceed(tx);
+
+            await mintAndDeposit(onChain, alice.address, 2000);
+            await mintAndDeposit(onChain, bob.address, 2000);
+
+            const priceTx = await onChain.setOraclePrice({
+                price: 100,
+                pythPackageId: pythPackagId,
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
+            });
+
+            expectTxToSucceed(priceTx);
+
+            const orderSigner = new OrderSigner(alice.keyPair);
+
+            const defaultOrder = createOrder({
+                price: 100,
+                quantity: 1,
+                isBuy: true,
+                maker: alice.address,
+                market: onChain.getPerpetualID()
+            });
+
+            const trade = await Trader.setupNormalTrade(
+                provider,
+                orderSigner,
+                alice.keyPair,
+                bob.keyPair,
+                defaultOrder
+            );
+            const tx2 = await onChain.trade({ ...trade, settlementCapID });
+            expectTxToSucceed(tx2);
+
+            const event = Transaction.getEvents(tx2, "TradeExecuted")[0];
+            expect(event.makerFee).to.be.equal("0");
+        });
+    });
 });

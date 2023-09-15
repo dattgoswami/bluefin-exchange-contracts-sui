@@ -139,8 +139,11 @@ module bluefin_foundation::isolated_trading {
 
             let oraclePrice = perpetual::priceOracle(perp);
             let tradeChecks = perpetual::checks(perp);
-            let makerFee = perpetual::makerFee(perp);
-            let takerFee = perpetual::takerFee(perp);
+
+            // get maker taker fee
+            let makerFee = perpetual::get_fee(order::maker(*makerOrder), perp, true);
+            let takerFee = perpetual::get_fee(order::maker(*takerOrder), perp, false);
+
             let perpID = object::uid_to_inner(perpetual::id(perp));
             let imr = perpetual::imr(perp);
             let mmr = perpetual::mmr(perp);
@@ -326,12 +329,11 @@ module bluefin_foundation::isolated_trading {
         return TRADE_TYPE
     }
 
+
     //===========================================================//
     //                      HELPER METHODS
     //===========================================================//
     
-
-
     fun verify_order(pos: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, userOrder: Order, orderSerialized: vector<u8>, hash: vector<u8>, signature: vector<u8>, publicKey: vector<u8>, fill:Fill, currentTime: u64, isTaker: u64){
 
             // if a taker order, must have post only false else
@@ -531,8 +533,5 @@ module bluefin_foundation::isolated_trading {
         }
 
     }
-
-
-
 
 }

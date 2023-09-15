@@ -11,7 +11,7 @@ module bluefin_foundation::exchange {
 
     // custom modules
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::perpetual::{Self, Perpetual};
+    use bluefin_foundation::perpetual::{Self, Perpetual, SpecialFee};
     use bluefin_foundation::margin_bank::{Self, Bank};
     use bluefin_foundation::order::{Self, OrderStatus};
     use bluefin_foundation::signed_number::{Self, Number};
@@ -87,15 +87,11 @@ module bluefin_foundation::exchange {
         fundingRate: Number
     }
 
+
+
     //===========================================================//
     //                      INITIALIZATION
     //===========================================================//
-
-    fun init(ctx: &mut TxContext) {        
-        // create orders filled quantity table
-        let orders = table::new<vector<u8>, OrderStatus>(ctx);
-        transfer::public_share_object(orders);   
-    }
     
     //===========================================================//
     //                      ENTRY METHODS                        //
@@ -156,8 +152,9 @@ module bluefin_foundation::exchange {
         // convert max oi opens to 1e9
         let maxOIOpen = library::to_1x9_vec(maxAllowedOIOpen);
 
-
         let positions = table::new<address, UserPosition>(ctx);
+
+        let specialFee = table::new<address, SpecialFee>(ctx);
 
         // creates perpetual and shares it
         let perpID = perpetual::initialize(
@@ -182,6 +179,7 @@ module bluefin_foundation::exchange {
             startTime,
             maxOIOpen,
             positions,
+            specialFee,
             priceIdentifierId,
             ctx
         );
