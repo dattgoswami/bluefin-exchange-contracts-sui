@@ -2,7 +2,11 @@ import path from "path";
 import {
     RawSigner,
     SuiTransactionBlockResponse,
-    readFile
+    readFile,
+    DeploymentData,
+    TransactionBlock,
+    OBJECT_OWNERSHIP_STATUS,
+    OnChainCalls
 } from "../submodules/library-sui";
 import { Client } from "../src/Client";
 import fs from "fs";
@@ -22,6 +26,40 @@ export async function publishPackage(
     } else {
         return Client.publishPackageUsingSDK(deployer as RawSigner, pkgPath);
     }
+}
+
+export async function postDeployment(
+    signer: RawSigner,
+    deploymentData: DeploymentData,
+    addressUSDC: string
+) {
+    //perform post deployment steps.
+    const onChain = new OnChainCalls(signer, deploymentData);
+    const tx = new TransactionBlock();
+    const packageId = deploymentData.objects.package.id;
+    tx.moveCall({
+        target: `${packageId}::margin_bank::create_bank`,
+        arguments: [
+            tx.object(deploymentData["objects"]["ExchangeAdminCap"]["id"]),
+            tx.pure(addressUSDC)
+        ],
+        typeArguments: [`${addressUSDC}::coin::COIN`]
+    });
+    const res = await signer.signAndExecuteTransactionBlock({
+        transactionBlock: tx,
+        options: {
+            showObjectChanges: true,
+            showEffects: true,
+            showEvents: true,
+            showInput: true
+        }
+    });
+
+    return {
+        id: (res as any).objectChanges[2].objectId,
+        owner: OBJECT_OWNERSHIP_STATUS.SHARED,
+        dataType: (res as any).objectChanges[2].objectType
+    };
 }
 
 export function editTomlFile(

@@ -11,7 +11,8 @@ import {
     OnChainCalls,
     Transaction,
     DeploymentObjects,
-    MarketDeploymentData
+    MarketDeploymentData,
+    usdcAddress
 } from "../submodules/library-sui";
 
 export async function getGenesisMap(
@@ -56,7 +57,7 @@ export async function getGenesisMap(
 
         if (objectType.indexOf("TreasuryCap") > 0) {
             dataType = "TreasuryCap";
-        } else if (objectType.indexOf("TUSDC") > 0) {
+        } else if (objectType.indexOf("COIN") > 0) {
             dataType = "Currency";
         } else if (objectType.lastIndexOf("::") > 0) {
             dataType = objectType.slice(objectType.lastIndexOf("::") + 2);
@@ -74,7 +75,16 @@ export async function getGenesisMap(
 
     // if the test currency was deployed, update its data type
     if (map["Currency"]) {
-        map["Currency"].dataType = map["package"].id + "::tusdc::TUSDC";
+        map["Currency"].dataType = map["package"].id + "::coin::COIN";
+        map["Currency"].id = map["package"].id;
+    }
+    if (
+        map["Currency"] &&
+        process.env.ENV == "PROD" &&
+        process.env.DEPLOY_ON == "mainnet"
+    ) {
+        map["Currency"].dataType = usdcAddress + "::coin::COIN";
+        map["Currency"].id = usdcAddress;
     }
 
     return map;
@@ -135,11 +145,11 @@ export async function createMarket(
 
 export async function getBankTable(
     provider: JsonRpcProvider,
-    objects: DeploymentObjectMap
+    deploymentData: DeploymentData
 ): Promise<DeploymentObjects> {
     // get bank details
     const bankDetails = await provider.getObject({
-        id: objects["Bank"]["id"],
+        id: deploymentData["objects"]["Bank"]["id"],
         options: {
             showContent: true
         }

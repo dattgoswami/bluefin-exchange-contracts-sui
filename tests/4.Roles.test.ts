@@ -10,7 +10,7 @@ import {
     getTestAccounts,
     packageName
 } from "../submodules/library-sui";
-import { publishPackage } from "../src/helpers";
+import { postDeployment, publishPackage } from "../src/helpers";
 
 import {
     expect,
@@ -19,7 +19,11 @@ import {
     fundTestAccounts
 } from "./helpers";
 
-import { getGenesisMap, packDeploymentData } from "../src/deployment";
+import {
+    getBankTable,
+    getGenesisMap,
+    packDeploymentData
+} from "../src/deployment";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -48,6 +52,16 @@ describe("Roles", () => {
         );
         const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = await packDeploymentData(ownerAddress, objects);
+        const coinPackageId = deploymentData["objects"]["package"]["id"];
+        deploymentData["objects"]["Bank"] = await postDeployment(
+            ownerSigner,
+            deploymentData,
+            coinPackageId
+        );
+        deploymentData["objects"]["BankTable"] = await getBankTable(
+            provider,
+            deploymentData
+        );
         onChain = new OnChainCalls(ownerSigner, deploymentData);
     });
 
@@ -99,7 +113,7 @@ describe("Roles", () => {
 
             await expect(
                 onChain.setExchangeGuardian(
-                    { address: alice.address, gasBudget: 9000000 },
+                    { address: alice.address },
                     bob.signer
                 )
             ).to.be.eventually.rejectedWith(error);

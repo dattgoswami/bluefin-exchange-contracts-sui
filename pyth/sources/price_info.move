@@ -149,8 +149,8 @@ module pyth::price_info {
                     clock::timestamp_ms(clock) / 1000,
                     price_feed::new(
                         pyth_price_identifier,
-                        pyth::price::new(pyth::i64::new(1557, false), 7, pyth::i64::new(5, true), clock::timestamp_ms(clock) / 1000),
-                        pyth::price::new(pyth::i64::new(1500, false), 3, pyth::i64::new(5, true), clock::timestamp_ms(clock) / 1000),
+                        pyth::price::new(pyth::i64::new(1557, false), 7, pyth::i64::new(6, true), clock::timestamp_ms(clock) / 1000),
+                        pyth::price::new(pyth::i64::new(1500, false), 3, pyth::i64::new(6, true), clock::timestamp_ms(clock) / 1000),
                     ) );
                 let obj = new_price_info_object(value, ctx);
                 
@@ -173,8 +173,8 @@ module pyth::price_info {
             price_feed::new(
                         //pyth::price_identifier::from_byte_vec(x"c6c75c89f14810ec1c54c03ab8f1864a4c4032791f05747f560faec380a695d1"),
                         pyth::price_identifier::from_byte_vec(price_identifier_id),
-                        pyth::price::new(pyth::i64::new(price_to_be_set, false), conf, pyth::i64::new(5, true), clock::timestamp_ms(clock) / 1000),
-                        pyth::price::new(pyth::i64::new(price_to_be_set, false), conf, pyth::i64::new(5, true), clock::timestamp_ms(clock) / 1000),
+                        pyth::price::new(pyth::i64::new(price_to_be_set, false), conf, pyth::i64::new(6, true), clock::timestamp_ms(clock) / 1000),
+                        pyth::price::new(pyth::i64::new(price_to_be_set, false), conf, pyth::i64::new(6, true), clock::timestamp_ms(clock) / 1000),
                     )     
         );
         pyth::event::emit_price_feed_update(price_info_object.price_info.price_feed,clock::timestamp_ms(clock) / 1000)

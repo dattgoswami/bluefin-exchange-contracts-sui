@@ -23,12 +23,21 @@ async function main() {
 
     //calling function.
     const result = await onChain.setOraclePrice({
-        price: 100,
+        price: 1000,
         priceInfoFeedId:
             pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"],
         pythPackageId: pythPackage.objects.package.id
     });
+
+    //calling function.
+    const result2 = await onChain.setOraclePrice({
+        price: 1020,
+        priceInfoFeedId:
+            pythObj["BTC-PERP"][process.env.DEPLOY_ON as string]["feed_id"],
+        pythPackageId: pythPackage.objects.package.id
+    });
     console.log(result);
+    console.log(result2);
 }
 
 main();

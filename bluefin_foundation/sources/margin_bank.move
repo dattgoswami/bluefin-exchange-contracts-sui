@@ -11,13 +11,14 @@ module bluefin_foundation::margin_bank {
     use sui::coin::{Self, Coin};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use std::string::{Self, String};
+
 
     // custom modules
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::error::{Self};
-    use bluefin_foundation::roles::{Self, ExchangeGuardianCap, CapabilitiesSafe};
-    use bluefin_foundation::tusdc::{TUSDC};
+    use bluefin_foundation::roles::{Self, ExchangeGuardianCap, CapabilitiesSafe, ExchangeAdminCap};
 
     // friend modules
     friend bluefin_foundation::exchange;
@@ -48,11 +49,12 @@ module bluefin_foundation::margin_bank {
         owner: address,
     }
 
-    struct Bank has key, store {
+    struct Bank<phantom T> has key, store {
         id: UID,
         accounts: Table<address, BankAccount>,
-        coinBalance: Balance<TUSDC>,
+        coinBalance: Balance<T>,
         isWithdrawalAllowed: bool,
+        supportedCoin: String
     }
 
     //===========================================================//
@@ -65,27 +67,14 @@ module bluefin_foundation::margin_bank {
     const ACTION_INTERNAL: u64 = 2;
 
 
-    //===========================================================//
-    //                      INITIALIZATION
-    //===========================================================//
-
-    fun init(ctx: &mut TxContext) {
-        
-        let bank = Bank {
-            id: object::new(ctx),
-            accounts: table::new<address, BankAccount>(ctx),
-            coinBalance: balance::zero<TUSDC>(),
-            isWithdrawalAllowed: true,
-        };
-
-        transfer::share_object(bank);   
-    }
-
+  
+ 
+    
     //===========================================================//
     //                      GUARDIAN METHODS
     //===========================================================//
 
-    public entry fun set_withdrawal_status(safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, bank: &mut Bank, isWithdrawalAllowed: bool) {
+    public entry fun set_withdrawal_status<T>(safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, bank: &mut Bank<T>, isWithdrawalAllowed: bool) {
 
         // validate guardian
         roles::check_guardian_validity(safe, guardian);
@@ -101,12 +90,32 @@ module bluefin_foundation::margin_bank {
     //===========================================================//
 
     /*
+        Allows the ExchangeAdminCap to create the bank
+        @params:
+            - address of exchangeAdminCap
+            - address of supported coin
+    */
+    public entry fun create_bank<T>(_: &ExchangeAdminCap, supportedCoin: String, ctx: &mut TxContext) {
+        let empty_balance = balance::zero<T>();
+
+        let bank = Bank {
+            id: object::new(ctx),
+            accounts: table::new<address, BankAccount>(ctx),
+            coinBalance: empty_balance,
+            isWithdrawalAllowed: true,
+            supportedCoin: supportedCoin
+        };
+        transfer::share_object(bank);   
+    }
+
+
+    /*
      * @notice Deposits collateral token from caller's address 
      * to provided account address in the bank
      * @dev amount is expected to be in 6 decimal units as 
      * the collateral token is USDC
      */
-    entry fun deposit_to_bank(bank: &mut Bank, destination: address, amount: u64, coin: &mut Coin<TUSDC>, ctx: &mut TxContext) {
+    entry fun deposit_to_bank<T>(bank: &mut Bank<T>, destination: address, amount: u64, coin: &mut Coin<T>, ctx: &mut TxContext) {
         // getting the sender address
         let sender = tx_context::sender(ctx);
 
@@ -149,14 +158,15 @@ module bluefin_foundation::margin_bank {
                 destBalance: table::borrow(accounts, destination).balance,
             }
         );
-    }
     
+    }
+
 
     /**
      * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
      * @dev withdrawal amount is expected to be in 6 decimal units as the collateral token is USDC
      */
-    entry fun withdraw_from_bank(bank: &mut Bank, destination: address, amount: u128, ctx: &mut TxContext) {
+    entry fun withdraw_from_bank<T>(bank: &mut Bank<T>, destination: address, amount: u128, ctx: &mut TxContext) {
         
         // getting the sender address
         let sender = tx_context::sender(ctx);
@@ -208,7 +218,7 @@ module bluefin_foundation::margin_bank {
     /**
      * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
      */
-    entry fun withdraw_all_margin_from_bank(bank: &mut Bank, destination: address, ctx: &mut TxContext) {
+    entry fun withdraw_all_margin_from_bank<T>(bank: &mut Bank<T>, destination: address, ctx: &mut TxContext) {
         
         // getting the sender address
         let sender = tx_context::sender(ctx);
@@ -259,8 +269,6 @@ module bluefin_foundation::margin_bank {
 
     }
 
-
-
     public (friend) fun initialize_account(accounts: &mut Table<address, BankAccount>, addr: address){
 
         // checking if the account exists
@@ -273,10 +281,11 @@ module bluefin_foundation::margin_bank {
             });
 
         };
-    }   
-    
-    public (friend) fun transfer_trade_margin(
-        bank: &mut Bank,
+    }
+
+
+    public (friend) fun transfer_trade_margin<T>(
+        bank: &mut Bank<T>,
         perpetual: address, 
         maker:address, 
         taker:address, 
@@ -302,8 +311,8 @@ module bluefin_foundation::margin_bank {
             };
     }
 
-    public (friend) fun transfer_margin_to_account(
-        bank: &mut Bank, 
+    public (friend) fun transfer_margin_to_account<T>(
+        bank: &mut Bank<T>, 
         source: address, 
         destination: address, 
         amount: u128, 
@@ -341,15 +350,16 @@ module bluefin_foundation::margin_bank {
         );
     }
 
-    public (friend) fun mut_accounts(bank: &mut Bank): &mut Table<address, BankAccount> {
+    public (friend) fun mut_accounts<T>(bank: &mut Bank<T>): &mut Table<address, BankAccount> {
         return &mut bank.accounts
     }
+
 
     //===========================================================//
     //                      GETTER METHODS 
     //===========================================================//
 
-    public fun get_balance(bank: &Bank, addr: address) : u128 {
+    public fun get_balance<T>(bank: &Bank<T>, addr: address) : u128 {
         // getting the accounts table
         let accounts = &bank.accounts;
 
@@ -364,7 +374,7 @@ module bluefin_foundation::margin_bank {
 
     }
 
-    public fun is_withdrawal_allowed(bank: &Bank) : bool {
+    public fun is_withdrawal_allowed<T>(bank: &Bank<T>) : bool {
         bank.isWithdrawalAllowed
     }
 
@@ -372,8 +382,8 @@ module bluefin_foundation::margin_bank {
     //                      HELPER METHODS
     //===========================================================//
 
-    fun transfer_based_on_fundsflow(
-        bank: &mut Bank, 
+    fun transfer_based_on_fundsflow<T>(
+        bank: &mut Bank<T>, 
         perpetual: address, 
         account: address, 
         fundsFlow: Number, 
@@ -406,4 +416,9 @@ module bluefin_foundation::margin_bank {
             offset
         );
     }
+
+
+
+
+
 }

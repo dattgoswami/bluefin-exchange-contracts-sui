@@ -25,10 +25,10 @@ describe("Sanity Tests", () => {
 
     // deploy package once
     before(async () => {
-        await fundTestAccounts();
+        // await fundTestAccounts();
         ownerAddress = await ownerSigner.getAddress();
         onChain = new OnChainCalls(ownerSigner, deployment);
-        await requestGas(ownerAddress);
+        //await requestGas(ownerAddress);
     });
 
     it("deployer should have non zero balance", async () => {
@@ -69,7 +69,10 @@ describe("Sanity Tests", () => {
         );
 
         await expect(
-            onChain.createPerpetual({}, alice)
+            onChain.createPerpetual(
+                { priceInfoFeedId: onChain.getPriceOracleObjectId() },
+                alice
+            )
         ).to.eventually.be.rejectedWith(expectedError);
     });
 });

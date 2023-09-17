@@ -2,11 +2,20 @@
 module bluefin_foundation::test {
 
     use std::hash;
+    use std::type_name::{Self, TypeName};
+    use std::ascii::String;
+
     use sui::event;
+    use sui::transfer::{Self,transfer};
+    use sui::pay::{Self, split_and_transfer};
     use sui::hex;
     use sui::address::{to_bytes};
+    use sui::coin::{Self,Coin};
+   // use std::string::{Self, String};
     use bluefin_foundation::order::{Self};
     use bluefin_foundation::library::{Self};
+    use sui::tx_context::{Self, TxContext};
+
 
     struct SignatureVerifiedEvent has copy, drop {
         is_verified: bool,
@@ -30,6 +39,13 @@ module bluefin_foundation::test {
 
     struct EncodedOrder has copy, drop {
         order: vector<u8>,
+    }
+
+    struct CoinValue has copy,drop{
+        value: u64,
+        type_name: TypeName,
+        name: String,
+        addr: String
     }
 
 
@@ -107,4 +123,5 @@ module bluefin_foundation::test {
         event::emit(PublicAddressGeneratedEvent {addr:to_bytes(address)});
 
     }
+
 }

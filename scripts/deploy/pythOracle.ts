@@ -11,7 +11,7 @@ import {
 import { getGenesisMap, packDeploymentData } from "../../src/deployment";
 import { Client } from "../../src/Client";
 import { publishPackage, editTomlFile } from "../../src/helpers";
-
+import * as fs from "fs";
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
     DeploymentConfigs.network.faucet
@@ -65,8 +65,23 @@ async function main() {
         const address = deploymentData.objects.package.id;
         editTomlFile(pythTomlFilePath, address, true);
 
-        const contractFilePath = "./bluefin_foundation/Move.toml";
+        const contractFilePath = "./bluefin_foundation/Move.local.toml";
         editTomlFile(contractFilePath, address, false, true);
+
+        // Copying the file from Bluefin foundation local to Move.toml
+        fs.copyFile(
+            contractFilePath,
+            "./bluefin_foundation/Move.toml",
+            (err: any) => {
+                if (err) {
+                    console.log("Error Found:", err);
+                } else {
+                    console.log(
+                        "File Copied Succesfully to bluefin_foundation/Move.toml"
+                    );
+                }
+            }
+        );
 
         console.log("Creating an object for Oracle Price");
         const onChain = new OnChainCalls(signer, deploymentData);

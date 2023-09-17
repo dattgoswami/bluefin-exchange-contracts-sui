@@ -117,7 +117,8 @@ export async function evaluateSystemExpect(
         const insurancePoolBalance = await onChain.getUserBankBalance(
             insurancePoolAddress
         );
-        expect(bnToBaseStr(insurancePoolBalance)).to.be.equal(
+        //changed from 6 to 9 because insaurancePoolBalance is in base9
+        expect(bnToBaseStr(insurancePoolBalance, undefined, 9)).to.be.equal(
             bigNumber(expectedSystemValues.insurancePool).toFixed(6)
         );
     }
@@ -126,7 +127,7 @@ export async function evaluateSystemExpect(
         const perpetualBalance = await onChain.getUserBankBalance(
             perpetualAddress
         );
-        expect(bnToBaseStr(perpetualBalance)).to.be.equal(
+        expect(bnToBaseStr(perpetualBalance, undefined, 9)).to.be.equal(
             bigNumber(expectedSystemValues.perpetual).toFixed(6)
         );
     }

@@ -17,12 +17,13 @@ import {
     fundTestAccounts
 } from "./helpers";
 
-import { publishPackage } from "../src/helpers";
+import { postDeployment, publishPackage } from "../src/helpers";
 
 import {
     createMarket,
     packDeploymentData,
-    getGenesisMap
+    getGenesisMap,
+    getBankTable
 } from "../src/deployment";
 
 const pythObj = readFile("./pyth/priceInfoObject.json");
@@ -50,6 +51,16 @@ describe("Guardian", () => {
         );
         const objects = await getGenesisMap(provider, publishTxn);
         const deployment = packDeploymentData(ownerAddress, objects);
+        const coinPackageId = deployment["objects"]["package"]["id"];
+        deployment["objects"]["Bank"] = await postDeployment(
+            ownerSigner,
+            deployment,
+            coinPackageId
+        );
+        deployment["objects"]["BankTable"] = await getBankTable(
+            provider,
+            deployment
+        );
         const enrichedDeployment = {
             ...deployment,
             markets: {

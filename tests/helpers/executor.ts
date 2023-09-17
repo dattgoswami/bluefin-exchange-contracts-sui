@@ -17,7 +17,8 @@ import {
     MarketDetails,
     ERROR_CODES,
     SuiTransactionBlockResponse,
-    BASE_DECIMALS_ON_CHAIN
+    BASE_DECIMALS_ON_CHAIN,
+    USDC_BASE_DECIMALS
 } from "../../submodules/library-sui";
 import {
     evaluateSystemExpect,
@@ -351,7 +352,6 @@ export async function executeTests(
                             );
                             return;
                         }
-
                         expectTxToSucceed(tx);
 
                         // if an expect for maker or taker exists

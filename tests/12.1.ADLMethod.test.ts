@@ -35,11 +35,12 @@ import {
 import {
     getGenesisMap,
     createMarket,
-    packDeploymentData
+    packDeploymentData,
+    getBankTable
 } from "../src/deployment";
 
 import { DEFAULT } from "../submodules/library-sui/src/defaults";
-import { publishPackage } from "../src/helpers";
+import { postDeployment, publishPackage } from "../src/helpers";
 const provider = getProvider(network.rpc, network.faucet);
 
 const pythObj = readFile("./pyth/priceInfoObject.json");
@@ -66,6 +67,16 @@ describe("Deleveraging Trade Method", () => {
         );
         const objects = await getGenesisMap(provider, publishTxn);
         const deploymentData = await packDeploymentData(ownerAddress, objects);
+        const coinPackageId = deploymentData["objects"]["package"]["id"];
+        deploymentData["objects"]["Bank"] = await postDeployment(
+            ownerSigner,
+            deploymentData,
+            coinPackageId
+        );
+        deploymentData["objects"]["BankTable"] = await getBankTable(
+            provider,
+            deploymentData
+        );
 
         // deploy market
         deploymentData["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
@@ -165,6 +176,16 @@ describe("Deleveraging Trade Method", () => {
         );
         const objects = await getGenesisMap(provider, publishTxn);
         const localDeployment = packDeploymentData(ownerAddress, objects);
+        const coinPackageId = localDeployment["objects"]["package"]["id"];
+        localDeployment["objects"]["Bank"] = await postDeployment(
+            ownerSigner,
+            localDeployment,
+            coinPackageId
+        );
+        localDeployment["objects"]["BankTable"] = await getBankTable(
+            provider,
+            localDeployment
+        );
 
         localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
 
@@ -581,6 +602,16 @@ describe("Deleveraging Trade Method", () => {
         );
         const objects = await getGenesisMap(provider, publishTxn);
         const localDeployment = packDeploymentData(ownerAddress, objects);
+        const coinPackageId = localDeployment["objects"]["package"]["id"];
+        localDeployment["objects"]["Bank"] = await postDeployment(
+            ownerSigner,
+            localDeployment,
+            coinPackageId
+        );
+        localDeployment["objects"]["BankTable"] = await getBankTable(
+            provider,
+            localDeployment
+        );
 
         localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
 

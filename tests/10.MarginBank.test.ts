@@ -9,7 +9,7 @@ import {
     ERROR_CODES,
     packageName
 } from "../submodules/library-sui";
-import { publishPackage } from "../src/helpers";
+import { postDeployment, publishPackage } from "../src/helpers";
 
 import {
     fundTestAccounts,
@@ -18,7 +18,11 @@ import {
     expect
 } from "./helpers";
 
-import { getGenesisMap } from "../src/deployment";
+import {
+    getBankTable,
+    getGenesisMap,
+    packDeploymentData
+} from "../src/deployment";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -48,7 +52,23 @@ describe("Margin Bank", () => {
             deployer: ownerAddress,
             objects: objects
         };
-        onChain = new OnChainCalls(ownerSigner, deployment);
+        const deploymentData = packDeploymentData(
+            await ownerSigner.getAddress(),
+            objects
+        );
+        const coinPackageId = deploymentData["objects"]["package"]["id"];
+
+        deploymentData["objects"]["Bank"] = await postDeployment(
+            ownerSigner,
+            deploymentData,
+            coinPackageId
+        );
+        deploymentData["objects"]["BankTable"] = await getBankTable(
+            provider,
+            deploymentData
+        );
+
+        onChain = new OnChainCalls(ownerSigner, deploymentData);
     });
 
     describe("Deposits and Withdraw", () => {
@@ -87,10 +107,10 @@ describe("Margin Bank", () => {
             );
             expect(bankBalanceUpdateEvent.action).to.be.equal("0");
             expect(bankBalanceUpdateEvent.amount).to.be.equal(
-                toBigNumberStr("10000")
+                toBigNumberStr("10000", 9)
             );
             expect(bankBalanceUpdateEvent.destBalance).to.be.equal(
-                toBigNumberStr("10000")
+                toBigNumberStr("10000", 9)
             );
         });
 

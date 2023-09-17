@@ -5,18 +5,20 @@ import {
     readFile,
     packageName,
     DeploymentConfigs,
-    Transaction
+    Transaction,
+    TransactionBlock
 } from "../../submodules/library-sui";
 import { Connection, JsonRpcProvider } from "@mysten/sui.js";
 import { SuiPythClient } from "@pythnetwork/pyth-sui-js";
 import { Client } from "../../src/Client";
-import { publishPackage } from "../../src/helpers";
+import { postDeployment, publishPackage } from "../../src/helpers";
 import {
     getBankTable,
     getGenesisMap,
     packDeploymentData,
     createMarket
 } from "../../src/deployment";
+import { usdcAddress } from "../../submodules/library-sui";
 import { syncingTomlFiles } from "../../src/helpers";
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -57,11 +59,12 @@ async function main() {
             );
             if (res == undefined) {
                 console.log("cannot fetch price object id");
-                process.exit(1);
+                //process.exit(1);
+            } else {
+                pythObj[marketConfig.symbol as string][
+                    process.env.DEPLOY_ON as string
+                ]["object_id"] = res;
             }
-            pythObj[marketConfig.symbol as string][
-                process.env.DEPLOY_ON as string
-            ]["object_id"] = res;
         }
         writeFile("./pyth/priceInfoObject.json", pythObj);
         console.log("Syncing Toml file with package ids from json file");
@@ -93,9 +96,26 @@ async function main() {
         // fetch created objects
         const objects = await getGenesisMap(provider, publishTxn);
 
-        objects["BankTable"] = await getBankTable(provider, objects);
-
         const deploymentData = packDeploymentData(deployerAddress, objects);
+
+        // for dev env our own package id the owner of coin package
+        let coinPackageId = deploymentData["objects"]["package"]["id"];
+
+        if (process.env.ENV == "PROD" && process.env.DEPLOY_ON == "mainnet") {
+            console.log("Using SUI USDC coin");
+            coinPackageId = usdcAddress;
+            console.log(coinPackageId);
+        }
+
+        deploymentData["objects"]["Bank"] = await postDeployment(
+            signer,
+            deploymentData,
+            coinPackageId
+        );
+        deploymentData["objects"]["BankTable"] = await getBankTable(
+            provider,
+            deploymentData
+        );
 
         // create perpetual
         console.log("Creating Perpetual Markets");

@@ -103,9 +103,9 @@ module bluefin_foundation::exchange {
      * Only Admin can create one
      * Created perpetual is publically shared for any one to use
      */
-    entry fun create_perpetual(
+    entry fun create_perpetual<T>(
         _: &ExchangeAdminCap,
-        bank: &mut Bank,
+        bank: &mut Bank<T>,
 
         name: vector<u8>, 
         minPrice: u128,
@@ -211,10 +211,10 @@ module bluefin_foundation::exchange {
     /**
      * Used to perofrm on-chain trade between two orders (maker/taker)
      */ 
-    entry fun trade(
+    entry fun trade<T>(
         clock: &Clock,
         perp: &mut Perpetual, 
-        bank: &mut Bank, 
+        bank: &mut Bank<T>, 
         safe: &CapabilitiesSafe,
         cap: &SettlementCap,
 
@@ -379,10 +379,10 @@ module bluefin_foundation::exchange {
      * Used to perofrm liquidation trade between the liquidator and
      * an under collat account
      */ 
-    entry fun liquidate(
+    entry fun liquidate<T>(
         clock: &Clock,
         perp: &mut Perpetual,
-        bank: &mut Bank, 
+        bank: &mut Bank<T>, 
         subAccounts: &SubAccounts,
 
         // address of account to be liquidated
@@ -520,10 +520,10 @@ module bluefin_foundation::exchange {
      * Used to perofrm adl trade between an under water maker and 
      * above water taker
      */
-     entry fun deleverage(
+     entry fun deleverage<T>(
         clock: &Clock,
         perp: &mut Perpetual, 
-        bank: &mut Bank, 
+        bank: &mut Bank<T>, 
         safe: &CapabilitiesSafe,
         cap: &DeleveragingCap,
 
@@ -615,7 +615,7 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to add margin to their position
      */
-    entry fun add_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user:address, amount: u128, price_oracle: &PythFeeder ,ctx: &mut TxContext){
+    entry fun add_margin<T>(perp: &mut Perpetual, bank: &mut Bank<T>, subAccounts: &SubAccounts, user:address, amount: u128, price_oracle: &PythFeeder ,ctx: &mut TxContext){
 
         amount = amount / library::base_uint();
 
@@ -675,7 +675,7 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to remove margin from their position
      */
-    entry fun remove_margin(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, amount: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
+    entry fun remove_margin<T>(perp: &mut Perpetual, bank: &mut Bank<T>, subAccounts: &SubAccounts, user: address, amount: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
         
         amount = amount / library::base_uint();
 
@@ -756,7 +756,7 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to adjust their leverage
      */
-    entry fun adjust_leverage(perp: &mut Perpetual, bank: &mut Bank, subAccounts: &SubAccounts, user: address, leverage: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
+    entry fun adjust_leverage<T>(perp: &mut Perpetual, bank: &mut Bank<T>, subAccounts: &SubAccounts, user: address, leverage: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
      
         leverage = leverage / library::base_uint();
 
@@ -858,7 +858,7 @@ module bluefin_foundation::exchange {
     //                     CLOSE POSITION                        //
     //===========================================================//
 
-    entry fun close_position(perp: &mut Perpetual, bank: &mut Bank, ctx: &mut TxContext){
+    entry fun close_position<T>(perp: &mut Perpetual, bank: &mut Bank<T>, ctx: &mut TxContext){
 
         // ensure perpetual is delisted before users can close their position
         assert!(perpetual::delisted(perp), error::perpetual_is_not_delisted());
@@ -912,7 +912,7 @@ module bluefin_foundation::exchange {
     //                        FUNDING RATE                       //
     //===========================================================//
 
-    fun apply_funding_rate(bank: &mut Bank, perp: &mut Perpetual, caller: address, user: address, flag: u8, offset:u64){
+    fun apply_funding_rate<T>(bank: &mut Bank<T>, perp: &mut Perpetual, caller: address, user: address, flag: u8, offset:u64){
         
         let perpID = object::uid_to_inner(perpetual::id(perp));
         let perpAddress = object::id_to_address(&perpID);

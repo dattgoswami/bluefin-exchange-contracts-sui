@@ -1,4 +1,5 @@
-import { createMarket } from "../src/deployment";
+import { createMarket, getBankTable } from "../src/deployment";
+import { postDeployment } from "../src/helpers";
 import {
     DeploymentConfigs,
     readFile,
@@ -58,6 +59,16 @@ describe("Perpetual", () => {
 
     it("should revert when trying to trade/liquidate/deleverage as perpetual start time < current chain time", async () => {
         const localDeployment = { ...deployment };
+        const coinPackageId = localDeployment["objects"]["package"]["id"];
+        localDeployment["objects"]["Bank"] = await postDeployment(
+            ownerSigner,
+            localDeployment,
+            coinPackageId
+        );
+        localDeployment["objects"]["BankTable"] = await getBankTable(
+            provider,
+            localDeployment
+        );
         // trade starting time, current time + 1000 seconds
         localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
             deployment,
@@ -482,6 +493,16 @@ describe("Perpetual", () => {
 
     it("should revert when trying to trade/liquidate/deleverage as trading has been stopped on the perpetual", async () => {
         const localDeployment = { ...deployment };
+        const coinPackageId = localDeployment["objects"]["package"]["id"];
+        localDeployment["objects"]["Bank"] = await postDeployment(
+            ownerSigner,
+            localDeployment,
+            coinPackageId
+        );
+        localDeployment["objects"]["BankTable"] = await getBankTable(
+            provider,
+            localDeployment
+        );
         localDeployment["markets"]["ETH-PERP"]["Objects"] = await createMarket(
             deployment,
             ownerSigner,
