@@ -7,7 +7,6 @@ import {
     OnChainCalls,
     OrderSigner,
     Trader,
-    requestGas,
     Transaction
 } from "../submodules/library-sui";
 
@@ -37,28 +36,71 @@ async function main() {
     // Note: Assumes that the deployer is admin, as only admin can make a
     // settlement operator
     // make admin of the exchange settlement operator
-    //const tx1 = await onChain.createSettlementOperator({
-    //    operator: await ownerSigner.getAddress()
-    //});
-    //const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[1];
+    const tx1 = await onChain.createSettlementOperator({
+        operator: await ownerSigner.getAddress()
+    });
+    const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[1];
+
+    // const settlementCapID = "0x8cc5e1f8751e78364b36a6b5e385ce6f346f9b557098235b864e90e3880cd5ee";
 
     // mint and deposit USDC to test accounts
-    console.log(
-        await requestGas(
-            "0x1ffa85757f95ceced28622d30e41a452c88516df53450cb1913812dd828d5968"
-        )
-    );
-    await mintAndDeposit(
-        onChain,
-        "0x1ffa85757f95ceced28622d30e41a452c88516df53450cb1913812dd828d5968"
-    );
-    await mintAndDeposit(onChain, accounts.taker.address);
+    // await mintAndDeposit(onChain, accounts.maker.address);
+    // await mintAndDeposit(onChain, accounts.taker.address);
 
     // set specific price on oracle
     //  const tx3 = await onChain.updateOraclePrice({
     //    price: toBigNumberStr(1800)
     //});
     // expectTxToSucceed(tx3);
+
+    // create an order for ETH market
+    const order = createOrder({
+        maker: accounts.maker.address,
+        market: onChain.getPerpetualID(tradingPerp),
+        isBuy: true,
+        price: 1800,
+        leverage: 1,
+        quantity: 0.1
+    });
+
+    const tradeData = await Trader.setupNormalTrade(
+        provider,
+        signer,
+        accounts.maker.keyPair,
+        accounts.taker.keyPair,
+        order
+    );
+
+    const tx = await onChain.trade({
+        ...tradeData,
+        settlementCapID
+    });
+
+    const status = Transaction.getStatus(tx);
+    console.log("Status:", status);
+
+    if (status == "failure") {
+        console.log("Error:", Transaction.getError(tx));
+        return;
+    }
+
+    console.log(
+        "Maker bank balance: ",
+        +(await onChain.getUserBankBalance(accounts.maker.address))
+    );
+    console.log(
+        "Maker Position: ",
+        await onChain.getUserPosition(tradingPerp, accounts.maker.address)
+    );
+
+    console.log(
+        "Taker bank balance: ",
+        +(await onChain.getUserBankBalance(accounts.taker.address))
+    );
+    console.log(
+        "Taker Position: ",
+        await onChain.getUserPosition(tradingPerp, accounts.taker.address)
+    );
 }
 
 main();
