@@ -94,6 +94,11 @@ module bluefin_foundation::perpetual {
         makerFee: u128,
         takerFee: u128
     }
+    
+    struct PriceOracleIdentifierUpdateEvent has copy, drop{
+        perp: ID,
+        identifier: vector<u8>
+    }
 
     //===========================================================//
     //                           STORAGE                         //
@@ -256,6 +261,7 @@ module bluefin_foundation::perpetual {
         emit(TradingPermissionStatusUpdate{status: isTradingPermitted});
     }
 
+
     //===========================================================//
     //                          ACCESSORS                        //
     //===========================================================//
@@ -351,6 +357,21 @@ module bluefin_foundation::perpetual {
     //===========================================================//
     //                         SETTERS                           //
     //===========================================================//
+
+
+    /**
+     * Allows exchange admin to update the price oracle identifier id for a perpetual
+     * @param perp: Perpetual for which the oracle feed id is to be updated
+     * @param new_identifier_id: New price oracle identifier/feed id to be saved on perpetual
+     */
+    public entry fun set_price_oracle_identifier(_: &ExchangeAdminCap, perp: &mut Perpetual, new_identifier_id:vector<u8>){
+            perp.priceIdentifierId = new_identifier_id;
+
+            emit(PriceOracleIdentifierUpdateEvent{
+                perp: object::uid_to_inner(id(perp)),
+                identifier: new_identifier_id
+            })
+    }
 
     public entry fun set_insurance_pool_percentage(_: &ExchangeAdminCap, perp: &mut Perpetual,  percentage: u128){
         percentage = percentage / library::base_uint();

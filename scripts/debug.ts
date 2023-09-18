@@ -1,4 +1,4 @@
-import { DeploymentConfigs } from "../submodules/library-sui";
+import { DeploymentConfigs, TransactionBlock } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
@@ -20,8 +20,28 @@ const provider = getProvider(
 const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
 
 const onChain = new OnChainCalls(ownerSigner, deployment);
+ 
 
 async function main() {
+
+    
+    const ethobj=await onChain.getOnChainObject(deployment["markets"]["ETH-PERP"]["Objects"]["Perpetual"]["id"]);
+    const ethpriceobj=await onChain.getOnChainObject(deployment["markets"]["ETH-PERP"]["Objects"]["PriceOracle"]["id"]);
+    
+    //@ts-ignore
+    const priceFeedPerp=ethobj["data"]["content"]["fields"]["priceIdentifierId"];
+    //@ts-ignore
+    const priceFeedPyth=ethpriceobj["data"]["content"]["fields"]["price_info"]["fields"]["price_feed"]["fields"]["price_identifier"]["fields"]["bytes"]
+
+    const btcobj=await onChain.getOnChainObject(deployment["markets"]["ETH-PERP"]["Objects"]["Perpetual"]["id"]);
+    const btcpriceobj=await onChain.getOnChainObject(deployment["markets"]["ETH-PERP"]["Objects"]["PriceOracle"]["id"]);
+    
+    //@ts-ignore
+    const priceFeedPerpbtc=btcobj["data"]["content"]["fields"]["priceIdentifierId"];
+    //@ts-ignore
+    const priceFeedPythbtc=btcpriceobj["data"]["content"]["fields"]["price_info"]["fields"]["price_feed"]["fields"]["price_identifier"]["fields"]["bytes"]
+
+
     const wormholeStateId =
         "0xebba4cc4d614f7a7cdbe883acc76d1cc767922bc96778e7b68be0d15fce27c02";
     const pythStateId =
@@ -36,6 +56,7 @@ async function main() {
     const res = await client.getPriceFeedObjectId(
         "0xca80ba6dc32e08d06f1aa886011eed1d77c77be9eb761cc10d72b7d0a2fd57a6"
     );
+
 
     console.log(client);
 }

@@ -1,4 +1,4 @@
-import { DeploymentConfigs } from "../submodules/library-sui";
+import { DeploymentConfigs, toBigNumberStr } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
@@ -7,6 +7,7 @@ import {
     OnChainCalls,
     OrderSigner,
     Trader,
+    requestGas,
     Transaction
 } from "../submodules/library-sui";
 
@@ -39,21 +40,27 @@ async function main() {
     const tx1 = await onChain.createSettlementOperator({
         operator: await ownerSigner.getAddress()
     });
-    const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[1];
+    const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[0];
 
-    // const settlementCapID = "0x8cc5e1f8751e78364b36a6b5e385ce6f346f9b557098235b864e90e3880cd5ee";
-
+    
     // mint and deposit USDC to test accounts
-    // await mintAndDeposit(onChain, accounts.maker.address);
-    // await mintAndDeposit(onChain, accounts.taker.address);
 
-    // set specific price on oracle
-    //  const tx3 = await onChain.updateOraclePrice({
-    //    price: toBigNumberStr(1800)
-    //});
+    await mintAndDeposit(
+        onChain,
+        accounts.maker.address
+    );
+    
+    await mintAndDeposit(onChain, accounts.taker.address);
+
+    //set specific price on oracle
+      const tx3 = await onChain.setOraclePrice({
+          price: 1800,
+          priceInfoFeedId: deployment["markets"]["ETH-PERP"]["Config"]["priceInfoFeedId"],
+          pythPackageId: "0x968f006be284b9cc4851d63e7eed6f66a68610bed3b56e77650f974e7c1515a7"
+      });
+
+
     // expectTxToSucceed(tx3);
-
-    // create an order for ETH market
     const order = createOrder({
         maker: accounts.maker.address,
         market: onChain.getPerpetualID(tradingPerp),
