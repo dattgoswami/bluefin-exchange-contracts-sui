@@ -9,7 +9,8 @@ module pyth::price_info {
     use sui::transfer;
 
     use pyth::price_feed::{Self, PriceFeed};
-    use pyth::price_identifier::{PriceIdentifier};
+    use pyth::price_identifier::{PriceIdentifier,Self};
+    use pyth::error_pyth::{Self};
 
     const KEY: vector<u8> = b"price_info";
     const FEE_STORAGE_KEY: vector<u8> = b"fee_storage";
@@ -167,6 +168,11 @@ module pyth::price_info {
         conf: u64,
         price_identifier_id: vector<u8>
     ) {
+        assert!
+            (get_price_identifier_bytes(price_info_object)==price_identifier_id,
+            error_pyth::wrong_price_identifier()
+        );
+        
         price_info_object.price_info = new_price_info(
             clock::timestamp_ms(clock) / 1000,
             clock::timestamp_ms(clock) / 1000,
@@ -178,6 +184,14 @@ module pyth::price_info {
                     )     
         );
         pyth::event::emit_price_feed_update(price_info_object.price_info.price_feed,clock::timestamp_ms(clock) / 1000)
+    }
+
+
+    public entry fun get_price_identifier_bytes(price_info_obj: &PriceInfoObject): vector<u8>{
+        let priceInfo=get_price_info_from_price_info_object(price_info_obj);
+        let priceIdentifier= get_price_identifier(&priceInfo);
+        let priceIdentifierBytes = price_identifier::get_bytes(&priceIdentifier);
+        return priceIdentifierBytes
     }
 
     public fun new_price_info(
