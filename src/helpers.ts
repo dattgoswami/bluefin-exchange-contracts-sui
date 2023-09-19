@@ -6,7 +6,9 @@ import {
     DeploymentData,
     TransactionBlock,
     OBJECT_OWNERSHIP_STATUS,
-    OnChainCalls
+    OnChainCalls,
+    hexToString,
+    hexToBuffer
 } from "../submodules/library-sui";
 import { Client } from "../src/Client";
 import fs from "fs";
@@ -132,4 +134,33 @@ export function syncingTomlFiles(pythObj: any) {
             "utf8"
         );
     }
+}
+
+export async function checkPythPriceInfoObjects(
+    signer: RawSigner,
+    deployment: DeploymentData
+): Promise<boolean> {
+    const onChain = new OnChainCalls(signer, deployment);
+    for (const market in deployment.markets) {
+        const perpObj = (await onChain.getOnChainObject(
+            deployment["markets"][market]["Objects"]["Perpetual"]["id"]
+        )) as any;
+        const priceObj = (await onChain.getOnChainObject(
+            deployment["markets"][market]["Objects"]["PriceOracle"]["id"]
+        )) as any;
+
+        const priceFeedPerp =
+            perpObj["data"]["content"]["fields"]["priceIdentifierId"];
+        const priceFeedPyth =
+            priceObj["data"]["content"]["fields"]["price_info"]["fields"][
+                "price_feed"
+            ]["fields"]["price_identifier"]["fields"]["bytes"];
+        if (
+            Buffer.from(priceFeedPerp).toString("hex") !=
+            Buffer.from(priceFeedPyth).toString("hex")
+        ) {
+            return false;
+        }
+    }
+    return true;
 }

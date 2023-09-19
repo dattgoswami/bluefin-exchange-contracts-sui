@@ -11,7 +11,11 @@ import {
 import { Connection, JsonRpcProvider } from "@mysten/sui.js";
 import { SuiPythClient } from "@pythnetwork/pyth-sui-js";
 import { Client } from "../../src/Client";
-import { postDeployment, publishPackage } from "../../src/helpers";
+import {
+    checkPythPriceInfoObjects,
+    postDeployment,
+    publishPackage
+} from "../../src/helpers";
 import {
     getBankTable,
     getGenesisMap,
@@ -33,7 +37,9 @@ async function main() {
     const pythObj = readFile("./pyth/priceInfoObject.json");
     const deployEnv = process.env.DEPLOY_ON + "_pyth";
 
-    if (process.env.ENV == "PROD") {
+    
+    //True oracle will be deployed only if we are deploying on prod and mainnet
+    if (process.env.ENV == "PROD" && process.env.DEPLOY_ON=="mainnet") {
         console.log(
             "Updating price object ids from price feed ids from respective network"
         );
@@ -59,7 +65,7 @@ async function main() {
             );
             if (res == undefined) {
                 console.log("cannot fetch price object id");
-                //process.exit(1);
+                process.exit(1);
             } else {
                 pythObj[marketConfig.symbol as string][
                     process.env.DEPLOY_ON as string
@@ -140,6 +146,13 @@ async function main() {
                 Objects: marketObjects
             };
         }
+
+        console.log("Checking if PythPriceObjects are consistent");
+        if (!(await checkPythPriceInfoObjects(signer, deploymentData))) {
+            console.error("Wrong Price Identifier Set, check configuration");
+            process.exit(-1);
+        }
+
 
         await writeFile(DeploymentConfigs.filePath, deploymentData);
         console.log(
