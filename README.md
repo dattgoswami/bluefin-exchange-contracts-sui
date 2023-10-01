@@ -20,16 +20,14 @@ Repository containing bluefin core exchange contracts that allow users to do on-
 - Create `.env` file using `.env.example` provided. Specify the DEPLOYER_SEED (secp256k1) and DEPLOY_ON (See `networks.json` for available networks to deploy) The Deployer account must be in sui-client addresses.
 - After this please following the following schemes for deploying on testnet/mainnet/local
 
-
 ## For Deploying on local/testnet with fake pyth
+
 1. Open the `.env` file and ensure that `DEPLOY_ON=local/testnet` and `ENV=DEV`
 2. Run `yarn deploy:pyth` and wait for it to be completed
 3. Run `yarn deploy` and wait for it to be completed
 
-
-
-
 ## For Deploying on testnet with REAL pyth
+
 1. Open the `.env` file and ensure that `DEPLOY_ON=testnet` and `ENV=PROD`
 2. Open folder `bluefin_foundation` and copy the contents of `Move.testnet.toml` to `Move.toml`
 3. `cp bluefin_foundation/Move.testnet.toml bluefin_foundation/Move.toml`
@@ -38,18 +36,15 @@ Repository containing bluefin core exchange contracts that allow users to do on-
    1. Pyth Package ID
    2. Pyth State ID
    3. Wormhole Package ID
-   4. Wormhole State ID 
-   
+   4. Wormhole State ID
 6. **Please double check that the package id and state ids are correct. Wrong ids will lead to undetectable errors.**
 7. In `pyth/priceInfoObject.json` ensure that `feed_id` of respective markets are correct
    1. Feed_id are from pyth and can be retrieved from Pyth documentation, it keeps on changing hence we have not hardcoded it.
    2. feed_id are sometimes different for testnet and mainnet, for testnet update the relevant feed_id
 8. Run `yarn deploy`
 
-
-
-
 ## For Deploying on testnet with REAL pyth
+
 1. Open the `.env` file and ensure that `DEPLOY_ON=testnet` and `ENV=PROD`
 2. Open folder `bluefin_foundation` and copy the contents of `Move.mainnet.toml` to `Move.toml`
 3. `cp bluefin_foundation/Move.mainnet.toml bluefin_foundation/Move.toml`
@@ -58,14 +53,12 @@ Repository containing bluefin core exchange contracts that allow users to do on-
    1. Pyth Package ID
    2. Pyth State ID
    3. Wormhole Package ID
-   4. Wormhole State ID 
+   4. Wormhole State ID
 6. **Please double check that the package id and state ids are correct. Wrong ids will lead to undetectable errors.**
 7. In `pyth/priceInfoObject.json` ensure that `feed_id` of respective markets are correct
    1. Feed_id are from pyth and can be retrieved from Pyth documentation, it keeps on changing hence we have not hardcoded it.
-   2. feed_id are sometimes different for testnet and mainnet, for mainnet update the relevant feed_id 
+   2. feed_id are sometimes different for testnet and mainnet, for mainnet update the relevant feed_id
 8. Run `yarn deploy`
-
-
 
 **Running Tests:**
 
@@ -107,17 +100,19 @@ the oracle price. For that We need
 7. IT WILL NOT UPDATE THE BLUEFIN_FOUNDATION file and you need to manually update the bluefin_foundation file in that replace the Pyth id with the relevant pyth id.
 8. These instructions are only relevant when we are deploying to mainnet/testnet with real pyth integrated.
 
-
-
-
 ## Context information on fake and real pyth.
+
 1. Mainnet on sui is where real sui tokens and real usdc contracts are deployed
 2. testnet on sui is where we can test out our contracts and is accessible to everyone
 3. localnet is our own sui node running on docker container.
-4. Pyth network is a service which gives us OraclePrice on request, However when testing our contracts, we need to frequently change oracle price in order to test liquidation, trade. 
+4. Pyth network is a service which gives us OraclePrice on request, However when testing our contracts, we need to frequently change oracle price in order to test liquidation, trade.
    1. For the above purpose we have created a fake pyth, it is a contract just like pyth and it gives us the ability to change the oracle price to whatever we want for any market.
 5. With real pyth we do not have the ability to change the oracle price according to our wishes.
 6. When we say deployed on testnet with fake pyth we mean that we can manipulate the oracle prices.
 7. When we say deployed on testnet with real pyth we mean that we have deployed the contracts with pyth as a dependency and now we do not have the ability to change oracle prices with too much deviation.
 
-  
+## How to upgrade protocol
+
+- In order to upgrade the protocol, update the `Move.toml` file with the address of latest package. In order to do that add `published-at = "latest-package-id"` under `[package]`
+- Run `yarn upgrade:pkg` to publish new package. The script console logs the new package id.
+- Update this package id in `deployment.json` and update all services to start using the new package

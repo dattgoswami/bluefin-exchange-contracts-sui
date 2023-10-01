@@ -13,6 +13,7 @@
     "deploy:market": "ts-node ./scripts/deploy/market.ts",
     "faucet": "ts-node ./scripts/faucet.ts",
     "debug": "ts-node ./scripts/debug.ts",
+    "upgrade:pkg": "ts-node ./scripts/upgrade.ts",
     "make:trade": "ts-node ./scripts/makeTrade.ts",
     "test": "ts-mocha --no-timeout tests/*.test.ts",
     "fund:test:accounts": "ts-node ./tests/helpers/fundAccounts.ts",

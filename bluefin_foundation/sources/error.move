@@ -350,5 +350,10 @@ module bluefin_foundation::error {
     public fun wrong_price_identifier(): u64{
         return 903
     }
+
+    
+    public fun greater_than_max_allowed_funding(): u64 {
+        return 904
+    }
     
 }

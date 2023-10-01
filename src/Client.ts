@@ -79,8 +79,18 @@ export class Client {
         return result;
     }
 
-    static buildPackage(pkgPath: string) {
-        execCommand(`sui move build --path "${pkgPath}"`);
+    static buildPackage(pkgPath: string): {
+        modules: any;
+        dependencies: any;
+        digest: any;
+    } {
+        const { modules, dependencies, digest } = JSON.parse(
+            execSync(
+                `sui move build --dump-bytecode-as-base64 --path ${pkgPath}`,
+                { encoding: "utf-8" }
+            )
+        );
+        return { modules, dependencies, digest };
     }
 
     static switchAccount(address: string): boolean {

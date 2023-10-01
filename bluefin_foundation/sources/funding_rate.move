@@ -90,9 +90,12 @@ module bluefin_foundation::funding_rate {
         assert!(expectedWindow > 1, error::funding_rate_can_not_be_set_for_zeroth_window());
 
         assert!(funding.window < expectedWindow - 1, error::funding_rate_for_window_already_set());
-
-        // funding rate per milli second
-        funding.rate =  signed_number::from(rate / (FUNDING_WINDOW_SIZE as u128), sign);
+        
+        // must be <= max allowed funding else revert
+        assert!(rate <= funding.maxFunding, error::greater_than_max_allowed_funding());
+        
+        // save the hourly funding rate
+        funding.rate = signed_number::from(rate, sign);
 
         // update window for which FR is set
         funding.window = expectedWindow - 1;
@@ -151,7 +154,8 @@ module bluefin_foundation::funding_rate {
             // funding rate * time delta * oracle price
             let fundingValue = signed_number::from(
                 library::base_mul(
-                    signed_number::value(funding.rate) * timeDelta, 
+                    // timeDelta is in milli seconds, convert to hour as funding rate is in hour
+                    signed_number::value(funding.rate) * timeDelta / (FUNDING_WINDOW_SIZE as u128), 
                     oraclePrice),
                 signed_number::sign(funding.rate)
             );

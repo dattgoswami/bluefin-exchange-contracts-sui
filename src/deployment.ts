@@ -147,13 +147,21 @@ export async function getBankTable(
     provider: JsonRpcProvider,
     deploymentData: DeploymentData
 ): Promise<DeploymentObjects> {
-    // get bank details
-    const bankDetails = await provider.getObject({
-        id: deploymentData["objects"]["Bank"]["id"],
-        options: {
-            showContent: true
+    let bankDetails: any = undefined;
+
+    while (bankDetails == undefined) {
+        // get bank details
+        bankDetails = await provider.getObject({
+            id: deploymentData["objects"]["Bank"]["id"],
+            options: {
+                showContent: true
+            }
+        });
+
+        if (bankDetails.error) {
+            bankDetails = undefined;
         }
-    });
+    }
 
     return {
         owner: OBJECT_OWNERSHIP_STATUS.SHARED,

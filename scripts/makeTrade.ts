@@ -1,4 +1,4 @@
-import { DeploymentConfigs, toBigNumberStr } from "../submodules/library-sui";
+import { DeploymentConfigs } from "../submodules/library-sui";
 import {
     readFile,
     getProvider,
@@ -7,14 +7,12 @@ import {
     OnChainCalls,
     OrderSigner,
     Trader,
-    requestGas,
     Transaction
 } from "../submodules/library-sui";
 
 import { getMakerTakerAccounts } from "../tests/helpers/accounts";
 
 import { mintAndDeposit } from "../tests/helpers/utils";
-//import { expectTxToSucceed } from "../tests/helpers/expect";
 
 const deployment = readFile(DeploymentConfigs.filePath);
 
@@ -35,32 +33,21 @@ async function main() {
     const tradingPerp = "ETH-PERP";
 
     // Note: Assumes that the deployer is admin, as only admin can make a
-    // settlement operator
-    // make admin of the exchange settlement operator
-    const tx1 = await onChain.createSettlementOperator({
-        operator: await ownerSigner.getAddress()
-    });
-    const settlementCapID = Transaction.getCreatedObjectIDs(tx1)[0];
+    // settlement operator and its the first settlement operator
+    const settlementCapID = onChain.getSettlementOperators()[0].capID;
 
-    
     // mint and deposit USDC to test accounts
 
-    await mintAndDeposit(
-        onChain,
-        accounts.maker.address
-    );
-    
+    await mintAndDeposit(onChain, accounts.maker.address);
+
     await mintAndDeposit(onChain, accounts.taker.address);
 
     //set specific price on oracle
-      const tx3 = await onChain.setOraclePrice({
-          price: 1800,
-          priceInfoFeedId: deployment["markets"]["ETH-PERP"]["Config"]["priceInfoFeedId"],
-          pythPackageId: "0x968f006be284b9cc4851d63e7eed6f66a68610bed3b56e77650f974e7c1515a7"
-      });
+    await onChain.setOraclePrice({
+        price: 1800,
+        market: tradingPerp
+    });
 
-
-    // expectTxToSucceed(tx3);
     const order = createOrder({
         maker: accounts.maker.address,
         market: onChain.getPerpetualID(tradingPerp),
