@@ -8,4 +8,4 @@ Pyth = { local = "../submodules/pyth-crosschain/target_chains/sui/contracts"}
 
 [addresses]
 bluefin_foundation =  "0x0"
-Pyth="0x00b53b0f4174108627fbee72e2498b58d6a2714cded53fac537034c220d26302"
+Pyth="0x8d97f1cd6ac663735be08d1d2b6d02a159e711586461306ce60a2b7a6a565a9e"
