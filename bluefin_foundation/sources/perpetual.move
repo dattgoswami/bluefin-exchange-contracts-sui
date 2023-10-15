@@ -9,14 +9,16 @@ module bluefin_foundation::perpetual {
     use sui::event::{emit};
     use sui::transfer;
     use sui::math::pow;
+    use std::vector;
 
     // custom modules
     use bluefin_foundation::position::{UserPosition};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::funding_rate::{Self, FundingRate, FundingIndex};
-    use bluefin_foundation::roles::{Self, ExchangeAdminCap, ExchangeGuardianCap, FundingRateCap, CapabilitiesSafe};
+    use bluefin_foundation::roles::{Self, ExchangeAdminCap, ExchangeGuardianCap, FundingRateCap, CapabilitiesSafe, CapabilitiesSafeV2};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
+    use bluefin_foundation::margin_bank::{Self, Bank, BankV2};
 
     // pyth
     use Pyth::price_info::{PriceInfoObject as PythFeeder};
@@ -45,12 +47,6 @@ module bluefin_foundation::perpetual {
         feePool: address,
         checks:TradeChecks,
         funding: FundingRate
-    }
-
-    struct SpecialFee has copy, drop, store {
-        status: bool,
-        makerFee: u128,
-        takerFee: u128
     }
 
     struct InsurancePoolRatioUpdateEvent has copy, drop {
@@ -144,6 +140,57 @@ module bluefin_foundation::perpetual {
         priceIdentifierId: vector<u8>
     }
 
+    struct PerpetualV2 has key {
+        id: UID,
+
+        version: u64,
+
+        /// name of perpetual
+        name: String,
+        /// imr: the initial margin collateralization percentage
+        imr: u128,
+        /// mmr: the minimum collateralization percentage
+        mmr: u128,
+        /// default maker order fee for this Perpetual
+        makerFee: u128,
+        /// default taker order fee for this Perpetual
+        takerFee: u128,
+        /// percentage of liquidaiton premium goes to insurance pool
+        insurancePoolRatio: u128, 
+        /// address of insurance pool
+        insurancePool: address,
+        /// fee pool address
+        feePool: address,
+        /// delist status
+        delisted: bool,
+        /// the price at which trades will be executed after delisting
+        delistingPrice: u128,
+        /// is trading allowed
+        isTradingPermitted:bool,
+        // time at which trading will start for perpetual
+        startTime: u64,
+        /// trade checks
+        checks: TradeChecks,
+        /// table containing user positions for this market/perpetual
+        positions: Table<address, UserPosition>,
+        /// table containing special fee for users
+        specialFee: Table<address, SpecialFee>,
+        /// price oracle
+        priceOracle: u128,
+        /// Funding Rate
+        funding: FundingRate,
+
+        priceIdentifierId: vector<u8>
+    }
+
+
+    struct SpecialFee has copy, drop, store {
+        status: bool,
+        makerFee: u128,
+        takerFee: u128
+    }
+
+
     //===========================================================//
     //                      FRIEND FUNCTIONS                     //
     //===========================================================//
@@ -169,14 +216,15 @@ module bluefin_foundation::perpetual {
         maxAllowedFR: u128,
         startTime: u64,
         maxAllowedOIOpen: vector<u128>,
-        positions: Table<address,UserPosition>,
-        specialFee: Table<address,SpecialFee>,
-
         priceIdentifierId: vector<u8>,
 
         ctx: &mut TxContext
         ): ID{
-        
+
+        let positions = table::new<address, UserPosition>(ctx);
+
+        let specialFee = table::new<address, SpecialFee>(ctx);
+
         let id = object::new(ctx);
         let perpID =  object::uid_to_inner(&id);
 
@@ -201,8 +249,9 @@ module bluefin_foundation::perpetual {
         assert!(mmr > 0, error::maintenance_margin_must_be_greater_than_zero());
         assert!(mmr <= imr, error::maintenance_margin_must_be_less_than_or_equal_to_imr());
 
-        let perp = Perpetual {
+        let perp = PerpetualV2 {
             id,
+            version: roles::get_version(),
             name: string::utf8(name),
             imr,
             mmr,
@@ -242,7 +291,7 @@ module bluefin_foundation::perpetual {
         return perpID
     }
 
-    public (friend) fun positions(perp:&mut Perpetual):&mut Table<address,UserPosition>{
+    public (friend) fun positions(perp:&mut PerpetualV2):&mut Table<address,UserPosition>{
         return &mut perp.positions
     }
 
@@ -251,9 +300,22 @@ module bluefin_foundation::perpetual {
     //===========================================================//
 
     public entry fun set_trading_permit(safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, perp: &mut Perpetual, isTradingPermitted: bool) {
-
         // validate guardian
         roles::check_guardian_validity(safe, guardian);
+
+        // setting the withdrawal allowed flag
+        perp.isTradingPermitted = isTradingPermitted;
+
+        emit(TradingPermissionStatusUpdate{status: isTradingPermitted});
+    }
+
+    public entry fun set_trading_permit_v2(safe: &CapabilitiesSafeV2, guardian: &ExchangeGuardianCap, perp: &mut PerpetualV2, isTradingPermitted: bool) {
+
+        roles::validate_safe_version(safe);
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
+        // validate guardian
+        roles::check_guardian_validity_v2(safe, guardian);
 
         // setting the withdrawal allowed flag
         perp.isTradingPermitted = isTradingPermitted;
@@ -353,9 +415,171 @@ module bluefin_foundation::perpetual {
         return feeAmount
     }
 
+    //===========================================================//
+    //                      ACCESSORS (V2)                       //
+    //===========================================================//
+
+    public fun id_v2(perp:&PerpetualV2):&UID{
+        return &perp.id
+    }
+
+    public fun name_v2(perp:&PerpetualV2):&String{
+        return &perp.name
+    }
+
+    public fun checks_v2(perp:&PerpetualV2):TradeChecks{
+        return perp.checks
+    }
+
+    public fun imr_v2(perp:&PerpetualV2):u128{
+        return perp.imr
+    }
+
+    public fun mmr_v2(perp:&PerpetualV2):u128{
+        return perp.mmr
+    }
+
+    public fun makerFee_v2(perp:&PerpetualV2):u128{
+        return perp.makerFee
+    }
+
+    public fun takerFee_v2(perp:&PerpetualV2):u128{
+        return perp.takerFee
+    }
+
+    public fun fundingRate_v2(perp:&PerpetualV2):FundingRate{
+        return perp.funding
+    }
+
+    public fun poolPercentage_v2(perp:&PerpetualV2): u128{
+        return perp.insurancePoolRatio
+    }
+
+    public fun insurancePool_v2(perp:&PerpetualV2): address{
+        return perp.insurancePool
+    }
+
+    public fun feePool_v2(perp:&PerpetualV2): address{
+        return perp.feePool
+    }
+
+    public fun priceOracle_v2(perp:&PerpetualV2):u128{
+        return perp.priceOracle
+    }
+
+    public fun globalIndex_v2(perp:&PerpetualV2): FundingIndex{
+        return funding_rate::index(perp.funding)
+    }
+
+    public fun is_trading_permitted_v2(perp: &mut PerpetualV2) : bool {
+        perp.isTradingPermitted
+    }
+    
+    public fun delisted_v2(perp:&PerpetualV2): bool{
+        return perp.delisted
+    }
+
+    public fun delistingPrice_v2(perp:&PerpetualV2): u128{
+        return perp.delistingPrice
+    }
+
+    public fun startTime_v2(perp:&PerpetualV2): u64{
+        return perp.startTime
+    }
+
+    public fun priceIdenfitier_v2(perp:&PerpetualV2): vector<u8>{
+        return perp.priceIdentifierId
+    }
+
+    /// returns fee to be applied to the user
+    public fun get_fee_v2(user:address, perp: &PerpetualV2, isMaker: bool): u128{
+        
+        let feeAmount = if (isMaker) { perp.makerFee } else { perp.takerFee };
+
+        if(table::contains(&perp.specialFee, user)){
+            let fee = table::borrow(&perp.specialFee, user);
+            if(fee.status == true){
+                feeAmount = if (isMaker) { fee.makerFee } else { fee.takerFee };
+            };
+        };
+
+        return feeAmount
+    }
+
+    /// returns the version of perpetual object
+    public fun get_version(perp: &PerpetualV2): u64{
+        return perp.version
+    }
+
 
     //===========================================================//
     //                         SETTERS                           //
+    //===========================================================//
+
+    public entry fun set_price_oracle_identifier(_: &ExchangeAdminCap, _: &mut Perpetual, _:vector<u8>){
+    }
+
+    public entry fun set_insurance_pool_percentage(_: &ExchangeAdminCap, _: &mut Perpetual,  _: u128){
+    }
+
+    public entry fun set_fee_pool_address(_: &ExchangeAdminCap, _: &mut Perpetual, _: address){
+    }
+
+    public entry fun set_insurance_pool_address(_: &ExchangeAdminCap, _: &mut Perpetual, _: address){
+    }
+
+
+    public entry fun delist_perpetual(_: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }
+
+    public entry fun set_min_price( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+
+    public entry fun set_max_price( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+
+    public entry fun set_step_size( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+
+    public entry fun set_tick_size( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+
+    public entry fun set_mtb_long( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }  
+
+    public entry fun set_mtb_short( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+
+    public entry fun set_max_qty_limit( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+
+    public entry fun set_max_qty_market( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }  
+
+    public entry fun set_min_qty( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+    public entry fun set_max_oi_open( _: &ExchangeAdminCap, _: &mut Perpetual, _: vector<u128>){
+    }
+
+    public entry fun set_max_allowed_funding_rate(_: &ExchangeAdminCap, _: &mut Perpetual,  _: u128){
+    }
+
+    public entry fun set_funding_rate(_: &Clock, _: &CapabilitiesSafe, _: &FundingRateCap, _: &mut Perpetual, _: u128, _: bool, _: &PythFeeder){
+    }
+
+    public entry fun set_maintenance_margin_required( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+
+    public entry fun set_initial_margin_required( _: &ExchangeAdminCap, _: &mut Perpetual, _: u128){
+    }   
+
+    public entry fun set_special_fee(_: &ExchangeAdminCap, _: &mut Perpetual, _: address, _:bool, _: u128, _:u128){
+
+    }
+
+    
+    //===========================================================//
+    //                      SETTERS (V2)                         //
     //===========================================================//
 
 
@@ -364,23 +588,29 @@ module bluefin_foundation::perpetual {
      * @param perp: Perpetual for which the oracle feed id is to be updated
      * @param new_identifier_id: New price oracle identifier/feed id to be saved on perpetual
      */
-    public entry fun set_price_oracle_identifier(_: &ExchangeAdminCap, perp: &mut Perpetual, new_identifier_id:vector<u8>){
-            perp.priceIdentifierId = new_identifier_id;
+    public entry fun set_price_oracle_identifier_v2(_: &ExchangeAdminCap, perp: &mut PerpetualV2, new_identifier_id:vector<u8>){
 
-            emit(PriceOracleIdentifierUpdateEvent{
-                perp: object::uid_to_inner(id(perp)),
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
+        perp.priceIdentifierId = new_identifier_id;
+
+        emit(PriceOracleIdentifierUpdateEvent{
+                perp: object::uid_to_inner(id_v2(perp)),
                 identifier: new_identifier_id
             })
     }
 
-    public entry fun set_insurance_pool_percentage(_: &ExchangeAdminCap, perp: &mut Perpetual,  percentage: u128){
+    public entry fun set_insurance_pool_percentage_v2(_: &ExchangeAdminCap, perp: &mut PerpetualV2,  percentage: u128){
+
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
         percentage = percentage / library::base_uint();
         
         assert!(
             percentage <= library::base_uint(), 
             error::can_not_be_greater_than_hundred_percent());
 
-        let perpID = object::uid_to_inner(id(perp));
+        let perpID = object::uid_to_inner(id_v2(perp));
         perp.insurancePoolRatio = percentage;
 
         emit(InsurancePoolRatioUpdateEvent {
@@ -389,22 +619,39 @@ module bluefin_foundation::perpetual {
         });
     }
 
-    public entry fun set_fee_pool_address(_: &ExchangeAdminCap, perp: &mut Perpetual, account: address){
-        assert!(account != @0, error::address_cannot_be_zero());
-        let perpID = object::uid_to_inner(id(perp));
-        perp.feePool = account;
+    
+    public entry fun set_fee_pool_address_v2<T>(_: &ExchangeAdminCap, bank: &mut BankV2<T>, perp: &mut PerpetualV2, account: address){
         
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
+        assert!(account != @0, error::address_cannot_be_zero());
+        let perpID = object::uid_to_inner(id_v2(perp));
+        perp.feePool = account;
+
+        margin_bank::initialize_account(
+            margin_bank::mut_accounts_v2(bank), 
+            perp.feePool,
+        );
+
         emit(FeePoolAccountUpdateEvent {
             id: perpID,
             account
         });
     }
 
-    public entry fun set_insurance_pool_address(_: &ExchangeAdminCap, perp: &mut Perpetual, account: address){
+    public entry fun set_insurance_pool_address_v2<T>(_: &ExchangeAdminCap, bank: &mut BankV2<T>, perp: &mut PerpetualV2, account: address){
+        
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
         assert!(account != @0, error::address_cannot_be_zero());
-        let perpID = object::uid_to_inner(id(perp));
+        let perpID = object::uid_to_inner(id_v2(perp));
         perp.insurancePool = account;
         
+        margin_bank::initialize_account(
+            margin_bank::mut_accounts_v2(bank), 
+            perp.insurancePool,
+        );
+
         emit(InsurancePoolAccountUpdateEvent {
             id: perpID,
             account
@@ -412,7 +659,9 @@ module bluefin_foundation::perpetual {
     }
 
 
-    public entry fun delist_perpetual(_: &ExchangeAdminCap, perp: &mut Perpetual, price: u128){
+    public entry fun delist_perpetual_v2(_: &ExchangeAdminCap, perp: &mut PerpetualV2, price: u128){
+
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
 
         // convert price to base 1e9;
         price = price / library::base_uint();
@@ -426,10 +675,9 @@ module bluefin_foundation::perpetual {
         perp.delistingPrice = price;
 
         emit(DelistEvent{
-            id: object::uid_to_inner(id(perp)),
+            id: object::uid_to_inner(id_v2(perp)),
             delistingPrice: price
         })
-
 
     }
 
@@ -437,7 +685,10 @@ module bluefin_foundation::perpetual {
      * Updates minimum price of the perpetual 
      * Only Admin can update price
      */
-    public entry fun set_min_price( _: &ExchangeAdminCap, perp: &mut Perpetual, minPrice: u128){
+    public entry fun set_min_price_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, minPrice: u128){
+
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
         evaluator::set_min_price(
             object::uid_to_inner(&perp.id), 
             &mut perp.checks, 
@@ -447,7 +698,8 @@ module bluefin_foundation::perpetual {
     /** Updates maximum price of the perpetual 
      * Only Admin can update price
      */
-    public entry fun set_max_price( _: &ExchangeAdminCap, perp: &mut Perpetual, maxPrice: u128){
+    public entry fun set_max_price_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, maxPrice: u128){
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         evaluator::set_max_price(object::uid_to_inner(&perp.id), &mut perp.checks, maxPrice / library::base_uint());
     }   
 
@@ -455,7 +707,8 @@ module bluefin_foundation::perpetual {
      * Updates step size of the perpetual 
      * Only Admin can update size
      */
-    public entry fun set_step_size( _: &ExchangeAdminCap, perp: &mut Perpetual, stepSize: u128){
+    public entry fun set_step_size_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, stepSize: u128){
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         evaluator::set_step_size(object::uid_to_inner(&perp.id), &mut perp.checks, stepSize / library::base_uint());
     }   
 
@@ -463,7 +716,8 @@ module bluefin_foundation::perpetual {
      * Updates tick size of the perpetual 
      * Only Admin can update size
      */
-    public entry fun set_tick_size( _: &ExchangeAdminCap, perp: &mut Perpetual, tickSize: u128){
+    public entry fun set_tick_size_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, tickSize: u128){
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         evaluator::set_tick_size(object::uid_to_inner(&perp.id), &mut perp.checks, tickSize / library::base_uint());
     }   
 
@@ -471,7 +725,8 @@ module bluefin_foundation::perpetual {
      * Updates market take bound (long) of the perpetual 
      * Only Admin can update MTB long
      */
-    public entry fun set_mtb_long( _: &ExchangeAdminCap, perp: &mut Perpetual, mtbLong: u128){
+    public entry fun set_mtb_long_V2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, mtbLong: u128){
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         evaluator::set_mtb_long(object::uid_to_inner(&perp.id), &mut perp.checks, mtbLong / library::base_uint());
     }  
 
@@ -479,7 +734,8 @@ module bluefin_foundation::perpetual {
      * Updates market take bound (short) of the perpetual 
      * Only Admin can update MTB short
      */
-    public entry fun set_mtb_short( _: &ExchangeAdminCap, perp: &mut Perpetual, mtbShort: u128){
+    public entry fun set_mtb_short_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, mtbShort: u128){
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         evaluator::set_mtb_short(object::uid_to_inner(&perp.id), &mut perp.checks, mtbShort / library::base_uint());
     }   
 
@@ -487,7 +743,8 @@ module bluefin_foundation::perpetual {
      * Updates maximum quantity for limit orders of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun set_max_qty_limit( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
+    public entry fun set_max_qty_limit_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, quantity: u128){
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         evaluator::set_max_qty_limit(object::uid_to_inner(&perp.id), &mut perp.checks, quantity / library::base_uint());
     }   
 
@@ -495,7 +752,8 @@ module bluefin_foundation::perpetual {
      * Updates maximum quantity for market orders of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun set_max_qty_market( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
+    public entry fun set_max_qty_market_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, quantity: u128){
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         evaluator::set_max_qty_market(object::uid_to_inner(&perp.id), &mut perp.checks, quantity / library::base_uint());
     }  
 
@@ -503,7 +761,8 @@ module bluefin_foundation::perpetual {
      * Updates minimum quantity of the perpetual 
      * Only Admin can update max qty
      */
-    public entry fun set_min_qty( _: &ExchangeAdminCap, perp: &mut Perpetual, quantity: u128){
+    public entry fun set_min_qty_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, quantity: u128){
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         evaluator::set_min_qty(object::uid_to_inner(&perp.id), &mut perp.checks, quantity / library::base_uint());
     }   
 
@@ -511,8 +770,9 @@ module bluefin_foundation::perpetual {
      * updates max allowed oi open for selected mro
      * Only Admin can update max allowed OI open
      */
-    public entry fun set_max_oi_open( _: &ExchangeAdminCap, perp: &mut Perpetual, maxLimit: vector<u128>){
+    public entry fun set_max_oi_open_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, maxLimit: vector<u128>){
 
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
 
         // convert max oi opens to 1e9
         let maxOIOpen = library::to_1x9_vec(maxLimit);
@@ -524,8 +784,11 @@ module bluefin_foundation::perpetual {
     /*
      * Updates max allowed funding rate to the provided one
      */
-    public entry fun set_max_allowed_funding_rate(_: &ExchangeAdminCap, perp: &mut Perpetual,  maxAllowedFR: u128){
-        let perpID = object::uid_to_inner(id(perp));
+    public entry fun set_max_allowed_funding_rate_v2(_: &ExchangeAdminCap, perp: &mut PerpetualV2,  maxAllowedFR: u128){
+
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
+        let perpID = object::uid_to_inner(id_v2(perp));
         funding_rate::set_max_allowed_funding_rate(
             &mut perp.funding, 
             maxAllowedFR / library::base_uint(), 
@@ -535,13 +798,22 @@ module bluefin_foundation::perpetual {
     /*
      * Allows funding rate operator to set funding rate for current window
      */
-    public entry fun set_funding_rate(clock: &Clock, safe: &CapabilitiesSafe, cap: &FundingRateCap, perp: &mut Perpetual, rate: u128, sign: bool, price_oracle: &PythFeeder){
+    public entry fun set_funding_rate_v2(clock: &Clock, safe: &CapabilitiesSafeV2, cap: &FundingRateCap, perp: &mut PerpetualV2, rate: u128, sign: bool, price_oracle: &PythFeeder){
+        
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+        roles::validate_safe_version(safe);
+
         // verify that the incoming oracle object belongs to the provided perpetual and 
         // update oracle price on the perp and also verig
         update_oracle_price(perp, price_oracle);
 
-        update_global_index(clock, perp);
+        let perpID = object::uid_to_inner(&perp.id);
+        
+        // update global index based on last fuding rate
+        let index = funding_rate::compute_new_global_index(clock, perp.funding, priceOracle_v2(perp));
+        funding_rate::set_global_index(&mut perp.funding, index, perpID);
 
+        
         funding_rate::set_funding_rate(
             safe,
             cap,
@@ -549,14 +821,16 @@ module bluefin_foundation::perpetual {
             rate / library::base_uint(),
             sign,
             clock::timestamp_ms(clock),
-            object::uid_to_inner(&perp.id));
+            perpID);
     }
 
     /**
      * Updates maintenance margin required for the perpetual 
      * Only Admin can update mmr
      */
-    public entry fun set_maintenance_margin_required( _: &ExchangeAdminCap, perp: &mut Perpetual, newMMR: u128){
+    public entry fun set_maintenance_margin_required_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, newMMR: u128){
+        
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
         
         newMMR = newMMR / library::base_uint();
 
@@ -566,7 +840,7 @@ module bluefin_foundation::perpetual {
         perp.mmr = newMMR;
 
         emit(MMRUpdateEvent{
-            id: object::uid_to_inner(id(perp)),
+            id: object::uid_to_inner(id_v2(perp)),
             mmr: newMMR
         });
 
@@ -576,8 +850,10 @@ module bluefin_foundation::perpetual {
      * Updates initial margin required for the perpetual 
      * Only Admin can update imr
      */
-    public entry fun set_initial_margin_required( _: &ExchangeAdminCap, perp: &mut Perpetual, newIMR: u128){
+    public entry fun set_initial_margin_required_v2( _: &ExchangeAdminCap, perp: &mut PerpetualV2, newIMR: u128){
         
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
         newIMR = newIMR / library::base_uint();
 
         assert!(newIMR >= perp.mmr, error::initial_margin_must_be_greater_than_or_equal_to_mmr());
@@ -585,20 +861,12 @@ module bluefin_foundation::perpetual {
         perp.imr = newIMR;
 
         emit(IMRUpdateEvent{
-            id: object::uid_to_inner(id(perp)),
+            id: object::uid_to_inner(id_v2(perp)),
             imr: newIMR
         });
 
     }   
 
-
-    fun update_global_index(clock: &Clock, perp: &mut Perpetual){
-        let perpID = object::uid_to_inner(&perp.id);
-        // update global index based on last fuding rate
-        let index = funding_rate::compute_new_global_index(clock, perp.funding, priceOracle(perp));
-        funding_rate::set_global_index(&mut perp.funding, index, perpID);
-
-    }
 
     /*
      * @notice allows exchange admin to set a specific maker/taker tx fee for a user
@@ -608,12 +876,14 @@ module bluefin_foundation::perpetual {
      * @param makerFee: the maker fee to be charged from user on each tx
      * @param takerFee: the taker fee to be charged from user on each tx
      */
-    public entry fun set_special_fee(_: &ExchangeAdminCap, perp: &mut Perpetual, account: address, status:bool, makerFee: u128, takerFee:u128){
+    public entry fun set_special_fee_v2(_: &ExchangeAdminCap, perp: &mut PerpetualV2, account: address, status:bool, makerFee: u128, takerFee:u128){
+
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
 
         let specialFee = SpecialFee {
                 status,
-                makerFee,
-                takerFee
+                makerFee: makerFee / library::base_uint(),
+                takerFee: takerFee / library::base_uint()
             };
 
         // if table already has an entry update it
@@ -632,25 +902,28 @@ module bluefin_foundation::perpetual {
         };
 
         emit(SpecialFeeEvent{
-            perp: object::uid_to_inner(id(perp)),
+            perp: object::uid_to_inner(id_v2(perp)),
             account,
             status,
-            makerFee,
-            takerFee
+            makerFee: specialFee.makerFee,
+            takerFee: specialFee.takerFee
         });
     }
 
-
+    /// increases the version of perpetual object
+    entry fun increment_perpetual_version(_: &ExchangeAdminCap, perp: &mut PerpetualV2){
+        perp.version = perp.version + 1;
+    }
 
     //===========================================================//
     //                         ORACLE PRICE                      //
     //===========================================================//
 
-    public (friend) fun update_oracle_price(perp: &mut Perpetual, price_oracle: &PythFeeder){
+    public (friend) fun update_oracle_price(perp: &mut PerpetualV2, price_oracle: &PythFeeder){
 
         // verify that the incoming oracle object belongs to the provided perpetual        
         assert!(
-            library::get_price_identifier(price_oracle) == priceIdenfitier(perp), 
+            library::get_price_identifier(price_oracle) == perp.priceIdentifierId, 
             error::wrong_price_identifier());
         
         // update oracle price on the perp
@@ -660,5 +933,92 @@ module bluefin_foundation::perpetual {
 
     }
 
+
+    //===========================================================//
+    //              MIGRATION of V1 Perpetual to V2              //
+    //===========================================================//
+
+    entry fun migrate_perpetual<T>(_: &ExchangeAdminCap, bank: &mut Bank<T>, perp: &mut Perpetual, pos_keys: vector<address>, fee_keys: vector<address>, ctx: &mut TxContext) {
+        
+        let id = object::new(ctx);
+        let perpID =  object::uid_to_inner(&id);
+
+        let perp_v2 = PerpetualV2 {
+            id,
+            version: roles::get_version(),
+            name: perp.name,
+            imr: perp.imr,
+            mmr: perp.mmr,
+            makerFee: perp.makerFee,
+            takerFee: perp.takerFee,
+            insurancePoolRatio: perp.insurancePoolRatio,
+            insurancePool: perp.insurancePool,
+            feePool: perp.feePool,
+            delisted: perp.delisted,
+            delistingPrice: perp.delistingPrice,
+            isTradingPermitted: true,
+            startTime: perp.startTime,
+            checks: perp.checks,
+            positions: table::new<address, UserPosition>(ctx),
+            specialFee: table::new<address, SpecialFee>(ctx),
+            priceOracle: perp.priceOracle,
+            funding: perp.funding,
+            priceIdentifierId: perp.priceIdentifierId,
+        };
+
+        {
+            // copy all positions data from old perp to new perp 
+            let count = vector::length(&pos_keys);
+            let i = 0;
+            while (i < count){
+                let addr = *vector::borrow(&pos_keys, i);
+                let position = *table::borrow(&perp.positions, addr);
+                table::add(&mut perp_v2.positions, addr, position);
+                i = i+1;
+            };
+        };
+
+        {
+            // copy all special fee data from old perp to new perp 
+            let count = vector::length(&fee_keys);
+            let i = 0;
+            while (i < count){
+                let addr = *vector::borrow(&fee_keys, i);
+                let special_fee = *table::borrow(&perp.specialFee, addr);
+                table::add(&mut perp_v2.specialFee, addr, special_fee);
+                i = i+1;
+            };
+
+        };
+       
+        // create bank account for our new perpetual
+        margin_bank::initialize_account(
+            margin_bank::mut_accounts(bank), 
+            object::id_to_address(&perpID),
+        );
+        
+        // move all money from old perpetual address to new perp;
+        // get balance of perp in V1 bank
+        let total_perp_balance = margin_bank::get_balance(
+            bank, 
+            object::id_to_address(&object::uid_to_inner(&perp.id))
+        );
+
+        // using v1 transfer_margin_to_account as Bank is V1
+        margin_bank::transfer_margin_to_account(
+            bank,
+            object::id_to_address(&object::uid_to_inner(&perp.id)),
+            object::id_to_address(&perpID),
+            total_perp_balance,
+            2,
+        );
+
+        // share the object
+        transfer::share_object(perp_v2);
+
+        // de-list the old perpetual
+        perp.delisted = true;
+        perp.delistingPrice = 0;
+    } 
 
 }

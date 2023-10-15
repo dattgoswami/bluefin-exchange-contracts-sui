@@ -18,11 +18,7 @@ import {
     expect
 } from "./helpers";
 
-import {
-    getBankTable,
-    getGenesisMap,
-    packDeploymentData
-} from "../src/deployment";
+import { getGenesisMap, packDeploymentData } from "../src/deployment";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -48,24 +44,17 @@ describe("Margin Bank", () => {
             packageName
         );
         const objects = await getGenesisMap(provider, publishTxn);
-        const deployment = {
-            deployer: ownerAddress,
-            objects: objects
-        };
-        const deploymentData = packDeploymentData(
+
+        let deploymentData = packDeploymentData(
             await ownerSigner.getAddress(),
             objects
         );
         const coinPackageId = deploymentData["objects"]["package"]["id"];
 
-        deploymentData["objects"]["Bank"] = await postDeployment(
+        deploymentData = await postDeployment(
             ownerSigner,
             deploymentData,
             coinPackageId
-        );
-        deploymentData["objects"]["BankTable"] = await getBankTable(
-            provider,
-            deploymentData
         );
 
         onChain = new OnChainCalls(ownerSigner, deploymentData);

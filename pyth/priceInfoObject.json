@@ -11,7 +11,7 @@
     "local": { "feed_id": "", "object_id": "" },
     "devnet": {
       "feed_id": "c6c75c89f14810ec1c54c03ab8f1864a4c4032791f05747f560faec380a695d1",
-      "object_id": "0xa5d841848939057727a1ffad14e184351e90bc8f191ff658028a36f107a7f8d2"
+      "object_id": "0x88889c25d48576ec5cb2e539cfe57c1656a30e7fb63f764bad4cc6fa3caca426"
     }
   },
   "BTC-PERP": {
@@ -26,7 +26,7 @@
     "local": { "feed_id": "", "object_id": "" },
     "devnet": {
       "feed_id": "3b9551a68d01d954d6387aff4df1529027ffb2fee413082e509feb29cc4904fe",
-      "object_id": "0xbedf055ccd0323e6ecb3a9039e6b14165411afe82e0bd3778c8d22a2241405f7"
+      "object_id": "0x90b10f83349baae7e996311653ccd462b65d05a8ddbac2e05750adf212010497"
     }
   },
   "mainnet_pyth": {

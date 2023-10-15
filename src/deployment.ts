@@ -66,6 +66,12 @@ export async function getGenesisMap(
         if (dataType.endsWith(">") && dataType.indexOf("<") == -1) {
             dataType = dataType.slice(0, dataType.length - 1);
         }
+
+        // removing V2 from data type
+        if (dataType.endsWith("V2")) {
+            dataType = dataType.split("V2")[0];
+        }
+
         map[dataType] = {
             id,
             owner,

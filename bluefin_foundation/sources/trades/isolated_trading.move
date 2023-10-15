@@ -8,14 +8,14 @@ module bluefin_foundation::isolated_trading {
 
 
     // custom modules
-    use bluefin_foundation::perpetual::{Self, Perpetual};
+    use bluefin_foundation::perpetual::{Self, PerpetualV2};
     use bluefin_foundation::position::{Self, UserPosition};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::order::{Self, Order, OrderStatus};
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::error::{Self};
-    use bluefin_foundation::roles::{SubAccounts};
+    use bluefin_foundation::roles::{SubAccountsV2};
 
     // friend modules
     friend bluefin_foundation::exchange;
@@ -25,6 +25,26 @@ module bluefin_foundation::isolated_trading {
     //===========================================================//
 
     struct TradeExecuted has copy, drop {
+        sender:address,
+        perpID: ID,
+        tradeType: u8,
+        maker: address,
+        taker: address,
+        makerOrderHash: vector<u8>,
+        takerOrderHash: vector<u8>,
+        makerMRO: u128,
+        takerMRO: u128,
+        makerFee: u128,
+        takerFee: u128,
+        makerPnl: Number,
+        takerPnl: Number,
+        tradeQuantity: u128,
+        tradePrice: u128,
+        isBuy: bool
+    }
+
+    struct TradeExecutedV2 has copy, drop {
+        tx_index:u128,
         sender:address,
         perpID: ID,
         tradeType: u8,
@@ -107,10 +127,12 @@ module bluefin_foundation::isolated_trading {
     // @dev only exchange module can invoke this
     public (friend) fun trade(
         sender: address, 
-        perp: &mut Perpetual,
+        perp: &mut PerpetualV2,
         ordersTable: &mut Table<vector<u8>,OrderStatus>,
-        subAccounts: &SubAccounts,
-        data1x18: TradeData):TradeResponse
+        subAccounts: &SubAccountsV2,
+        data1x18: TradeData,
+        tx_index: u128
+        ):TradeResponse
         {
             let data = data1x18;
 
@@ -137,16 +159,16 @@ module bluefin_foundation::isolated_trading {
                 order::isBuy(*takerOrder),
                 error::order_cannot_be_of_same_side());
 
-            let oraclePrice = perpetual::priceOracle(perp);
-            let tradeChecks = perpetual::checks(perp);
+            let oraclePrice = perpetual::priceOracle_v2(perp);
+            let tradeChecks = perpetual::checks_v2(perp);
 
             // get maker taker fee
-            let makerFee = perpetual::get_fee(order::maker(*makerOrder), perp, true);
-            let takerFee = perpetual::get_fee(order::maker(*takerOrder), perp, false);
+            let makerFee = perpetual::get_fee_v2(order::maker(*makerOrder), perp, true);
+            let takerFee = perpetual::get_fee_v2(order::maker(*takerOrder), perp, false);
 
-            let perpID = object::uid_to_inner(perpetual::id(perp));
-            let imr = perpetual::imr(perp);
-            let mmr = perpetual::mmr(perp);
+            let perpID = object::uid_to_inner(perpetual::id_v2(perp));
+            let imr = perpetual::imr_v2(perp);
+            let mmr = perpetual::mmr_v2(perp);
             let positionsTable = perpetual::positions(perp);
 
 
@@ -179,8 +201,8 @@ module bluefin_foundation::isolated_trading {
             let initTakerPos = *table::borrow(positionsTable, order::maker(*takerOrder));
 
             // Validate orders are correct and can be executed for the trade
-            verify_order(initMakerPos, ordersTable, subAccounts, *makerOrder, makerOrderSerialized, makerHash, makerSignature, makerPublicKey, fill, currentTime, 0);
-            verify_order(initTakerPos, ordersTable, subAccounts, *takerOrder, takerOrderSerialized, takerHash, takerSignature, takerPublicKey, fill, currentTime, 1);
+            verify_order(initMakerPos, ordersTable, subAccounts, *makerOrder, makerOrderSerialized, makerHash, makerSignature, makerPublicKey, fill, currentTime, 0, tx_index);
+            verify_order(initTakerPos, ordersTable, subAccounts, *takerOrder, takerOrderSerialized, takerHash, takerSignature, takerPublicKey, fill, currentTime, 1, tx_index);
 
             // verify pre-trade checks
             evaluator::verify_price_checks(tradeChecks, fill.price);
@@ -238,10 +260,11 @@ module bluefin_foundation::isolated_trading {
                 TRADE_TYPE, 
                 1);           
 
-            position::emit_position_update_event(newMakerPosition, sender, ACTION_TRADE);
-            position::emit_position_update_event(newTakerPosition, sender, ACTION_TRADE);
+            position::emit_position_update_event(newMakerPosition, sender, ACTION_TRADE, tx_index);
+            position::emit_position_update_event(newTakerPosition, sender, ACTION_TRADE, tx_index);
     
-            emit(TradeExecuted{
+            emit(TradeExecutedV2{
+                tx_index,
                 sender,
                 perpID,
                 tradeType: TRADE_TYPE,
@@ -265,7 +288,7 @@ module bluefin_foundation::isolated_trading {
                 makerFundsFlow: makerResponse.fundsFlow,
                 takerFundsFlow: takerResponse.fundsFlow,
                 fee: takerResponse.fee + makerResponse.fee
-            }          
+            }    
     }
 
     //===========================================================//
@@ -334,7 +357,7 @@ module bluefin_foundation::isolated_trading {
     //                      HELPER METHODS
     //===========================================================//
     
-    fun verify_order(pos: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccounts, userOrder: Order, orderSerialized: vector<u8>, hash: vector<u8>, signature: vector<u8>, publicKey: vector<u8>, fill:Fill, currentTime: u64, isTaker: u64){
+    fun verify_order(pos: UserPosition, ordersTable: &mut Table<vector<u8>, OrderStatus>, subAccounts: &SubAccountsV2, userOrder: Order, orderSerialized: vector<u8>, hash: vector<u8>, signature: vector<u8>, publicKey: vector<u8>, fill:Fill, currentTime: u64, isTaker: u64, tx_index: u128){
 
             // if a taker order, must have post only false else
             // it can only be a maker order
@@ -359,7 +382,9 @@ module bluefin_foundation::isolated_trading {
                 position::isPosPositive(pos),
                 position::qPos(pos),
                 sigMaker,
-                isTaker);
+                isTaker,
+                tx_index
+            );
     }
 
     /*

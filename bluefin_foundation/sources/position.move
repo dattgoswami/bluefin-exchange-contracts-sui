@@ -32,6 +32,21 @@ module bluefin_foundation::position {
         amount: u128,
     }
 
+
+    struct AccountPositionUpdateEventV2 has copy, drop {
+        tx_index: u128,
+        position:UserPosition,
+        sender: address,
+        action: u8
+    }
+
+    struct PositionClosedEventV2 has copy, drop{
+        tx_index: u128,
+        perpID: ID,
+        account: address,
+        amount: u128,
+    }
+
     //===========================================================//
     //                           STORAGE                         //
     //===========================================================//
@@ -192,16 +207,17 @@ module bluefin_foundation::position {
 
     }   
 
-    public (friend) fun emit_position_update_event(position: UserPosition, sender:address, action:u8){
-        emit (AccountPositionUpdateEvent{
+    public (friend) fun emit_position_update_event(position: UserPosition, sender:address, action:u8, tx_index:u128){
+        emit (AccountPositionUpdateEventV2{
+            tx_index,
             position,
             sender,
             action
         });
     }
 
-    public (friend) fun emit_position_closed_event(perpID:ID, account:address, amount: u128){
-        emit(PositionClosedEvent{perpID, account, amount});
+    public (friend) fun emit_position_closed_event(perpID:ID, account:address, amount: u128, tx_index: u128){
+        emit(PositionClosedEventV2{tx_index, perpID, account, amount});
     }
 
 

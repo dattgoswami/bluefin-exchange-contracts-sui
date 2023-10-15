@@ -223,12 +223,8 @@ export async function executeTests(
                         // set oracle price if need be
                         if (oraclePrice != lastOraclePrice) {
                             const priceTx = await onChain.setOraclePrice({
-                                price: oraclePrice,
-                                pythPackageId: pythPackagId,
-                                priceInfoFeedId:
-                                    pythObj["ETH-PERP"][
-                                        process.env.DEPLOY_ON as string
-                                    ]["feed_id"]
+                                price: 1800,
+                                market: "ETH-PERP"
                             });
                             expectTxToSucceed(priceTx);
                             lastOraclePrice = oraclePrice;

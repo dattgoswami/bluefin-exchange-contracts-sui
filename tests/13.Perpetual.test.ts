@@ -27,8 +27,6 @@ import {
 const provider = getProvider(network.rpc, network.faucet);
 
 const pythObj = readFile("./pyth/priceInfoObject.json");
-const pythPackage = readFile("./pythFakeDeployment.json");
-const pythPackagId = pythPackage.objects.package.id;
 
 describe("Perpetual", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
@@ -389,12 +387,7 @@ describe("Perpetual", () => {
             const settlementCapID = Transaction.getCreatedObjectIDs(txs)[0];
 
             const priceTx = await onChain.setOraclePrice({
-                price: 100,
-                pythPackageId: pythPackagId,
-                priceInfoFeedId:
-                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
-                        "feed_id"
-                    ]
+                price: 100
             });
 
             expectTxToSucceed(priceTx);
@@ -453,12 +446,7 @@ describe("Perpetual", () => {
             await mintAndDeposit(onChain, bob.address, 2000);
 
             const priceTx = await onChain.setOraclePrice({
-                price: 1,
-                pythPackageId: pythPackagId,
-                priceInfoFeedId:
-                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
-                        "feed_id"
-                    ]
+                price: 1
             });
 
             expectTxToSucceed(priceTx);
@@ -627,12 +615,7 @@ describe("Perpetual", () => {
 
             // set oracle price
             const priceTx = await onChain.setOraclePrice({
-                price: 100,
-                pythPackageId: pythPackagId,
-                priceInfoFeedId:
-                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
-                        "feed_id"
-                    ]
+                price: 100
             });
 
             expectTxToSucceed(priceTx);
@@ -791,12 +774,7 @@ describe("Perpetual", () => {
             await mintAndDeposit(onChain, bob.address, 2000);
 
             const priceTx = await onChain.setOraclePrice({
-                price: 100,
-                pythPackageId: pythPackagId,
-                priceInfoFeedId:
-                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
-                        "feed_id"
-                    ]
+                price: 100
             });
 
             expectTxToSucceed(priceTx);

@@ -50,17 +50,14 @@ describe("Guardian", () => {
             packageName
         );
         const objects = await getGenesisMap(provider, publishTxn);
-        const deployment = packDeploymentData(ownerAddress, objects);
+        let deployment = packDeploymentData(ownerAddress, objects);
         const coinPackageId = deployment["objects"]["package"]["id"];
-        deployment["objects"]["Bank"] = await postDeployment(
+        deployment = await postDeployment(
             ownerSigner,
             deployment,
             coinPackageId
         );
-        deployment["objects"]["BankTable"] = await getBankTable(
-            provider,
-            deployment
-        );
+
         const enrichedDeployment = {
             ...deployment,
             markets: {

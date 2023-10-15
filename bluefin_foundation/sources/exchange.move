@@ -6,13 +6,12 @@ module bluefin_foundation::exchange {
     use sui::tx_context::{Self, TxContext};
     use sui::table::{Self, Table};
     use sui::event::{emit};
-    use sui::transfer;
 
 
     // custom modules
     use bluefin_foundation::position::{Self, UserPosition};
-    use bluefin_foundation::perpetual::{Self, Perpetual, SpecialFee};
-    use bluefin_foundation::margin_bank::{Self, Bank};
+    use bluefin_foundation::perpetual::{Self, PerpetualV2};
+    use bluefin_foundation::margin_bank::{Self, BankV2};
     use bluefin_foundation::order::{Self, OrderStatus};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::funding_rate::{Self};
@@ -25,10 +24,11 @@ module bluefin_foundation::exchange {
     use bluefin_foundation::roles::{
         Self, 
         ExchangeAdminCap, 
-        CapabilitiesSafe,
+        CapabilitiesSafeV2,
         SettlementCap,
         DeleveragingCap,
-        SubAccounts,
+        SubAccountsV2,
+        Sequencer,
         };
 
     // traders
@@ -88,10 +88,39 @@ module bluefin_foundation::exchange {
     }
 
 
+    struct LiquidatorPaidForAccountSettlementEvnetV2 has copy, drop {
+        tx_index:u128,
+        id: ID,
+        liquidator: address,
+        account: address,
+        amount: u128
+    }
 
-    //===========================================================//
-    //                      INITIALIZATION
-    //===========================================================//
+    /// @notice emitted when oi open of account < settlement amount during adl trade
+    struct SettlementAmountNotPaidCompletelyEventV2 has copy, drop {
+        tx_index:u128,
+        account: address,
+        amount: u128
+    }
+
+    /// @notice emitted when oi open of account < settlement amount during adl trade
+    struct SettlementAmtDueByMakerEventV2 has copy, drop {
+        tx_index:u128,
+        account: address,
+        amount: u128
+    }
+
+    /// @notice emitted when oi open of account < settlement amount during adl trade
+    struct AccountSettlementUpdateEventV2 has copy, drop {
+        tx_index:u128,
+        account: address,
+        balance: UserPosition,
+        settlementIsPositive: bool,
+        settlementAmount: u128,
+        price: u128,
+        fundingRate: Number
+    }
+
     
     //===========================================================//
     //                      ENTRY METHODS                        //
@@ -105,7 +134,7 @@ module bluefin_foundation::exchange {
      */
     entry fun create_perpetual<T>(
         _: &ExchangeAdminCap,
-        bank: &mut Bank<T>,
+        bank: &mut BankV2<T>,
 
         name: vector<u8>, 
         minPrice: u128,
@@ -131,6 +160,8 @@ module bluefin_foundation::exchange {
         ctx: &mut TxContext
         ){
 
+        assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
+
         // input values are in 1e18, convert to 1e9
         minPrice = minPrice / library::base_uint();
         maxPrice = maxPrice / library::base_uint();
@@ -151,10 +182,6 @@ module bluefin_foundation::exchange {
 
         // convert max oi opens to 1e9
         let maxOIOpen = library::to_1x9_vec(maxAllowedOIOpen);
-
-        let positions = table::new<address, UserPosition>(ctx);
-
-        let specialFee = table::new<address, SpecialFee>(ctx);
 
         // creates perpetual and shares it
         let perpID = perpetual::initialize(
@@ -178,27 +205,25 @@ module bluefin_foundation::exchange {
             maxAllowedFR,
             startTime,
             maxOIOpen,
-            positions,
-            specialFee,
             priceIdentifierId,
             ctx
         );
 
         // create bank account for perpetual
         margin_bank::initialize_account(
-            margin_bank::mut_accounts(bank), 
+            margin_bank::mut_accounts_v2(bank), 
             object::id_to_address(&perpID),
         );
 
         // create bank account for insurance pool of perpetual
         margin_bank::initialize_account(
-            margin_bank::mut_accounts(bank), 
+            margin_bank::mut_accounts_v2(bank), 
             insurancePool,
         );
 
         // create bank account for fee pool of perpetual
         margin_bank::initialize_account(
-            margin_bank::mut_accounts(bank), 
+            margin_bank::mut_accounts_v2(bank), 
             feePool,
         );
 
@@ -213,13 +238,16 @@ module bluefin_foundation::exchange {
      */ 
     entry fun trade<T>(
         clock: &Clock,
-        perp: &mut Perpetual, 
-        bank: &mut Bank<T>, 
-        safe: &CapabilitiesSafe,
-        cap: &SettlementCap,
-
-        subAccounts: &SubAccounts, 
+        perp: &mut PerpetualV2, 
+        bank: &mut BankV2<T>, 
+        safe: &CapabilitiesSafeV2,
+        subAccounts: &SubAccountsV2, 
         ordersTable: &mut Table<vector<u8>, OrderStatus>,
+        sequencer: &mut Sequencer,
+        cap: &SettlementCap,
+        
+        // pyth oracle
+        price_oracle: &PythFeeder,
 
         // maker
         makerFlags:u8,
@@ -247,12 +275,18 @@ module bluefin_foundation::exchange {
         quantity: u128, 
         price: u128, 
 
-        // pyth oracle object
-        price_oracle: &PythFeeder,
-        
+        // a unique tx hash
+        tx_hash: vector<u8>,
+
         ctx: &mut TxContext
         ){
 
+            assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
+            assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
+            roles::validate_sub_accounts_version(subAccounts);
+            roles::validate_safe_version(safe);
+
+            let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
 
             // checks that provided price oracle is correct and updates perpetual with new price
             perpetual::update_oracle_price(perp, price_oracle);
@@ -260,14 +294,14 @@ module bluefin_foundation::exchange {
             let sender = tx_context::sender(ctx);
 
             // ensure perpetual is not delisted
-            assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+            assert!(!perpetual::delisted_v2(perp), error::perpetual_is_delisted());
 
             // ensure trading is allowed on the perp
-            assert!(perpetual::is_trading_permitted(perp), error::trading_is_stopped_on_perpetual());
+            assert!(perpetual::is_trading_permitted_v2(perp), error::trading_is_stopped_on_perpetual());
 
             // ensure trading is started
             assert!(
-                clock::timestamp_ms(clock) > perpetual::startTime(perp), 
+                clock::timestamp_ms(clock) > perpetual::startTime_v2(perp), 
                 error::trading_not_started());
 
             
@@ -275,19 +309,19 @@ module bluefin_foundation::exchange {
             // orderbook, it should only be executed by a settlement operator
             if (order::flag_orderbook_only(makerFlags) || order::flag_orderbook_only(takerFlags)){
                 // only settlement operators can trade
-                roles::check_settlement_operator_validity(safe, cap);
+                roles::check_settlement_operator_validity_v2(safe, cap);
             } else {
                 // ensure that capability provided is public settlement cap
-                roles::check_public_settlement_cap_validity(safe, cap);
+                roles::check_public_settlement_cap_validity_v2(safe, cap);
 
                 // the sender must be the taker or a sub account of taker
-                assert!(sender == takerAddress || roles::is_sub_account(subAccounts, takerAddress, sender),
+                assert!(sender == takerAddress || roles::is_sub_account_v2(subAccounts, takerAddress, sender),
                     error::only_taker_of_trade_can_execute_trade_involving_non_orderbook_orders()
                 );
             }; 
         
 
-            let perpID = object::uid_to_inner(perpetual::id(perp));
+            let perpID = object::uid_to_inner(perpetual::id_v2(perp));
             let perpAddress = object::id_to_address(&perpID);
 
             // if maker/taker positions don't exist create them
@@ -296,6 +330,7 @@ module bluefin_foundation::exchange {
 
             // apply funding rate to maker
             apply_funding_rate(
+                tx_index,
                 bank,
                 perp,
                 sender,
@@ -306,6 +341,7 @@ module bluefin_foundation::exchange {
 
             // apply funding rate to taker
             apply_funding_rate(
+                tx_index,
                 bank,
                 perp,
                 sender,
@@ -349,7 +385,7 @@ module bluefin_foundation::exchange {
             );
             
 
-            let tradeResponse = isolated_trading::trade(sender, perp, ordersTable, subAccounts, data);
+            let tradeResponse = isolated_trading::trade(sender, perp, ordersTable, subAccounts, data, tx_index);
 
 
             // transfer margins between perp and accounts
@@ -359,18 +395,20 @@ module bluefin_foundation::exchange {
                 makerAddress,
                 takerAddress,
                 isolated_trading::makerFundsFlow(tradeResponse),
-                isolated_trading::takerFundsFlow(tradeResponse)
+                isolated_trading::takerFundsFlow(tradeResponse),
+                tx_index
             );
 
             // transfer fee to fee pool from perpetual
             let fee = isolated_trading::fee(tradeResponse);
             if(fee > 0 ){
-                margin_bank::transfer_margin_to_account(
+                margin_bank::transfer_margin_to_account_v2(
                     bank, 
                     perpAddress, 
-                    perpetual::feePool(perp), 
+                    perpetual::feePool_v2(perp), 
                     fee, 
-                    2
+                    2,
+                    tx_index
                 );
             }
     }
@@ -381,9 +419,12 @@ module bluefin_foundation::exchange {
      */ 
     entry fun liquidate<T>(
         clock: &Clock,
-        perp: &mut Perpetual,
-        bank: &mut Bank<T>, 
-        subAccounts: &SubAccounts,
+        perp: &mut PerpetualV2,
+        bank: &mut BankV2<T>, 
+        subAccounts: &SubAccountsV2,
+        sequencer: &mut Sequencer,
+        // pyth oracle object
+        price_oracle: &PythFeeder,
 
         // address of account to be liquidated
         liquidatee: address,
@@ -395,12 +436,18 @@ module bluefin_foundation::exchange {
         leverage: u128,
         // all of nothing
         allOrNothing: bool,
-        // pyth oracle object
-        price_oracle: &PythFeeder,
+
+        tx_hash: vector<u8>,
 
         ctx: &mut TxContext        
 
     ){
+
+        assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
+        assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
+        roles::validate_sub_accounts_version(subAccounts);
+        
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
 
         quantity = quantity / library::base_uint();
         leverage = leverage / library::base_uint();
@@ -409,24 +456,24 @@ module bluefin_foundation::exchange {
         perpetual::update_oracle_price(perp, price_oracle);
 
         // ensure perpetual is not delisted
-        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+        assert!(!perpetual::delisted_v2(perp), error::perpetual_is_delisted());
 
         // ensure trading is allowed on the perp
-        assert!(perpetual::is_trading_permitted(perp), error::trading_is_stopped_on_perpetual());
+        assert!(perpetual::is_trading_permitted_v2(perp), error::trading_is_stopped_on_perpetual());
 
         // ensure trading is started
-        assert!(clock::timestamp_ms(clock) > perpetual::startTime(perp), error::trading_not_started());
+        assert!(clock::timestamp_ms(clock) > perpetual::startTime_v2(perp), error::trading_not_started());
 
         let sender = tx_context::sender(ctx);
 
 
         // check if caller has permission to trade on taker's behalf
         assert!(
-            sender == liquidator || roles::is_sub_account(subAccounts, liquidator, sender),
+            sender == liquidator || roles::is_sub_account_v2(subAccounts, liquidator, sender),
             error::sender_does_not_have_permission_for_account(1));
 
 
-        let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpID = object::uid_to_inner(perpetual::id_v2(perp));
         let perpAddress = object::id_to_address(&perpID);
 
         // create liquidatee/liquidator position if not exists
@@ -435,6 +482,7 @@ module bluefin_foundation::exchange {
 
         // apply funding rate to maker
         apply_funding_rate(
+            tx_index,
             bank,
             perp,
             sender,
@@ -445,6 +493,7 @@ module bluefin_foundation::exchange {
 
         // apply funding rate to taker
         apply_funding_rate(
+            tx_index,
             bank,
             perp,
             sender,
@@ -460,7 +509,7 @@ module bluefin_foundation::exchange {
             leverage,
             allOrNothing);
 
-        let tradeResponse = isolated_liquidation::trade(sender, perp, data);
+        let tradeResponse = isolated_liquidation::trade(sender, perp, data, tx_index);
 
         // transfer premium amount between perpetual/liquidator 
         // and insurance pool
@@ -471,35 +520,38 @@ module bluefin_foundation::exchange {
         // if liquidator's portion is positive
         if(signed_number::gt_uint(liqPortion, 0)){
             // transfer percentage of premium to liquidator
-            margin_bank::transfer_margin_to_account(
+            margin_bank::transfer_margin_to_account_v2(
                 bank,
                 perpAddress,
                 liquidator,
                 signed_number::value(liqPortion), 
-                2, 
+                2,
+                tx_index
             )
         }
         // if negative, implies under water/bankrupt liquidation
         else if(signed_number::lt_uint(liqPortion, 0)){
             // transfer negative liquidation premium from liquidator to perpetual
-            margin_bank::transfer_margin_to_account(
+            margin_bank::transfer_margin_to_account_v2(
                 bank,
                 liquidator,
                 perpAddress,
                 signed_number::value(liqPortion), 
-                1, 
+                1,
+                tx_index
             )
         };
 
         // insurance pool portion
         if(signed_number::gt_uint(poolPortion, 0)){
             // transfer percentage of premium to insurance pool
-            margin_bank::transfer_margin_to_account(
+            margin_bank::transfer_margin_to_account_v2(
                 bank,
                 perpAddress,
-                perpetual::insurancePool(perp),
+                perpetual::insurancePool_v2(perp),
                 signed_number::value(poolPortion), 
-                2, 
+                2,
+                tx_index 
             )
         };
 
@@ -510,7 +562,8 @@ module bluefin_foundation::exchange {
             liquidatee,
             liquidator,
             isolated_liquidation::makerFundsFlow(tradeResponse),
-            isolated_liquidation::takerFundsFlow(tradeResponse)
+            isolated_liquidation::takerFundsFlow(tradeResponse),
+            tx_index
         );
         
      }
@@ -522,10 +575,14 @@ module bluefin_foundation::exchange {
      */
      entry fun deleverage<T>(
         clock: &Clock,
-        perp: &mut Perpetual, 
-        bank: &mut Bank<T>, 
-        safe: &CapabilitiesSafe,
+        perp: &mut PerpetualV2, 
+        bank: &mut BankV2<T>, 
+        safe: &CapabilitiesSafeV2,
+        sequencer: &mut Sequencer,
         cap: &DeleveragingCap,
+
+        // price oracle object
+        price_oracle: &PythFeeder,
 
         // below water account to be deleveraged
         maker: address,
@@ -535,11 +592,18 @@ module bluefin_foundation::exchange {
         quantity: u128,
         // if true, will revert if maker's position is less than the amount
         allOrNothing: bool,
-        // price oracle object
-        price_oracle: &PythFeeder,
+
+        tx_hash: vector<u8>,
+
         // sender's context
         ctx: &mut TxContext
     ){
+
+        assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
+        assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
+        roles::validate_safe_version(safe);
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
 
         quantity = quantity / library::base_uint();
 
@@ -547,18 +611,18 @@ module bluefin_foundation::exchange {
         perpetual::update_oracle_price(perp, price_oracle);
 
         // ensure perpetual is not delisted
-        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+        assert!(!perpetual::delisted_v2(perp), error::perpetual_is_delisted());
 
         // ensure trading is allowed on the perp
-        assert!(perpetual::is_trading_permitted(perp), error::trading_is_stopped_on_perpetual());
+        assert!(perpetual::is_trading_permitted_v2(perp), error::trading_is_stopped_on_perpetual());
 
         // ensure trading is allowed on the perp
-        assert!(clock::timestamp_ms(clock) > perpetual::startTime(perp), error::trading_not_started());
+        assert!(clock::timestamp_ms(clock) > perpetual::startTime_v2(perp), error::trading_not_started());
 
-        roles::check_delevearging_operator_validity(safe, cap);
+        roles::check_delevearging_operator_validity_v2(safe, cap);
 
         let sender = tx_context::sender(ctx);
-        let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpID = object::uid_to_inner(perpetual::id_v2(perp));
         let perpAddress = object::id_to_address(&perpID);
 
         // create maker/taker position if not exists
@@ -568,6 +632,7 @@ module bluefin_foundation::exchange {
 
         // apply funding rate to maker
         apply_funding_rate(
+            tx_index,
             bank,
             perp,
             sender,
@@ -578,6 +643,7 @@ module bluefin_foundation::exchange {
 
         // apply funding rate to taker
         apply_funding_rate(
+            tx_index,
             bank,
             perp,
             sender,
@@ -587,14 +653,13 @@ module bluefin_foundation::exchange {
         );
 
 
-
         let data = isolated_adl::pack_trade_data(
             maker,
             taker,
             quantity,
             allOrNothing);
 
-        let tradeResponse = isolated_adl::trade(sender, perp, data);
+        let tradeResponse = isolated_adl::trade(sender, perp, data, tx_index);
         
         // transfer margins between perp and accounts
         margin_bank::transfer_trade_margin(
@@ -603,7 +668,8 @@ module bluefin_foundation::exchange {
             maker,
             taker,
             isolated_adl::makerFundsFlow(tradeResponse),
-            isolated_adl::takerFundsFlow(tradeResponse)
+            isolated_adl::takerFundsFlow(tradeResponse),
+            tx_index
         );
 
     }
@@ -615,7 +681,14 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to add margin to their position
      */
-    entry fun add_margin<T>(perp: &mut Perpetual, bank: &mut Bank<T>, subAccounts: &SubAccounts, user:address, amount: u128, price_oracle: &PythFeeder ,ctx: &mut TxContext){
+    entry fun add_margin<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user:address, amount: u128, tx_hash: vector<u8>,  ctx: &mut TxContext){
+
+
+        assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
+        assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
+        roles::validate_sub_accounts_version(subAccounts);
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
 
         amount = amount / library::base_uint();
 
@@ -626,18 +699,18 @@ module bluefin_foundation::exchange {
 
         // check if caller has permission for account
         assert!(
-            caller == user || roles::is_sub_account(subAccounts, user, caller),
+            caller == user || roles::is_sub_account_v2(subAccounts, user, caller),
             error::sender_does_not_have_permission_for_account(2)
             );
 
         // ensure perpetual is not delisted
-        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+        assert!(!perpetual::delisted_v2(perp), error::perpetual_is_delisted());
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
 
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
 
-        let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpID = object::uid_to_inner(perpetual::id_v2(perp));
         let perpAddress = object::id_to_address(&perpID);
 
         let balance = table::borrow_mut(perpetual::positions(perp), user);
@@ -648,21 +721,23 @@ module bluefin_foundation::exchange {
         assert!(qPos > 0, error::user_position_size_is_zero(2));
 
         // Transfer margin amount from user to perpetual in margin bank
-        margin_bank::transfer_margin_to_account(
+        margin_bank::transfer_margin_to_account_v2(
             bank,
             user, 
             perpAddress, 
             amount,
-            3
+            3,
+            tx_index
         );
 
         // update margin of user in storage
         position::set_margin(balance, margin + amount);
         
-        position::emit_position_update_event(*balance, caller, ACTION_ADD_MARGIN);
+        position::emit_position_update_event(*balance, caller, ACTION_ADD_MARGIN, tx_index);
 
         // user must add enough margin that can pay for its all settlement dues
         apply_funding_rate(
+            tx_index,
             bank,
             perp,
             user,
@@ -675,8 +750,14 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to remove margin from their position
      */
-    entry fun remove_margin<T>(perp: &mut Perpetual, bank: &mut Bank<T>, subAccounts: &SubAccounts, user: address, amount: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
+    entry fun remove_margin<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user: address, amount: u128, tx_hash: vector<u8>, ctx: &mut TxContext){
         
+        assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
+        assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
+        roles::validate_sub_accounts_version(subAccounts);
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
+
         amount = amount / library::base_uint();
 
         // checks that provided price oracle is correct and updates perpetual with new price
@@ -686,20 +767,20 @@ module bluefin_foundation::exchange {
 
         // check if caller has permission for account
         assert!(
-            caller == user || roles::is_sub_account(subAccounts, user, caller),
+            caller == user || roles::is_sub_account_v2(subAccounts, user, caller),
             error::sender_does_not_have_permission_for_account(2)
             );
 
         // ensure perpetual is not delisted
-        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+        assert!(!perpetual::delisted_v2(perp), error::perpetual_is_delisted());
 
         assert!(amount > 0, error::margin_amount_must_be_greater_than_zero());
 
-        let priceOracle = perpetual::priceOracle(perp);
+        let priceOracle = perpetual::priceOracle_v2(perp);
 
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
-        let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpID = object::uid_to_inner(perpetual::id_v2(perp));
         let perpAddress = object::id_to_address(&perpID);
 
         let initBalance = *table::borrow(perpetual::positions(perp), user);
@@ -716,12 +797,13 @@ module bluefin_foundation::exchange {
         assert!(amount <= maxRemovableAmount, error::margin_must_be_less_than_max_removable_margin());
         
         // transfer margin amount from perpetual to user address in margin bank
-        margin_bank::transfer_margin_to_account(
+        margin_bank::transfer_margin_to_account_v2(
             bank,
             perpAddress, 
             user, 
             amount,
-            2
+            2,
+            tx_index
         );
 
 
@@ -730,6 +812,7 @@ module bluefin_foundation::exchange {
 
         // user must have enough margin to pay for their settlement dues
         apply_funding_rate(
+            tx_index,
             bank,
             perp,
             user,
@@ -743,21 +826,27 @@ module bluefin_foundation::exchange {
         position::verify_collat_checks(
             initBalance, 
             currBalance, 
-            perpetual::imr(perp), 
-            perpetual::mmr(perp), 
+            perpetual::imr_v2(perp), 
+            perpetual::mmr_v2(perp), 
             priceOracle, 
             0, 
             0);
             
-        position::emit_position_update_event(currBalance, caller, ACTION_REMOVE_MARGIN);
+        position::emit_position_update_event(currBalance, caller, ACTION_REMOVE_MARGIN, tx_index);
 
     }
 
     /**
      * Allows caller to adjust their leverage
      */
-    entry fun adjust_leverage<T>(perp: &mut Perpetual, bank: &mut Bank<T>, subAccounts: &SubAccounts, user: address, leverage: u128, price_oracle: &PythFeeder, ctx: &mut TxContext){
+    entry fun adjust_leverage<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user: address, leverage: u128, tx_hash: vector<u8>, ctx: &mut TxContext){
      
+        assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
+        assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
+        roles::validate_sub_accounts_version(subAccounts);
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
+
         leverage = leverage / library::base_uint();
 
         // checks that provided price oracle is correct and updates perpetual with new price
@@ -767,27 +856,28 @@ module bluefin_foundation::exchange {
 
         // check if caller has permission for account
         assert!(
-            caller == user || roles::is_sub_account(subAccounts, user, caller),
+            caller == user || roles::is_sub_account_v2(subAccounts, user, caller),
             error::sender_does_not_have_permission_for_account(2)
             );
 
         // ensure perpetual is not delisted
-        assert!(!perpetual::delisted(perp), error::perpetual_is_delisted());
+        assert!(!perpetual::delisted_v2(perp), error::perpetual_is_delisted());
 
         // get precise(whole number) leverage 1, 2, 3...n
         leverage = library::round_down(leverage);
 
         assert!(leverage > 0, error::leverage_can_not_be_set_to_zero());
 
-        let priceOracle = perpetual::priceOracle(perp);
-        let tradeChecks = perpetual::checks(perp);
-        let perpID = object::uid_to_inner(perpetual::id(perp));
+        let priceOracle = perpetual::priceOracle_v2(perp);
+        let tradeChecks = perpetual::checks_v2(perp);
+        let perpID = object::uid_to_inner(perpetual::id_v2(perp));
         let perpAddress = object::id_to_address(&perpID);
 
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
 
         // user must have enough margin to pay for their settlement dues
         apply_funding_rate(
+            tx_index,
             bank,
             perp,
             user,
@@ -806,23 +896,25 @@ module bluefin_foundation::exchange {
         if(margin > targetMargin){
             // if user position has more margin than required for leverage, 
             // move extra margin back to bank
-            margin_bank::transfer_margin_to_account(
+            margin_bank::transfer_margin_to_account_v2(
                 bank,
                 perpAddress, 
                 user, 
                 margin - targetMargin,
-                2
+                2,
+                tx_index
             );
 
         } else if (margin < targetMargin) {
             // if user position has < margin than required target margin, 
             // move required margin from bank to perpetual
-            margin_bank::transfer_margin_to_account(
+            margin_bank::transfer_margin_to_account_v2(
                 bank,
                 user, 
                 perpAddress, 
                 targetMargin - margin,
-                3
+                3,
+                tx_index
             );
         };
 
@@ -845,33 +937,38 @@ module bluefin_foundation::exchange {
         position::verify_collat_checks(
             initBalance,
             currBalance,
-            perpetual::imr(perp), 
-            perpetual::mmr(perp), 
+            perpetual::imr_v2(perp), 
+            perpetual::mmr_v2(perp), 
             priceOracle, 
             0, 
             0);
 
-        position::emit_position_update_event(currBalance, caller, ACTION_ADJUST_LEVERAGE);
+        position::emit_position_update_event(currBalance, caller, ACTION_ADJUST_LEVERAGE, tx_index);
     }
 
     //===========================================================// 
     //                     CLOSE POSITION                        //
     //===========================================================//
 
-    entry fun close_position<T>(perp: &mut Perpetual, bank: &mut Bank<T>, ctx: &mut TxContext){
+    entry fun close_position<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, ctx: &mut TxContext){
+
+        assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
+        assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
 
         // ensure perpetual is delisted before users can close their position
-        assert!(perpetual::delisted(perp), error::perpetual_is_not_delisted());
+        assert!(perpetual::delisted_v2(perp), error::perpetual_is_not_delisted());
 
         let user = tx_context::sender(ctx);
         
         assert!(table::contains(perpetual::positions(perp), user), error::user_has_no_position_in_table(2));
         
-        let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpID = object::uid_to_inner(perpetual::id_v2(perp));
         let perpAddress = object::id_to_address(&perpID);
-        let delistingPrice = perpetual::delistingPrice(perp);
+        let delistingPrice = perpetual::delistingPrice_v2(perp);
 
         apply_funding_rate(
+            tx_index,
             bank,
             perp,
             user,
@@ -884,7 +981,7 @@ module bluefin_foundation::exchange {
         
         assert!(position::qPos(*userPos) > 0, error::user_position_size_is_zero(2));
 
-        let perpBalance = margin_bank::get_balance(bank, perpAddress);
+        let perpBalance = margin_bank::get_balance_v2(bank, perpAddress);
 
         // get margin to be returned to user
         let marginLeft = margin_math::get_margin_left(*userPos, delistingPrice, perpBalance);
@@ -894,16 +991,17 @@ module bluefin_foundation::exchange {
         position::set_qPos(userPos, 0);
 
         // transfer margin to user account
-        margin_bank::transfer_margin_to_account(
+        margin_bank::transfer_margin_to_account_v2(
             bank,
             perpAddress, 
             user,
             marginLeft,
-            2
+            2,
+            tx_index
         );
 
-        position::emit_position_closed_event(perpID, user, marginLeft);
-        position::emit_position_update_event(*userPos, user, ACTION_FINAL_WITHDRAWAL);
+        position::emit_position_closed_event(perpID, user, marginLeft, tx_index);
+        position::emit_position_update_event(*userPos, user, ACTION_FINAL_WITHDRAWAL, tx_index);
 
     }
 
@@ -912,15 +1010,15 @@ module bluefin_foundation::exchange {
     //                        FUNDING RATE                       //
     //===========================================================//
 
-    fun apply_funding_rate<T>(bank: &mut Bank<T>, perp: &mut Perpetual, caller: address, user: address, flag: u8, offset:u64){
+    fun apply_funding_rate<T>(tx_index:u128, bank: &mut BankV2<T>, perp: &mut PerpetualV2, caller: address, user: address, flag: u8, offset:u64){
         
-        let perpID = object::uid_to_inner(perpetual::id(perp));
+        let perpID = object::uid_to_inner(perpetual::id_v2(perp));
         let perpAddress = object::id_to_address(&perpID);
 
         // oracle price
-        let price = perpetual::priceOracle(perp);
+        let price = perpetual::priceOracle_v2(perp);
 
-        let fundingRate = perpetual::fundingRate(perp);
+        let fundingRate = perpetual::fundingRate_v2(perp);
 
         // get perp global index
         let globalIndex = funding_rate::index(fundingRate);
@@ -929,16 +1027,18 @@ module bluefin_foundation::exchange {
 
         // get user's local index
         let localIndex = position::index(*userPos);
-
-         // If timestamp didn't change, index doesn't change
-        if (funding_rate::are_indexes_equal(localIndex, globalIndex)){
-            return
-        };
-
         let margin = position::margin(*userPos);
         let qPos = position::qPos(*userPos);
         let oiOpen = position::oiOpen(*userPos);
         let isPosPositive = position::isPosPositive(*userPos);
+
+        // update user index to global index
+        position::set_index(userPos, globalIndex);
+
+         // If timestamp didn't change, index doesn't change or qpos is zero
+        if (funding_rate::are_indexes_equal(localIndex, globalIndex) || qPos == 0){
+            return
+        };
 
         // Considering position direction, compute the correct difference between indices
         let indexDiff = if (isPosPositive) {
@@ -969,15 +1069,17 @@ module bluefin_foundation::exchange {
                 if (margin < settlementAmount) {                
                     // the liquidator collateralized the position to pay for settlement amount
                     let amount = settlementAmount - margin;
-                    margin_bank::transfer_margin_to_account(
+                    margin_bank::transfer_margin_to_account_v2(
                         bank,
                         caller, 
                         perpAddress, 
                         amount,
-                        1 // taker is transferring amount (as caller is the taker/liquidator in liquidaiton trade)
+                        1, // taker is transferring amount (as caller is the taker/liquidator in liquidaiton trade)
+                        tx_index
                     );
 
-                    emit(LiquidatorPaidForAccountSettlementEvnet{
+                    emit(LiquidatorPaidForAccountSettlementEvnetV2{
+                        tx_index,
                         id: perpID,
                         liquidator: caller,
                         account: user,
@@ -1000,7 +1102,8 @@ module bluefin_foundation::exchange {
                     } else {
                         if (settlementAmount > oiOpen) {
                             position::set_oiOpen(userPos, 0);
-                            emit(SettlementAmountNotPaidCompletelyEvent{
+                            emit(SettlementAmountNotPaidCompletelyEventV2{
+                                tx_index,
                                 account: user,
                                 amount: settlementAmount - oiOpen
                             });
@@ -1010,7 +1113,8 @@ module bluefin_foundation::exchange {
 
                     };
 
-                    emit(SettlementAmtDueByMakerEvent{
+                    emit(SettlementAmtDueByMakerEventV2{
+                        tx_index,
                         account:user, 
                         amount: settlementAmount
                         });
@@ -1022,13 +1126,11 @@ module bluefin_foundation::exchange {
             // reduce user's margin by settlement amount
             position::set_margin(userPos, margin - settlementAmount);
 
-            // update user index to global index
-            position::set_index(userPos, globalIndex);
-
-
         };
+
        
-        emit(AccountSettlementUpdateEvent{
+        emit(AccountSettlementUpdateEventV2{
+            tx_index,
             account: user,
             balance: *userPos,
             settlementIsPositive: signed_number::sign(indexDiff),
@@ -1037,6 +1139,6 @@ module bluefin_foundation::exchange {
             fundingRate: funding_rate::rate(fundingRate)
         });
 
-    }   
+    }  
 
 }

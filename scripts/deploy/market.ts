@@ -2,18 +2,11 @@ import {
     writeFile,
     getSignerFromSeed,
     getProvider,
-    readFile,
-    hexToString,
-    usdcAddress
+    readFile
 } from "../../submodules/library-sui";
-import {
-    packDeploymentData,
-    createMarket,
-    getBankTable
-} from "../../src/deployment";
+import { packDeploymentData, createMarket } from "../../src/deployment";
 import { Client } from "../../src/Client";
 import { DeploymentConfigs, market } from "../../submodules/library-sui";
-import { postDeployment } from "../../src/helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -45,24 +38,6 @@ async function main() {
         data.deployer,
         data.objects,
         data.markets
-    );
-    // for dev env our own package id the owner of coin package
-    let coinPackageId = deployment["objects"]["package"]["id"];
-
-    if (process.env.ENV == "PROD" && process.env.DEPLOY_ON == "mainnet") {
-        console.log("Using SUI USDC coin");
-        coinPackageId = usdcAddress;
-        console.log(coinPackageId);
-    }
-
-    deployment["objects"]["Bank"] = await postDeployment(
-        signer,
-        deployment,
-        coinPackageId
-    );
-    deployment["objects"]["BankTable"] = await getBankTable(
-        provider,
-        deployment
     );
 
     console.log(`Creating perpetual for market: ${market}`);

@@ -38,15 +38,15 @@ async function main() {
 
     // mint and deposit USDC to test accounts
 
-    await mintAndDeposit(onChain, accounts.maker.address);
+    // await mintAndDeposit(onChain, accounts.maker.address);
 
-    await mintAndDeposit(onChain, accounts.taker.address);
+    // await mintAndDeposit(onChain, accounts.taker.address);
 
     //set specific price on oracle
-    await onChain.setOraclePrice({
-        price: 1800,
-        market: tradingPerp
-    });
+    // await onChain.setOraclePrice({
+    //     price: 1800,
+    //     market: tradingPerp
+    // });
 
     const order = createOrder({
         maker: accounts.maker.address,
@@ -65,16 +65,17 @@ async function main() {
         order
     );
 
-    const tx = await onChain.trade({
-        ...tradeData,
-        settlementCapID
-    });
+    try {
+        const tx = await onChain.trade({
+            ...tradeData,
+            settlementCapID
+        });
 
-    const status = Transaction.getStatus(tx);
-    console.log("Status:", status);
-
-    if (status == "failure") {
-        console.log("Error:", Transaction.getError(tx));
+        const status = Transaction.getStatus(tx);
+        console.log("Status:", status);
+    } catch (e) {
+        console.log(e);
+        console.log("Error:", Transaction.getDryRunError(String(e)));
         return;
     }
 

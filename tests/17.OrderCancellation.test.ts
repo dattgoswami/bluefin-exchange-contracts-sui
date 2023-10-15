@@ -23,8 +23,6 @@ import {
 import { createMarket } from "../src/deployment";
 
 const pythObj = readFile("./pyth/priceInfoObject.json");
-const pythPackage = readFile("./pythFakeDeployment.json");
-const pythPackagId = pythPackage.objects.package.id;
 
 const provider = getProvider(network.rpc, network.faucet);
 
@@ -128,10 +126,7 @@ describe("Order Cancellation", () => {
         await mintAndDeposit(onChain, bob.address, 2000);
 
         const priceTx = await onChain.setOraclePrice({
-            price: 1,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 1
         });
 
         expectTxToSucceed(priceTx);

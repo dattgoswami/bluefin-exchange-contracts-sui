@@ -355,5 +355,14 @@ module bluefin_foundation::error {
     public fun greater_than_max_allowed_funding(): u64 {
         return 904
     }
+
+    public fun object_version_mismatch(): u64 {
+        return 905
+    }
+
+
+    public fun transaction_replay(): u64 {
+        return 906
+    }
     
 }

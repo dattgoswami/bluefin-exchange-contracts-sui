@@ -7,7 +7,7 @@ module bluefin_foundation::order {
     use sui::hex;
 
     // custom modules
-    use bluefin_foundation::roles::{Self, SubAccounts};
+    use bluefin_foundation::roles::{Self, SubAccountsV2, Sequencer};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
 
@@ -28,6 +28,25 @@ module bluefin_foundation::order {
     }
 
     struct OrderCancel has copy, drop{
+        caller: address, 
+        sigMaker: address,
+        perpetual: address,
+        orderHash: vector<u8>
+    }
+
+
+    struct OrderFillV2 has copy, drop {
+        tx_index: u128,
+        orderHash:vector<u8>,
+        order: Order,
+        sigMaker: address,
+        fillPrice: u128,
+        fillQty: u128,
+        newFilledQuantity: u128        
+    }
+
+    struct OrderCancelV2 has copy, drop{
+        tx_index: u128,
         caller: address, 
         sigMaker: address,
         perpetual: address,
@@ -75,7 +94,8 @@ module bluefin_foundation::order {
      * Allows caller to cancel their order
      */
     entry fun cancel_order(
-        subAccounts: &SubAccounts,
+        subAccounts: &SubAccountsV2,
+        sequencer: &mut Sequencer,
         ordersTable: &mut Table<vector<u8>, OrderStatus>,
         perpetual: address,
         orderFlags:u8,
@@ -87,15 +107,20 @@ module bluefin_foundation::order {
         makerAddress: address,
         signature:vector<u8>,
         publicKey:vector<u8>,
+        tx_hash: vector<u8>,
         ctx: &mut TxContext
         ){
+
+        roles::validate_sub_accounts_version(subAccounts);
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
 
         let caller = tx_context::sender(ctx);
 
         // only the account it self or its sub account can cancel an order
         assert!(
             caller == makerAddress || 
-            roles::is_sub_account(subAccounts, makerAddress, caller), 
+            roles::is_sub_account_v2(subAccounts, makerAddress, caller), 
             error::sender_does_not_have_permission_for_account(2));
 
         // pack order
@@ -131,7 +156,7 @@ module bluefin_foundation::order {
         // mark order as cancelled
         order_status.status = false;
 
-        emit(OrderCancel{caller, sigMaker: sig_maker, orderHash:order_hash, perpetual});
+        emit(OrderCancelV2{caller, sigMaker: sig_maker, orderHash:order_hash, perpetual, tx_index});
 
     }
 
@@ -333,7 +358,8 @@ module bluefin_foundation::order {
         userPosPositive:bool,
         userQPos:u128,
         sigMaker:address, 
-        isTaker:u64){
+        isTaker:u64,
+        tx_index: u128){
         
          // Ensure order is being filled at the specified or better price
         // For long/buy orders, the fill price must be equal or lower
@@ -364,7 +390,8 @@ module bluefin_foundation::order {
 
         assert!(orderStatus.filledQty  <=  order.quantity,  error::cannot_overfill_order(isTaker));
 
-        emit(OrderFill{
+        emit(OrderFillV2{
+                tx_index,
                 orderHash,
                 order,
                 sigMaker,
@@ -374,7 +401,7 @@ module bluefin_foundation::order {
         });
     }
 
-    public (friend) fun verify_order_signature(subAccounts: &SubAccounts, maker:address, orderSerialized: vector<u8>, signature: vector<u8>, publicKey: vector<u8>, isTaker:u64):address{
+    public (friend) fun verify_order_signature(subAccounts: &SubAccountsV2, maker:address, orderSerialized: vector<u8>, signature: vector<u8>, publicKey: vector<u8>, isTaker:u64):address{
 
         let encodedOrder = hex::encode(orderSerialized);
         let result = library::verify_signature(signature, publicKey, encodedOrder);
@@ -385,7 +412,7 @@ module bluefin_foundation::order {
 
         assert!(
             maker == publicAddress || 
-            roles::is_sub_account(subAccounts, maker, publicAddress), 
+            roles::is_sub_account_v2(subAccounts, maker, publicAddress), 
             error::order_has_invalid_signature(isTaker));
 
         return publicAddress

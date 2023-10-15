@@ -2,17 +2,14 @@ import path from "path";
 import {
     RawSigner,
     SuiTransactionBlockResponse,
-    readFile,
     DeploymentData,
-    TransactionBlock,
     OBJECT_OWNERSHIP_STATUS,
-    OnChainCalls,
-    hexToString,
-    hexToBuffer
+    OnChainCalls
 } from "../submodules/library-sui";
 import { Client } from "../src/Client";
 import fs from "fs";
 import * as toml from "@iarna/toml";
+import { getBankTable } from "./deployment";
 export interface KeyValue {
     [key: string]: any;
 }
@@ -34,34 +31,23 @@ export async function postDeployment(
     signer: RawSigner,
     deploymentData: DeploymentData,
     addressUSDC: string
-) {
-    //perform post deployment steps.
+): Promise<DeploymentData> {
     const onChain = new OnChainCalls(signer, deploymentData);
-    const tx = new TransactionBlock();
-    const packageId = deploymentData.objects.package.id;
-    tx.moveCall({
-        target: `${packageId}::margin_bank::create_bank`,
-        arguments: [
-            tx.object(deploymentData["objects"]["ExchangeAdminCap"]["id"]),
-            tx.pure(addressUSDC)
-        ],
-        typeArguments: [`${addressUSDC}::coin::COIN`]
-    });
-    const res = await signer.signAndExecuteTransactionBlock({
-        transactionBlock: tx,
-        options: {
-            showObjectChanges: true,
-            showEffects: true,
-            showEvents: true,
-            showInput: true
-        }
-    });
 
-    return {
+    // create bank object
+    const res = await onChain.createBank(addressUSDC);
+    deploymentData["objects"]["Bank"] = {
         id: (res as any).objectChanges[2].objectId,
         owner: OBJECT_OWNERSHIP_STATUS.SHARED,
         dataType: (res as any).objectChanges[2].objectType
     };
+
+    deploymentData["objects"]["BankTable"] = await getBankTable(
+        signer.provider,
+        deploymentData
+    );
+
+    return deploymentData;
 }
 
 export function editTomlFile(
@@ -71,19 +57,15 @@ export function editTomlFile(
     isMainContract = false
 ) {
     console.log("Editing Pyth Move.toml file");
-    const newPythValue = "0x0";
     const data = fs.readFileSync(filePath, "utf8");
 
-    const parsedData = toml.parse(data);
+    const parsedData = toml.parse(data) as any;
     if (isMainContract) {
-        //@ts-ignore
         parsedData.addresses.Pyth = address;
     } else {
-        //@ts-ignore
         parsedData.addresses.pyth = address;
     }
     if (updatePublishAt) {
-        //@ts-ignore
         parsedData.package["published-at"] = address;
     }
     const modifiedToml = toml.stringify(parsedData);
@@ -107,12 +89,9 @@ export function syncingTomlFiles(pythObj: any) {
             "./submodules/pyth-crosschain/target_chains/sui/contracts/";
         let data = fs.readFileSync(pythFileDir + filename, "utf8");
 
-        let parsedData = toml.parse(data);
-        //@ts-ignore
+        let parsedData = toml.parse(data) as any;
         parsedData.addresses.pyth = pythObj["package_id"];
-        //@ts-ignore
         parsedData.package["published-at"] = pythObj["package_id"];
-        //@ts-ignore
         parsedData.addresses.wormhole = pythObj["wormhole_id"];
         const modifiedToml = toml.stringify(parsedData);
         fs.writeFileSync(pythFileDir + "Move.toml", modifiedToml, "utf8");
@@ -120,11 +99,8 @@ export function syncingTomlFiles(pythObj: any) {
         const wormholeDir = "./submodules/wormhole/sui/wormhole/";
         data = fs.readFileSync(wormholeDir + filename, "utf8");
         parsedData = toml.parse(data);
-        //@ts-ignore
         parsedData.addresses.wormhole = pythObj["wormhole_id"];
-        //@ts-ignore
         parsedData.package["published-at"] = pythObj["wormhole_id"];
-        //@ts-ignore
         parsedData.addresses["sui"] = "0x2";
 
         const modifiedTomlWormhole = toml.stringify(parsedData);

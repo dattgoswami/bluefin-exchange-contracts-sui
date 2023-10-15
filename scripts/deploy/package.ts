@@ -10,11 +10,12 @@ import {
     packDeploymentData,
     getBankTable
 } from "../../src/deployment";
+import { usdcAddress } from "../../submodules/library-sui";
 
 import { DeploymentConfigs } from "../../submodules/library-sui";
 import { Transaction } from "../../submodules/library-sui";
 import { Client } from "../../src/Client";
-import { publishPackage } from "../../src/helpers";
+import { postDeployment, publishPackage } from "../../src/helpers";
 
 const provider = getProvider(
     DeploymentConfigs.network.rpc,
@@ -44,9 +45,22 @@ async function main() {
         // fetch created objects
         const objects = await getGenesisMap(provider, publishTxn);
 
-        objects["BankTable"] = await getBankTable(provider, objects);
+        let deploymentData = packDeploymentData(deployerAddress, objects);
 
-        const deploymentData = packDeploymentData(deployerAddress, objects);
+        // for dev env our own package id the owner of coin package
+        let coinPackageId = deploymentData["objects"]["package"]["id"];
+
+        if (process.env.ENV == "PROD" && process.env.DEPLOY_ON == "mainnet") {
+            console.log("Using SUI USDC coin");
+            coinPackageId = usdcAddress;
+            console.log(coinPackageId);
+        }
+
+        deploymentData = await postDeployment(
+            signer,
+            deploymentData,
+            coinPackageId
+        );
 
         await writeFile(DeploymentConfigs.filePath, deploymentData);
         console.log(

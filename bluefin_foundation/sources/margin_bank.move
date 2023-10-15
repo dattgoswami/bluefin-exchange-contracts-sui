@@ -11,23 +11,35 @@ module bluefin_foundation::margin_bank {
     use sui::coin::{Self, Coin};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
-    use std::string::{Self, String};
+    use std::string::{String};
+    use std::vector;
 
 
     // custom modules
     use bluefin_foundation::library::{Self};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::error::{Self};
-    use bluefin_foundation::roles::{Self, ExchangeGuardianCap, CapabilitiesSafe, ExchangeAdminCap};
+    use bluefin_foundation::roles::{Self, ExchangeGuardianCap, CapabilitiesSafe, CapabilitiesSafeV2, ExchangeAdminCap, Sequencer};
 
     // friend modules
     friend bluefin_foundation::exchange;
+    friend bluefin_foundation::perpetual;
 
     //================================================================//
     //                      EVENTS
     //================================================================//
 
     struct BankBalanceUpdate has drop, copy {
+        action: u64,
+        srcAddress: address,   
+        destAddress: address,   
+        amount: u128,
+        srcBalance: u128,
+        destBalance: u128
+    }
+
+    struct BankBalanceUpdateV2 has drop, copy {
+        tx_index: u128,
         action: u64,
         srcAddress: address,   
         destAddress: address,   
@@ -57,6 +69,16 @@ module bluefin_foundation::margin_bank {
         supportedCoin: String
     }
 
+
+    struct BankV2<phantom T> has key, store {
+        id: UID,
+        version: u64,
+        accounts: Table<address, BankAccount>,
+        coinBalance: Balance<T>,
+        isWithdrawalAllowed: bool,
+        supportedCoin: String
+    }
+
     //===========================================================//
     //                      CONSTANTS
     //===========================================================//
@@ -65,19 +87,30 @@ module bluefin_foundation::margin_bank {
     const ACTION_DEPOSIT: u64 = 0;
     const ACTION_WITHDRAW: u64 = 1;
     const ACTION_INTERNAL: u64 = 2;
-
-
-  
- 
     
     //===========================================================//
     //                      GUARDIAN METHODS
     //===========================================================//
 
+    /// depricated
     public entry fun set_withdrawal_status<T>(safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, bank: &mut Bank<T>, isWithdrawalAllowed: bool) {
 
         // validate guardian
         roles::check_guardian_validity(safe, guardian);
+
+        // setting the withdrawal allowed flag
+        bank.isWithdrawalAllowed = isWithdrawalAllowed;
+
+        emit(WithdrawalStatusUpdate{status: isWithdrawalAllowed});
+    }
+
+    public entry fun set_withdrawal_status_v2<T>(safe: &CapabilitiesSafeV2, guardian: &ExchangeGuardianCap, bank: &mut BankV2<T>, isWithdrawalAllowed: bool) {
+
+        assert!(bank.version == roles::get_version(), error::object_version_mismatch());
+        roles::validate_safe_version(safe);
+
+        // validate guardian
+        roles::check_guardian_validity_v2(safe, guardian);
 
         // setting the withdrawal allowed flag
         bank.isWithdrawalAllowed = isWithdrawalAllowed;
@@ -90,16 +123,18 @@ module bluefin_foundation::margin_bank {
     //===========================================================//
 
     /*
-        Allows the ExchangeAdminCap to create the bank
-        @params:
-            - address of exchangeAdminCap
-            - address of supported coin
-    */
+     * Allows the ExchangeAdminCap to create the bank
+     * @params:
+     *  address of exchangeAdminCap
+     *  address of supported coin
+     */
+
     public entry fun create_bank<T>(_: &ExchangeAdminCap, supportedCoin: String, ctx: &mut TxContext) {
         let empty_balance = balance::zero<T>();
 
-        let bank = Bank {
+        let bank = BankV2 {
             id: object::new(ctx),
+            version: roles::get_version(),
             accounts: table::new<address, BankAccount>(ctx),
             coinBalance: empty_balance,
             isWithdrawalAllowed: true,
@@ -108,14 +143,18 @@ module bluefin_foundation::margin_bank {
         transfer::share_object(bank);   
     }
 
-
     /*
      * @notice Deposits collateral token from caller's address 
      * to provided account address in the bank
      * @dev amount is expected to be in 6 decimal units as 
      * the collateral token is USDC
      */
-    entry fun deposit_to_bank<T>(bank: &mut Bank<T>, destination: address, amount: u64, coin: &mut Coin<T>, ctx: &mut TxContext) {
+    entry fun deposit_to_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, amount: u64, coin: &mut Coin<T>, ctx: &mut TxContext) {
+        
+        assert!(bank.version == roles::get_version(), error::object_version_mismatch());
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
+
         // getting the sender address
         let sender = tx_context::sender(ctx);
 
@@ -149,7 +188,8 @@ module bluefin_foundation::margin_bank {
 
         // emitting the balance balance update event
         emit(
-            BankBalanceUpdate {
+            BankBalanceUpdateV2 {
+                tx_index,
                 action: ACTION_DEPOSIT,
                 srcAddress: sender,
                 destAddress: destination,
@@ -166,8 +206,12 @@ module bluefin_foundation::margin_bank {
      * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
      * @dev withdrawal amount is expected to be in 6 decimal units as the collateral token is USDC
      */
-    entry fun withdraw_from_bank<T>(bank: &mut Bank<T>, destination: address, amount: u128, ctx: &mut TxContext) {
+    entry fun withdraw_from_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, amount: u128, ctx: &mut TxContext) {
         
+        assert!(bank.version == roles::get_version(), error::object_version_mismatch());
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
+
         // getting the sender address
         let sender = tx_context::sender(ctx);
 
@@ -203,7 +247,8 @@ module bluefin_foundation::margin_bank {
 
         // emitting the balance balance update event
         emit(
-            BankBalanceUpdate {
+            BankBalanceUpdateV2 {
+                tx_index,
                 action: ACTION_WITHDRAW,
                 srcAddress: sender,
                 destAddress: destination,
@@ -218,8 +263,12 @@ module bluefin_foundation::margin_bank {
     /**
      * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
      */
-    entry fun withdraw_all_margin_from_bank<T>(bank: &mut Bank<T>, destination: address, ctx: &mut TxContext) {
+    entry fun withdraw_all_margin_from_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, ctx: &mut TxContext) {
         
+        assert!(bank.version == roles::get_version(), error::object_version_mismatch());
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
+
         // getting the sender address
         let sender = tx_context::sender(ctx);
 
@@ -257,7 +306,8 @@ module bluefin_foundation::margin_bank {
 
         // emitting the balance balance update event
         emit(
-            BankBalanceUpdate {
+            BankBalanceUpdateV2 {
+                tx_index,
                 action: ACTION_WITHDRAW,
                 srcAddress: sender,
                 destAddress: destination,
@@ -267,6 +317,11 @@ module bluefin_foundation::margin_bank {
             }
         );
 
+    }
+
+    /// increases the version of bank object
+    entry fun increment_bank_version<T>(_: &ExchangeAdminCap, bank: &mut BankV2<T>){
+        bank.version = bank.version + 1;
     }
 
     public (friend) fun initialize_account(accounts: &mut Table<address, BankAccount>, addr: address){
@@ -283,14 +338,14 @@ module bluefin_foundation::margin_bank {
         };
     }
 
-
     public (friend) fun transfer_trade_margin<T>(
-        bank: &mut Bank<T>,
+        bank: &mut BankV2<T>,
         perpetual: address, 
         maker:address, 
         taker:address, 
         makerFundsFlow: Number, 
-        takerFundsFlow: Number
+        takerFundsFlow: Number,
+        tx_index: u128,
         ){  
             
             // maker has no account hence no margin
@@ -300,23 +355,24 @@ module bluefin_foundation::margin_bank {
 
             if (signed_number::gte_uint(makerFundsFlow, 0)) {
                 // for maker
-                transfer_based_on_fundsflow(bank, perpetual, maker, makerFundsFlow, 0); 
+                transfer_based_on_fundsflow(bank, perpetual, maker, makerFundsFlow, 0, tx_index); 
                 // for taker
-                transfer_based_on_fundsflow(bank, perpetual, taker, takerFundsFlow, 1);
+                transfer_based_on_fundsflow(bank, perpetual, taker, takerFundsFlow, 1, tx_index);
             } else {
                 // for taker
-                transfer_based_on_fundsflow(bank, perpetual, taker, takerFundsFlow, 1);
+                transfer_based_on_fundsflow(bank, perpetual, taker, takerFundsFlow, 1, tx_index);
                 // for maker
-                transfer_based_on_fundsflow(bank, perpetual, maker, makerFundsFlow, 0);
+                transfer_based_on_fundsflow(bank, perpetual, maker, makerFundsFlow, 0, tx_index);
             };
     }
 
+    /// depricated, only used during migration to V2 Objects
     public (friend) fun transfer_margin_to_account<T>(
         bank: &mut Bank<T>, 
         source: address, 
         destination: address, 
         amount: u128, 
-        offset: u64, 
+        offset: u64
         ){
 
         // getting the accounts table
@@ -350,10 +406,56 @@ module bluefin_foundation::margin_bank {
         );
     }
 
+    public (friend) fun transfer_margin_to_account_v2<T>(
+        bank: &mut BankV2<T>, 
+        source: address, 
+        destination: address, 
+        amount: u128, 
+        offset: u64,
+        tx_index: u128,
+        ){
+
+        // getting the accounts table
+        let accounts = &mut bank.accounts;
+
+        // getting the mut ref of balance of the source
+        let sourceBalance = &mut table::borrow_mut(accounts, source).balance;
+
+        // checking if the sender has enough balance
+        assert!(*sourceBalance >= amount, error::not_enough_balance_in_margin_bank(offset));
+
+        // reduce amount from source
+        *sourceBalance = *sourceBalance - amount;
+
+        // getting the mut ref of balance of the destination
+        let destBalance = &mut table::borrow_mut(accounts, destination).balance;
+
+        // increasing balance of desitnation
+        *destBalance = *destBalance + (amount as u128);
+
+        // emitting the balance balance update event
+        emit(
+            BankBalanceUpdateV2 {
+                tx_index,
+                action: ACTION_INTERNAL,
+                srcAddress: source,
+                destAddress: destination,
+                amount: amount,
+                srcBalance: table::borrow(accounts, source).balance,
+                destBalance: table::borrow(accounts, destination).balance
+            }
+        );
+    }
+
+    /// depricated
     public (friend) fun mut_accounts<T>(bank: &mut Bank<T>): &mut Table<address, BankAccount> {
         return &mut bank.accounts
     }
 
+    public (friend) fun mut_accounts_v2<T>(bank: &mut BankV2<T>): &mut Table<address, BankAccount> {
+        return &mut bank.accounts
+    }
+    
 
     //===========================================================//
     //                      GETTER METHODS 
@@ -371,23 +473,48 @@ module bluefin_foundation::margin_bank {
 
 
         return table::borrow(accounts, addr).balance
+    }
+
+    public fun get_balance_v2<T>(bank: &BankV2<T>, addr: address) : u128 {
+        // getting the accounts table
+        let accounts = &bank.accounts;
+
+        // checking if the account exists
+        if(!table::contains(accounts, addr)){
+            // returning 0 if the account doesn't exist
+            return 0u128
+        };
+
+
+        return table::borrow(accounts, addr).balance
 
     }
 
     public fun is_withdrawal_allowed<T>(bank: &Bank<T>) : bool {
+        return bank.isWithdrawalAllowed
+    }
+
+    public fun is_withdrawal_allowed_v2<T>(bank: &BankV2<T>) : bool {
         bank.isWithdrawalAllowed
     }
+
+    public fun get_version<T>(bank: &BankV2<T>) : u64 {
+        bank.version
+    }
+
+    
 
     //===========================================================//
     //                      HELPER METHODS
     //===========================================================//
 
     fun transfer_based_on_fundsflow<T>(
-        bank: &mut Bank<T>, 
+        bank: &mut BankV2<T>, 
         perpetual: address, 
         account: address, 
         fundsFlow: Number, 
-        isTaker: u64
+        isTaker: u64,
+        tx_index: u128,
         ){
 
         if(signed_number::value(fundsFlow) == 0){
@@ -408,17 +535,60 @@ module bluefin_foundation::margin_bank {
             offset = 2;  // if perp does not have balance emit 602 code
         };
 
-        transfer_margin_to_account(
+        transfer_margin_to_account_v2(
             bank,
             source, 
             destination, 
             signed_number::value(fundsFlow),
-            offset
+            offset,
+            tx_index
         );
     }
 
+    //===========================================================//
+    //                      MIGRATION METHOD                     //
+    //===========================================================//
+    
+    entry fun migrate_bank<T>(_: &ExchangeAdminCap, bank: &mut Bank<T>, account_keys: vector<address>, ctx: &mut TxContext){
 
+        let empty_balance = balance::zero<T>();
 
+        let bank_v2 = BankV2 {
+            id: object::new(ctx),
+            version: roles::get_version(),
+            accounts: table::new<address, BankAccount>(ctx),
+            coinBalance: empty_balance,
+            isWithdrawalAllowed: true,
+            supportedCoin: bank.supportedCoin
+        };
+
+        // transfer coins from old bank to new bank
+        let total_balance = balance::value(&bank.coinBalance);
+        let coins = coin::take(&mut bank.coinBalance, total_balance, ctx);
+        coin::put(&mut bank_v2.coinBalance, coins);
+
+        // copy all bank accounts from V1 bank to V2
+        let count = vector::length(&account_keys);
+        let i = 0;
+        while (i < count){
+            let addr = *vector::borrow(&account_keys, i);
+            let account = table::borrow(&bank.accounts, addr);
+
+            table::add(&mut bank_v2.accounts, addr, BankAccount {
+                balance: account.balance,
+                owner: account.owner,
+            });
+
+            i = i+1;
+        };
+        
+        // disable withdrawl on old bank ( for safe keeping)
+        bank.isWithdrawalAllowed = false;
+
+        // share v2 bank
+        transfer::share_object(bank_v2);   
+
+    }
 
 
 }

@@ -4,7 +4,7 @@ module bluefin_foundation::funding_rate {
     use sui::event::{emit};
 
     // custom modules
-    use bluefin_foundation::roles::{Self, FundingRateCap, CapabilitiesSafe};
+    use bluefin_foundation::roles::{Self, FundingRateCap, CapabilitiesSafeV2};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
@@ -80,10 +80,10 @@ module bluefin_foundation::funding_rate {
         }
     }
 
-    public (friend) fun set_funding_rate(safe: &CapabilitiesSafe, cap: &FundingRateCap, funding: &mut FundingRate, rate:u128, sign:bool, currentTime:u64, perpID: ID){
+    public (friend) fun set_funding_rate(safe: &CapabilitiesSafeV2, cap: &FundingRateCap, funding: &mut FundingRate, rate:u128, sign:bool, currentTime:u64, perpID: ID){
 
         // validate funding rate operator is correct        
-        roles::check_funding_rate_operator_validity(safe, cap);
+        roles::check_funding_rate_operator_validity_v2(safe, cap);
 
         let expectedWindow =  expected_funding_window(*funding, currentTime);
 
@@ -148,14 +148,14 @@ module bluefin_foundation::funding_rate {
         } else {
             0
         };
-
         if (timeDelta > 0) {
-            
+
+            timeDelta = if ( timeDelta < (FUNDING_WINDOW_SIZE as u128)) { 1 } else { timeDelta / (FUNDING_WINDOW_SIZE as u128)};
+
             // funding rate * time delta * oracle price
             let fundingValue = signed_number::from(
                 library::base_mul(
-                    // timeDelta is in milli seconds, convert to hour as funding rate is in hour
-                    signed_number::value(funding.rate) * timeDelta / (FUNDING_WINDOW_SIZE as u128), 
+                    signed_number::value(funding.rate) * timeDelta, 
                     oraclePrice),
                 signed_number::sign(funding.rate)
             );

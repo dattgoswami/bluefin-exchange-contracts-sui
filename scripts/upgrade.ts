@@ -1,6 +1,7 @@
 import {
     DeploymentConfigs,
-    TransactionBlock
+    TransactionBlock,
+    writeFile
 } from "../submodules/library-sui/dist";
 import path from "path";
 import {
@@ -63,6 +64,15 @@ async function main() {
     } else {
         const newPackageId = Transaction.getCreatedObjectIDs(result)[0];
         console.log("New Package id: ", newPackageId);
+
+        const deployment = readFile(DeploymentConfigs.filePath);
+        deployment["objects"]["package"]["id"] = newPackageId;
+
+        await writeFile(DeploymentConfigs.filePath, deployment);
+
+        console.log(
+            `Object details written to file: ${DeploymentConfigs.filePath}`
+        );
     }
 }
 

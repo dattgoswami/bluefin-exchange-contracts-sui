@@ -51,17 +51,14 @@ describe("Roles", () => {
             packageName
         );
         const objects = await getGenesisMap(provider, publishTxn);
-        const deploymentData = await packDeploymentData(ownerAddress, objects);
+        let deploymentData = await packDeploymentData(ownerAddress, objects);
         const coinPackageId = deploymentData["objects"]["package"]["id"];
-        deploymentData["objects"]["Bank"] = await postDeployment(
+        deploymentData = await postDeployment(
             ownerSigner,
             deploymentData,
             coinPackageId
         );
-        deploymentData["objects"]["BankTable"] = await getBankTable(
-            provider,
-            deploymentData
-        );
+
         onChain = new OnChainCalls(ownerSigner, deploymentData);
     });
 

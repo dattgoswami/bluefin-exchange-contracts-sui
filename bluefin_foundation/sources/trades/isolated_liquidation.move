@@ -5,7 +5,7 @@ module bluefin_foundation::isolated_liquidation {
     use sui::table::{Self};
 
     // custom modules
-    use bluefin_foundation::perpetual::{Self, Perpetual};
+    use bluefin_foundation::perpetual::{Self, PerpetualV2};
     use bluefin_foundation::position::{Self, UserPosition};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::signed_number::{Self, Number};
@@ -20,6 +20,22 @@ module bluefin_foundation::isolated_liquidation {
     //===========================================================//
 
     struct TradeExecuted has copy, drop {
+        sender:address,
+        perpID: ID,
+        tradeType: u8,
+        maker: address,
+        taker: address,
+        makerMRO: u128,
+        takerMRO: u128,
+        makerPnl: Number,
+        takerPnl: Number,
+        tradeQuantity: u128,
+        tradePrice: u128,
+        isBuy: bool
+    }
+
+    struct TradeExecutedV2 has copy, drop {
+        tx_index: u128,
         sender:address,
         perpID: ID,
         tradeType: u8,
@@ -82,14 +98,14 @@ module bluefin_foundation::isolated_liquidation {
     //===========================================================//
 
     // @dev only exchange module can invoke this
-    public (friend) fun trade(sender: address, perp: &mut Perpetual, data:TradeData): TradeResponse{
+    public (friend) fun trade(sender: address, perp: &mut PerpetualV2, data:TradeData, tx_index: u128): TradeResponse{
 
-        let perpID = object::uid_to_inner(perpetual::id(perp));
-        let imr = perpetual::imr(perp);
-        let mmr = perpetual::mmr(perp);
-        let oraclePrice = perpetual::priceOracle(perp);
-        let tradeChecks = perpetual::checks(perp);
-        let insurancePoolRatio = perpetual::poolPercentage(perp);
+        let perpID = object::uid_to_inner(perpetual::id_v2(perp));
+        let imr = perpetual::imr_v2(perp);
+        let mmr = perpetual::mmr_v2(perp);
+        let oraclePrice = perpetual::priceOracle_v2(perp);
+        let tradeChecks = perpetual::checks_v2(perp);
+        let insurancePoolRatio = perpetual::poolPercentage_v2(perp);
         let positionsTable = perpetual::positions(perp);
         
          // round oracle price to conform to tick size
@@ -193,10 +209,11 @@ module bluefin_foundation::isolated_liquidation {
         takerResponse.pnl = signed_number::add(premium.liquidator, takerResponse.pnl);
 
         // emit position updates
-        position::emit_position_update_event(newMakerPos, sender, ACTION_TRADE);
-        position::emit_position_update_event(newTakerPos, sender, ACTION_TRADE);
+        position::emit_position_update_event(newMakerPos, sender, ACTION_TRADE, tx_index);
+        position::emit_position_update_event(newTakerPos, sender, ACTION_TRADE, tx_index);
 
-        emit(TradeExecuted{
+        emit(TradeExecutedV2{
+            tx_index,
             sender,
             perpID,
             tradeType: TRADE_TYPE,
@@ -216,6 +233,7 @@ module bluefin_foundation::isolated_liquidation {
                 takerFundsFlow: takerResponse.fundsFlow,
                 premium
             }
+
     }
 
     //===========================================================//

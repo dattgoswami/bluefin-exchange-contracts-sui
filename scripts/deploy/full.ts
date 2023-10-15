@@ -5,8 +5,7 @@ import {
     readFile,
     packageName,
     DeploymentConfigs,
-    Transaction,
-    TransactionBlock
+    Transaction
 } from "../../submodules/library-sui";
 import { Connection, JsonRpcProvider } from "@mysten/sui.js";
 import { SuiPythClient } from "@pythnetwork/pyth-sui-js";
@@ -37,9 +36,8 @@ async function main() {
     const pythObj = readFile("./pyth/priceInfoObject.json");
     const deployEnv = process.env.DEPLOY_ON + "_pyth";
 
-    
     //True oracle will be deployed only if we are deploying on prod and mainnet
-    if (process.env.ENV == "PROD" && process.env.DEPLOY_ON=="mainnet") {
+    if (process.env.ENV == "PROD" && process.env.DEPLOY_ON == "mainnet") {
         console.log(
             "Updating price object ids from price feed ids from respective network"
         );
@@ -102,7 +100,7 @@ async function main() {
         // fetch created objects
         const objects = await getGenesisMap(provider, publishTxn);
 
-        const deploymentData = packDeploymentData(deployerAddress, objects);
+        let deploymentData = packDeploymentData(deployerAddress, objects);
 
         // for dev env our own package id the owner of coin package
         let coinPackageId = deploymentData["objects"]["package"]["id"];
@@ -113,14 +111,11 @@ async function main() {
             console.log(coinPackageId);
         }
 
-        deploymentData["objects"]["Bank"] = await postDeployment(
+        console.log("Performing post deployment steps");
+        deploymentData = await postDeployment(
             signer,
             deploymentData,
             coinPackageId
-        );
-        deploymentData["objects"]["BankTable"] = await getBankTable(
-            provider,
-            deploymentData
         );
 
         // create perpetual
@@ -131,6 +126,7 @@ async function main() {
                     process.env.DEPLOY_ON as string
                 ]["feed_id"];
             console.log(`-> ${marketConfig.symbol}`);
+
             const marketObjects = await createMarket(
                 deploymentData,
                 signer,
@@ -152,7 +148,6 @@ async function main() {
             console.error("Wrong Price Identifier Set, check configuration");
             process.exit(-1);
         }
-
 
         await writeFile(DeploymentConfigs.filePath, deploymentData);
         console.log(

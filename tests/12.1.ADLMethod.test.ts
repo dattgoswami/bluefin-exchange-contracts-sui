@@ -19,7 +19,6 @@ import {
     readFile,
     BASE_DECIMALS_ON_CHAIN
 } from "../submodules/library-sui";
-
 import {
     getMakerTakerAccounts,
     createAccount
@@ -35,8 +34,7 @@ import {
 import {
     getGenesisMap,
     createMarket,
-    packDeploymentData,
-    getBankTable
+    packDeploymentData
 } from "../src/deployment";
 
 import { DEFAULT } from "../submodules/library-sui/src/defaults";
@@ -44,8 +42,6 @@ import { postDeployment, publishPackage } from "../src/helpers";
 const provider = getProvider(network.rpc, network.faucet);
 
 const pythObj = readFile("./pyth/priceInfoObject.json");
-const pythPackage = readFile("./pythFakeDeployment.json");
-const pythPackagId = pythPackage.objects.package.id;
 
 describe("Deleveraging Trade Method", () => {
     const ownerSigner = getSignerFromSeed(DeploymentConfigs.deployer, provider);
@@ -66,21 +62,25 @@ describe("Deleveraging Trade Method", () => {
             packageName
         );
         const objects = await getGenesisMap(provider, publishTxn);
-        const deploymentData = await packDeploymentData(ownerAddress, objects);
+        let deploymentData = await packDeploymentData(ownerAddress, objects);
         const coinPackageId = deploymentData["objects"]["package"]["id"];
-        deploymentData["objects"]["Bank"] = await postDeployment(
+        deploymentData = await postDeployment(
             ownerSigner,
             deploymentData,
             coinPackageId
         );
-        deploymentData["objects"]["BankTable"] = await getBankTable(
-            provider,
-            deploymentData
-        );
+
+        deploymentData["markets"]["ETH-PERP"] = {
+            Objects: {},
+            Config: {
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
+            }
+        };
 
         // deploy market
-        deploymentData["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
-
         deploymentData["markets"]["ETH-PERP"].Objects = await createMarket(
             deploymentData,
             ownerSigner,
@@ -108,10 +108,7 @@ describe("Deleveraging Trade Method", () => {
 
         // set oracle price
         const priceTx = await onChain.setOraclePrice({
-            price: 100,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 100
         });
 
         expectTxToSucceed(priceTx);
@@ -142,10 +139,7 @@ describe("Deleveraging Trade Method", () => {
 
     beforeEach(async () => {
         await onChain.setOraclePrice({
-            price: 100,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 100
         });
     });
 
@@ -175,19 +169,23 @@ describe("Deleveraging Trade Method", () => {
             packageName
         );
         const objects = await getGenesisMap(provider, publishTxn);
-        const localDeployment = packDeploymentData(ownerAddress, objects);
+        let localDeployment = packDeploymentData(ownerAddress, objects);
         const coinPackageId = localDeployment["objects"]["package"]["id"];
-        localDeployment["objects"]["Bank"] = await postDeployment(
+        localDeployment = await postDeployment(
             ownerSigner,
             localDeployment,
             coinPackageId
         );
-        localDeployment["objects"]["BankTable"] = await getBankTable(
-            provider,
-            localDeployment
-        );
 
-        localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
+        localDeployment["markets"]["ETH-PERP"] = {
+            Objects: {},
+            Config: {
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
+            }
+        };
 
         localDeployment["markets"]["ETH-PERP"].Objects = await createMarket(
             localDeployment,
@@ -427,10 +425,7 @@ describe("Deleveraging Trade Method", () => {
 
     it("should revert as maker(alice) is above under water - can not be deleveraged", async () => {
         await onChain.setOraclePrice({
-            price: 92,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 92
         });
 
         const txResponse = await onChain.deleverage(
@@ -470,10 +465,7 @@ describe("Deleveraging Trade Method", () => {
 
         // at this price bob becomes under water and so does accounts.taker
         await onChain.setOraclePrice({
-            price: 112,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 112
         });
 
         const txResponse = await onChain.deleverage(
@@ -514,10 +506,7 @@ describe("Deleveraging Trade Method", () => {
 
         // at this price bob becomes under water
         await onChain.setOraclePrice({
-            price: 112,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 112
         });
 
         const txResponse = await onChain.deleverage(
@@ -559,10 +548,7 @@ describe("Deleveraging Trade Method", () => {
 
         // set oracle price to 89, alice becomes under water
         await onChain.setOraclePrice({
-            price: 89,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 89
         });
 
         const txResponse = await onChain.deleverage(
@@ -601,19 +587,23 @@ describe("Deleveraging Trade Method", () => {
             packageName
         );
         const objects = await getGenesisMap(provider, publishTxn);
-        const localDeployment = packDeploymentData(ownerAddress, objects);
+        let localDeployment = packDeploymentData(ownerAddress, objects);
         const coinPackageId = localDeployment["objects"]["package"]["id"];
-        localDeployment["objects"]["Bank"] = await postDeployment(
+        localDeployment = await postDeployment(
             ownerSigner,
             localDeployment,
             coinPackageId
         );
-        localDeployment["objects"]["BankTable"] = await getBankTable(
-            provider,
-            localDeployment
-        );
 
-        localDeployment["markets"]["ETH-PERP"] = { Objects: {}, Config: {} };
+        localDeployment["markets"]["ETH-PERP"] = {
+            Objects: {},
+            Config: {
+                priceInfoFeedId:
+                    pythObj["ETH-PERP"][process.env.DEPLOY_ON as string][
+                        "feed_id"
+                    ]
+            }
+        };
 
         localDeployment["markets"]["ETH-PERP"].Objects = await createMarket(
             localDeployment,
@@ -640,10 +630,7 @@ describe("Deleveraging Trade Method", () => {
         await mintAndDeposit(onChainCaller, alice.address);
         await mintAndDeposit(onChainCaller, bob.address);
         await onChain.setOraclePrice({
-            price: 100,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 100
         });
 
         const order = createOrder({
@@ -694,10 +681,7 @@ describe("Deleveraging Trade Method", () => {
 
         // set oracle price to 115, taker/bob becomes under water
         await onChain.setOraclePrice({
-            price: 115,
-            pythPackageId: pythPackagId,
-            priceInfoFeedId:
-                pythObj["ETH-PERP"][process.env.DEPLOY_ON as string]["feed_id"]
+            price: 115
         });
 
         const txResponse = await onChainCaller.deleverage(
