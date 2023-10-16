@@ -589,6 +589,22 @@ module bluefin_foundation::margin_bank {
         transfer::share_object(bank_v2);   
 
     }
+    
+    entry fun migrate_bank_v2<T>(_: &ExchangeAdminCap, bank: &mut Bank<T>, bank_v2: &mut BankV2<T>, account_keys: vector<address>){
+            // copy all bank accounts from V1 bank to V2
+            let count = vector::length(&account_keys);
+            let i = 0;
+            while (i < count){
+                let addr = *vector::borrow(&account_keys, i);
+                let account = table::borrow(&bank.accounts, addr);
+
+                table::add(&mut bank_v2.accounts, addr, BankAccount {
+                    balance: account.balance,
+                    owner: account.owner,
+                });
+                i = i+1;
+            };
+    }
 
 
 }
