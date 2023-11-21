@@ -13,6 +13,7 @@ module bluefin_foundation::library {
    const SIGNED_USING_SECP_KEYPAIR : u8 = 0;
    const SIGNED_USING_ED_KEYPAIR : u8 = 1;
    const SIGNED_USING_ED_UI_WALLET : u8 = 2;
+   const SIGNED_USING_ZK_WALLET : u8 = 3;
 
     use Pyth::price_info::{PriceInfoObject};
     use Pyth::price::{Price};
@@ -156,6 +157,11 @@ module bluefin_foundation::library {
             result.is_verified = ed25519::ed25519_verify(&signature, &public_key, &blake_encoded);       
             vector::insert(&mut result.public_key, 0, 0);
 
+        }
+
+        // if signed using zk wallet do nothing as zk wallet signatures are validated off-chain
+        else if(element == SIGNED_USING_ZK_WALLET){
+            result.is_verified = true;
         };
 
         return result

@@ -5,6 +5,7 @@ module bluefin_foundation::order {
     use std::vector;
     use sui::bcs;
     use sui::hex;
+    use sui::address;
 
     // custom modules
     use bluefin_foundation::roles::{Self, SubAccountsV2, Sequencer};
@@ -408,7 +409,14 @@ module bluefin_foundation::order {
 
         assert!(library::get_result_status(result), error::order_has_invalid_signature(isTaker));
 
-        let publicAddress = library::get_public_address(library::get_result_public_key(result));
+        // get last element from 
+        let element = vector::pop_back(&mut signature);
+        
+        let publicAddress = if (element == 3){
+            address::from_bytes(publicKey)
+        } else {
+            library::get_public_address(library::get_result_public_key(result))
+        };
 
         assert!(
             maker == publicAddress || 

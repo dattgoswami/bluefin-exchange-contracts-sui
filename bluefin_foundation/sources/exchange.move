@@ -305,22 +305,14 @@ module bluefin_foundation::exchange {
                 error::trading_not_started());
 
             
-            // if the maker or taker order was signed to be executed through 
-            // orderbook, it should only be executed by a settlement operator
-            if (order::flag_orderbook_only(makerFlags) || order::flag_orderbook_only(takerFlags)){
-                // only settlement operators can trade
-                roles::check_settlement_operator_validity_v2(safe, cap);
-            } else {
-                // ensure that capability provided is public settlement cap
-                roles::check_public_settlement_cap_validity_v2(safe, cap);
+            // since we are not validing the zk-login signature on-chain,
+            // we can not allow users to trade directly on-chain as they could submit
+            // a zk-login signature with a maker/taker order that may be wrong
+            // causing maker to loose funds. 
+            // The trade call can now only be performed by private settlement operators run by Bluefin!
+            roles::check_settlement_operator_validity_v2(safe, cap);
 
-                // the sender must be the taker or a sub account of taker
-                assert!(sender == takerAddress || roles::is_sub_account_v2(subAccounts, takerAddress, sender),
-                    error::only_taker_of_trade_can_execute_trade_involving_non_orderbook_orders()
-                );
-            }; 
-        
-
+            
             let perpID = object::uid_to_inner(perpetual::id_v2(perp));
             let perpAddress = object::id_to_address(&perpID);
 
