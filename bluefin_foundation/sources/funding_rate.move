@@ -190,6 +190,10 @@ module bluefin_foundation::funding_rate {
         return funding.rate
     }
 
+    public fun index_timestamp(index: FundingIndex): u64{
+        return index.timestamp
+    }
+
     //===========================================================//
     //                       HELPER FUNCTIONS                    //
     //===========================================================//

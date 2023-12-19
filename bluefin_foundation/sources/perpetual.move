@@ -12,7 +12,7 @@ module bluefin_foundation::perpetual {
     use std::vector;
 
     // custom modules
-    use bluefin_foundation::position::{UserPosition};
+    use bluefin_foundation::position::{Self, UserPosition};
     use bluefin_foundation::evaluator::{Self, TradeChecks};
     use bluefin_foundation::funding_rate::{Self, FundingRate, FundingIndex};
     use bluefin_foundation::roles::{Self, ExchangeAdminCap, ExchangeGuardianCap, FundingRateCap, CapabilitiesSafe, CapabilitiesSafeV2};
@@ -914,6 +914,21 @@ module bluefin_foundation::perpetual {
     entry fun increment_perpetual_version(_: &ExchangeAdminCap, perp: &mut PerpetualV2){
         perp.version = perp.version + 1;
     }
+
+    /// allows guardian to remove UserPosition objects that have zero sized positions
+    entry fun remove_empty_positions(safe: &CapabilitiesSafeV2, guardian: &ExchangeGuardianCap, clock: &Clock, perp: &mut PerpetualV2, pos_keys: vector<address>){
+
+        roles::validate_safe_version(safe);
+
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+
+        roles::check_guardian_validity_v2(safe, guardian);
+
+        let current_time = clock::timestamp_ms(clock);
+
+        position::remove_empty_positions(positions(perp), pos_keys, current_time);
+    }
+
 
     //===========================================================//
     //                         ORACLE PRICE                      //

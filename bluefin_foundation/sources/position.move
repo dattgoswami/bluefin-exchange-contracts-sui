@@ -2,6 +2,7 @@ module bluefin_foundation::position {
     use sui::object::{ID};
     use sui::table::{Self, Table};
     use sui::event::{emit};
+    use std::vector;
 
     // custom modules
     use bluefin_foundation::signed_number::{Self, Number};
@@ -12,6 +13,7 @@ module bluefin_foundation::position {
 
     // friend modules
     friend bluefin_foundation::exchange;
+    friend bluefin_foundation::perpetual;
     friend bluefin_foundation::isolated_liquidation;
     friend bluefin_foundation::isolated_trading;
     friend bluefin_foundation::isolated_adl;
@@ -205,6 +207,31 @@ module bluefin_foundation::position {
             table::add(positions, addr, initialize(perpID, addr));
         };
 
+    }   
+
+    // removes empty user positions from provided positions table
+    public (friend) fun remove_empty_positions(positions: &mut Table<address, UserPosition>, pos_keys: vector<address>, current_time: u64) {
+
+        let count = vector::length(&pos_keys);
+        let i = 0;
+        // iterate over all provided user addresses
+        while (i < count){
+            let addr = *vector::borrow(&pos_keys, i);
+            i=i+1;
+            // if user exists 
+            if(table::contains(positions, addr)){
+                // get user position
+                let position = table::borrow(positions, addr);
+
+                // if position size is zero and no funding rate has been applied to user in last 7 days
+                // then remove user position from table.
+                // 1 day == 86400000 ms
+                // 7 days == 604800000 ms           
+                if(position.qPos == 0 && current_time - funding_rate::index_timestamp(position.index) > 604800000) {
+                    table::remove(positions, addr);
+                }
+            }
+        }
     }   
 
     public (friend) fun emit_position_update_event(position: UserPosition, sender:address, action:u8, tx_index:u128){
