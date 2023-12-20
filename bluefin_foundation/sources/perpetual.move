@@ -96,6 +96,16 @@ module bluefin_foundation::perpetual {
         identifier: vector<u8>
     }
 
+    struct MakerFeeUpdateEvent has copy, drop {
+        perp: ID,
+        makerFee: u128
+    }
+
+    struct TakerFeeUpdateEvent has copy, drop {
+        perp: ID,
+        takerFee: u128
+    }
+
     //===========================================================//
     //                           STORAGE                         //
     //===========================================================//
@@ -927,6 +937,33 @@ module bluefin_foundation::perpetual {
         let current_time = clock::timestamp_ms(clock);
 
         position::remove_empty_positions(positions(perp), pos_keys, current_time);
+    }
+
+    /// allows admin of the exchange to update maker fee of the provided perpetual
+    /// fee is expected to be in 1e18 format 
+    entry fun set_maker_fee(_: &ExchangeAdminCap, perp: &mut PerpetualV2, fee: u128){
+
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+        perp.makerFee = fee / library::base_uint();
+        emit(
+            MakerFeeUpdateEvent{
+                perp: object::uid_to_inner(id_v2(perp)),
+                makerFee: perp.makerFee
+        });
+    }
+
+
+    /// allows admin of the exchange to update taker fee of the provided perpetual
+    /// fee is expected to be in 1e18 format 
+    entry fun set_taker_fee(_: &ExchangeAdminCap, perp: &mut PerpetualV2, fee: u128){
+
+        assert!(perp.version == roles::get_version(), error::object_version_mismatch());
+        perp.takerFee = fee / library::base_uint();
+        emit(
+            TakerFeeUpdateEvent{
+                perp: object::uid_to_inner(id_v2(perp)),
+                takerFee: perp.takerFee
+        });
     }
 
 
