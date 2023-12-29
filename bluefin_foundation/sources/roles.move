@@ -231,6 +231,7 @@ module bluefin_foundation::roles {
         safe.guardian = create_exchange_guardian(newGuardian, ctx);
     }
 
+    /// depricated
     public entry fun set_deleveraging_operator(
         _:&ExchangeAdminCap, 
         _: &mut CapabilitiesSafe, 
@@ -256,7 +257,7 @@ module bluefin_foundation::roles {
 
     }
 
-
+    /// depricated
     public entry fun set_funding_rate_operator(
         _:&ExchangeAdminCap, 
         _safe: &mut CapabilitiesSafe, 
@@ -340,7 +341,7 @@ module bluefin_foundation::roles {
     /**
      * Allows caller to set sub account (adds/removes)
      */
-    entry fun set_sub_account(subAccounts: &mut SubAccountsV2, account: address, status: bool, ctx: &mut TxContext){
+    public entry fun set_sub_account(subAccounts: &mut SubAccountsV2, account: address, status: bool, ctx: &mut TxContext){
 
         validate_sub_accounts_version(subAccounts);
 
@@ -447,13 +448,11 @@ module bluefin_foundation::roles {
 
     }
 
+    /// depricated
     public fun check_guardian_validity(
-        safe: &CapabilitiesSafe,
-        cap: &ExchangeGuardianCap,
+        _: &CapabilitiesSafe,
+        _: &ExchangeGuardianCap,
         ){ 
-        assert!( 
-            safe.guardian == object::uid_to_inner(&cap.id),
-            error::invalid_guardian());       
     }
 
     public fun check_guardian_validity_v2(
@@ -465,15 +464,11 @@ module bluefin_foundation::roles {
             error::invalid_guardian());       
     }
 
+    /// depricated
     public fun check_delevearging_operator_validity(
-        safe: &CapabilitiesSafe,
-        cap: &DeleveragingCap
-        ){ 
-        
-        assert!( 
-            safe.deleveraging == object::uid_to_inner(&cap.id),
-            error::invalid_deleveraging_operator()
-        ); 
+        _: &CapabilitiesSafe,
+        _: &DeleveragingCap
+        ){         
     }
 
     public fun check_delevearging_operator_validity_v2(
@@ -487,15 +482,11 @@ module bluefin_foundation::roles {
         ); 
     }
 
+    /// depricated
     public fun check_funding_rate_operator_validity(
-        safe: &CapabilitiesSafe,
-        cap: &FundingRateCap
-        ){ 
-        
-        assert!( 
-            safe.fundingRateOperator == object::uid_to_inner(&cap.id),
-            error::invalid_funding_rate_operator()
-        ); 
+        _: &CapabilitiesSafe,
+        _: &FundingRateCap
+        ){         
     }
 
     public fun check_funding_rate_operator_validity_v2(
@@ -509,21 +500,19 @@ module bluefin_foundation::roles {
         ); 
     }
 
+
+    /// depricated
+    public fun check_settlement_operator_validity(
+        _: &CapabilitiesSafe,
+        _: &SettlementCap,
+        ){ 
+    }
+
     /*
      * Returns true is the settlement cap is in list of whitelisted owned settlement operators
      * Note: If the settlement operator cap provided is shared (created at genesis of protocol)
      * the funciton will return false
      */
-    public fun check_settlement_operator_validity(
-        safe: &CapabilitiesSafe,
-        cap: &SettlementCap,
-        ){ 
-        assert!(
-            vec_set::contains(&safe.settlementOperators, &object::id(cap)),
-            error::invalid_settlement_operator()
-        );       
-    }
-
     public fun check_settlement_operator_validity_v2(
         safe: &CapabilitiesSafeV2,
         cap: &SettlementCap,
@@ -534,14 +523,11 @@ module bluefin_foundation::roles {
         );       
     }
 
+    /// depricated
     public fun check_public_settlement_cap_validity(
-        safe: &CapabilitiesSafe,
-        cap: &SettlementCap,
+        _: &CapabilitiesSafe,
+        _: &SettlementCap,
         ){ 
-        assert!(
-            safe.publicSettlementCap == object::uid_to_inner(&cap.id),
-            error::not_a_public_settlement_cap()
-        );       
     }
 
     public fun check_public_settlement_cap_validity_v2(
@@ -580,28 +566,20 @@ module bluefin_foundation::roles {
         return sequencer.counter
     }
 
+
+    /// depricated
+    public fun is_sub_account(
+        _: &SubAccounts,
+        _: address,
+        _: address
+        ): bool{         
+        return false
+    }
+
     /*
      * Returns true if the provided sigMaker is sub account of the provided
      * account.
      */
-    public fun is_sub_account(
-        subAccounts: &SubAccounts,
-        account: address,
-        sigMaker: address
-        ): bool{ 
-        
-        let accountsMap = &subAccounts.map;
-
-        // if account does not have key in table, it has no sub accounts
-        if(!table::contains(accountsMap, account)){
-            return false
-        };
-
-        let accountSet =  table::borrow(accountsMap, account);
-        
-        return vec_set::contains(accountSet, &sigMaker)
-    }
-
     public fun is_sub_account_v2(
         subAccounts: &SubAccountsV2,
         account: address,
@@ -623,63 +601,6 @@ module bluefin_foundation::roles {
     /// Returns the version of protocol
     public fun get_version():u64{
         return VERSION
-    }
-    
-    //===========================================================//
-    //                          MIGRATION                        //
-    //===========================================================//
-
-    /// creates a V2 capabilities safe using the V1 version
-    entry fun migrate_safe(_: &ExchangeAdminCap, safe: &CapabilitiesSafe, ctx: &mut TxContext) {
-
-        let CapabilitiesSafe { 
-            id:_, 
-            guardian, 
-            deleveraging, 
-            fundingRateOperator, 
-            publicSettlementCap, 
-            settlementOperators } = safe;
-
-        let safe_v2 = CapabilitiesSafeV2 {
-            id: object::new(ctx),
-            version: get_version(),
-            guardian: *guardian,
-            deleveraging: *deleveraging,
-            fundingRateOperator: *fundingRateOperator,
-            publicSettlementCap: *publicSettlementCap,
-            settlementOperators: *settlementOperators
-        };
-
-        // share safe
-        transfer::share_object(safe_v2);
-
-    }
-
-    /// migrates all data from V1 sub accounts map to V2 map. 
-    entry fun migrate_sub_accounts(_: &ExchangeAdminCap, sub_accounts: &SubAccounts, keys:vector<address>, ctx: &mut TxContext) {
-
-        let SubAccounts { 
-             id:_,
-             map} = sub_accounts;
-
-
-        let sub_accounts_v2 = SubAccountsV2 {
-            id: object::new(ctx),
-            version: get_version(),
-            map: table::new<address, VecSet<address>>(ctx)
-        };
-
-        // copy all sub accounts to new sub accounts v2
-        let count = vector::length(&keys);
-        let i = 0;
-        while (i < count){
-            let addr = *vector::borrow(&keys, i);
-            table::add(&mut sub_accounts_v2.map, addr, *table::borrow(map, addr));
-            i = i+1;
-        };
-
-        // share object
-        transfer::share_object(sub_accounts_v2);
     }
     
 }

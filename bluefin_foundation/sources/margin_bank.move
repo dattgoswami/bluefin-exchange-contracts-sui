@@ -93,15 +93,7 @@ module bluefin_foundation::margin_bank {
     //===========================================================//
 
     /// depricated
-    public entry fun set_withdrawal_status<T>(safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, bank: &mut Bank<T>, isWithdrawalAllowed: bool) {
-
-        // validate guardian
-        roles::check_guardian_validity(safe, guardian);
-
-        // setting the withdrawal allowed flag
-        bank.isWithdrawalAllowed = isWithdrawalAllowed;
-
-        emit(WithdrawalStatusUpdate{status: isWithdrawalAllowed});
+    public entry fun set_withdrawal_status<T>(_: &CapabilitiesSafe, _: &ExchangeGuardianCap, _: &mut Bank<T>, _: bool) {
     }
 
     public entry fun set_withdrawal_status_v2<T>(safe: &CapabilitiesSafeV2, guardian: &ExchangeGuardianCap, bank: &mut BankV2<T>, isWithdrawalAllowed: bool) {
@@ -149,7 +141,7 @@ module bluefin_foundation::margin_bank {
      * @dev amount is expected to be in 6 decimal units as 
      * the collateral token is USDC
      */
-    entry fun deposit_to_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, amount: u64, coin: &mut Coin<T>, ctx: &mut TxContext) {
+    public entry fun deposit_to_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, amount: u64, coin: &mut Coin<T>, ctx: &mut TxContext) {
         
         assert!(bank.version == roles::get_version(), error::object_version_mismatch());
 
@@ -206,7 +198,7 @@ module bluefin_foundation::margin_bank {
      * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
      * @dev withdrawal amount is expected to be in 6 decimal units as the collateral token is USDC
      */
-    entry fun withdraw_from_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, amount: u128, ctx: &mut TxContext) {
+    public entry fun withdraw_from_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, amount: u128, ctx: &mut TxContext) {
         
         assert!(bank.version == roles::get_version(), error::object_version_mismatch());
 
@@ -263,7 +255,7 @@ module bluefin_foundation::margin_bank {
     /**
      * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
      */
-    entry fun withdraw_all_margin_from_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, ctx: &mut TxContext) {
+    public entry fun withdraw_all_margin_from_bank<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, destination: address, ctx: &mut TxContext) {
         
         assert!(bank.version == roles::get_version(), error::object_version_mismatch());
 
@@ -461,18 +453,9 @@ module bluefin_foundation::margin_bank {
     //                      GETTER METHODS 
     //===========================================================//
 
-    public fun get_balance<T>(bank: &Bank<T>, addr: address) : u128 {
-        // getting the accounts table
-        let accounts = &bank.accounts;
-
-        // checking if the account exists
-        if(!table::contains(accounts, addr)){
-            // returning 0 if the account doesn't exist
-            return 0u128
-        };
-
-
-        return table::borrow(accounts, addr).balance
+    /// depricated
+    public fun get_balance<T>(_: &Bank<T>, _: address) : u128 {
+        return 0
     }
 
     public fun get_balance_v2<T>(bank: &BankV2<T>, addr: address) : u128 {
@@ -490,6 +473,7 @@ module bluefin_foundation::margin_bank {
 
     }
 
+    /// depricated
     public fun is_withdrawal_allowed<T>(bank: &Bank<T>) : bool {
         return bank.isWithdrawalAllowed
     }
@@ -544,67 +528,4 @@ module bluefin_foundation::margin_bank {
             tx_index
         );
     }
-
-    //===========================================================//
-    //                      MIGRATION METHOD                     //
-    //===========================================================//
-    
-    entry fun migrate_bank<T>(_: &ExchangeAdminCap, bank: &mut Bank<T>, account_keys: vector<address>, ctx: &mut TxContext){
-
-        let empty_balance = balance::zero<T>();
-
-        let bank_v2 = BankV2 {
-            id: object::new(ctx),
-            version: roles::get_version(),
-            accounts: table::new<address, BankAccount>(ctx),
-            coinBalance: empty_balance,
-            isWithdrawalAllowed: true,
-            supportedCoin: bank.supportedCoin
-        };
-
-        // transfer coins from old bank to new bank
-        let total_balance = balance::value(&bank.coinBalance);
-        let coins = coin::take(&mut bank.coinBalance, total_balance, ctx);
-        coin::put(&mut bank_v2.coinBalance, coins);
-
-        // copy all bank accounts from V1 bank to V2
-        let count = vector::length(&account_keys);
-        let i = 0;
-        while (i < count){
-            let addr = *vector::borrow(&account_keys, i);
-            let account = table::borrow(&bank.accounts, addr);
-
-            table::add(&mut bank_v2.accounts, addr, BankAccount {
-                balance: account.balance,
-                owner: account.owner,
-            });
-
-            i = i+1;
-        };
-        
-        // disable withdrawl on old bank ( for safe keeping)
-        bank.isWithdrawalAllowed = false;
-
-        // share v2 bank
-        transfer::share_object(bank_v2);   
-
-    }
-    
-    entry fun migrate_bank_v2<T>(_: &ExchangeAdminCap, bank: &mut Bank<T>, bank_v2: &mut BankV2<T>, account_keys: vector<address>){
-            // copy all bank accounts from V1 bank to V2
-            let count = vector::length(&account_keys);
-            let i = 0;
-            while (i < count){
-                let addr = *vector::borrow(&account_keys, i);
-                let account = table::borrow(&bank.accounts, addr);
-
-                table::add(&mut bank_v2.accounts, addr, BankAccount {
-                    balance: account.balance,
-                    owner: account.owner,
-                });
-                i = i+1;
-            };
-    }
-
-
 }

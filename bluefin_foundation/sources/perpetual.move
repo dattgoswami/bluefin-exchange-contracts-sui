@@ -309,14 +309,8 @@ module bluefin_foundation::perpetual {
     //                      GUARDIAN METHODS
     //===========================================================//
 
-    public entry fun set_trading_permit(safe: &CapabilitiesSafe, guardian: &ExchangeGuardianCap, perp: &mut Perpetual, isTradingPermitted: bool) {
-        // validate guardian
-        roles::check_guardian_validity(safe, guardian);
-
-        // setting the withdrawal allowed flag
-        perp.isTradingPermitted = isTradingPermitted;
-
-        emit(TradingPermissionStatusUpdate{status: isTradingPermitted});
+    /// depricated
+    public entry fun set_trading_permit(_: &CapabilitiesSafe, _: &ExchangeGuardianCap, _: &mut Perpetual, _: bool) {
     }
 
     public entry fun set_trading_permit_v2(safe: &CapabilitiesSafeV2, guardian: &ExchangeGuardianCap, perp: &mut PerpetualV2, isTradingPermitted: bool) {
@@ -333,11 +327,10 @@ module bluefin_foundation::perpetual {
         emit(TradingPermissionStatusUpdate{status: isTradingPermitted});
     }
 
-
+    // depricated 
     //===========================================================//
-    //                          ACCESSORS                        //
+    //                         ACCESSORS (v1)                    // 
     //===========================================================//
-
     public fun id(perp:&Perpetual):&UID{
         return &perp.id
     }
@@ -410,19 +403,8 @@ module bluefin_foundation::perpetual {
         return perp.priceIdentifierId
     }
 
-    // returns fee to be applied to the user
-    public fun get_fee(user:address, perp: &Perpetual, isMaker: bool): u128{
-        
-        let feeAmount = if (isMaker) { perp.makerFee } else { perp.takerFee };
-
-        if(table::contains(&perp.specialFee, user)){
-            let fee = table::borrow(&perp.specialFee, user);
-            if(fee.status == true){
-                feeAmount = if (isMaker) { fee.makerFee } else { fee.takerFee };
-            };
-        };
-
-        return feeAmount
+    public fun get_fee(_:address, _: &Perpetual, _: bool): u128{
+        return 0
     }
 
     //===========================================================//
@@ -522,6 +504,7 @@ module bluefin_foundation::perpetual {
     }
 
 
+    // depricated 
     //===========================================================//
     //                         SETTERS                           //
     //===========================================================//
@@ -984,93 +967,4 @@ module bluefin_foundation::perpetual {
         perp.priceOracle = library::base_div(oraclePrice, expo);
 
     }
-
-
-    //===========================================================//
-    //              MIGRATION of V1 Perpetual to V2              //
-    //===========================================================//
-
-    entry fun migrate_perpetual<T>(_: &ExchangeAdminCap, bank: &mut Bank<T>, perp: &mut Perpetual, pos_keys: vector<address>, fee_keys: vector<address>, ctx: &mut TxContext) {
-        
-        let id = object::new(ctx);
-        let perpID =  object::uid_to_inner(&id);
-
-        let perp_v2 = PerpetualV2 {
-            id,
-            version: roles::get_version(),
-            name: perp.name,
-            imr: perp.imr,
-            mmr: perp.mmr,
-            makerFee: perp.makerFee,
-            takerFee: perp.takerFee,
-            insurancePoolRatio: perp.insurancePoolRatio,
-            insurancePool: perp.insurancePool,
-            feePool: perp.feePool,
-            delisted: perp.delisted,
-            delistingPrice: perp.delistingPrice,
-            isTradingPermitted: true,
-            startTime: perp.startTime,
-            checks: perp.checks,
-            positions: table::new<address, UserPosition>(ctx),
-            specialFee: table::new<address, SpecialFee>(ctx),
-            priceOracle: perp.priceOracle,
-            funding: perp.funding,
-            priceIdentifierId: perp.priceIdentifierId,
-        };
-
-        {
-            // copy all positions data from old perp to new perp 
-            let count = vector::length(&pos_keys);
-            let i = 0;
-            while (i < count){
-                let addr = *vector::borrow(&pos_keys, i);
-                let position = *table::borrow(&perp.positions, addr);
-                table::add(&mut perp_v2.positions, addr, position);
-                i = i+1;
-            };
-        };
-
-        {
-            // copy all special fee data from old perp to new perp 
-            let count = vector::length(&fee_keys);
-            let i = 0;
-            while (i < count){
-                let addr = *vector::borrow(&fee_keys, i);
-                let special_fee = *table::borrow(&perp.specialFee, addr);
-                table::add(&mut perp_v2.specialFee, addr, special_fee);
-                i = i+1;
-            };
-
-        };
-       
-        // create bank account for our new perpetual
-        margin_bank::initialize_account(
-            margin_bank::mut_accounts(bank), 
-            object::id_to_address(&perpID),
-        );
-        
-        // move all money from old perpetual address to new perp;
-        // get balance of perp in V1 bank
-        let total_perp_balance = margin_bank::get_balance(
-            bank, 
-            object::id_to_address(&object::uid_to_inner(&perp.id))
-        );
-
-        // using v1 transfer_margin_to_account as Bank is V1
-        margin_bank::transfer_margin_to_account(
-            bank,
-            object::id_to_address(&object::uid_to_inner(&perp.id)),
-            object::id_to_address(&perpID),
-            total_perp_balance,
-            2,
-        );
-
-        // share the object
-        transfer::share_object(perp_v2);
-
-        // de-list the old perpetual
-        perp.delisted = true;
-        perp.delistingPrice = 0;
-    } 
-
 }
