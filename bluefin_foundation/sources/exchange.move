@@ -12,7 +12,7 @@ module bluefin_foundation::exchange {
     use bluefin_foundation::position::{Self, UserPosition};
     use bluefin_foundation::perpetual::{Self, PerpetualV2};
     use bluefin_foundation::margin_bank::{Self, BankV2};
-    use bluefin_foundation::order::{Self, OrderStatus};
+    use bluefin_foundation::order::{OrderStatus};
     use bluefin_foundation::signed_number::{Self, Number};
     use bluefin_foundation::funding_rate::{Self};
     use bluefin_foundation::evaluator::{Self};
@@ -57,6 +57,7 @@ module bluefin_foundation::exchange {
     //                           EVENTS                          //
     //===========================================================//
 
+    #[allow(unused_field)]
     /// @notice emitted when a liquidator account pays for settling and account's pending settlement amount
     struct LiquidatorPaidForAccountSettlementEvnet has copy, drop {
         id: ID,
@@ -65,18 +66,21 @@ module bluefin_foundation::exchange {
         amount: u128
     }
 
+    #[allow(unused_field)]
     /// @notice emitted when oi open of account < settlement amount during adl trade
     struct SettlementAmountNotPaidCompletelyEvent has copy, drop {
         account: address,
         amount: u128
     }
 
+    #[allow(unused_field)]
     /// @notice emitted when oi open of account < settlement amount during adl trade
     struct SettlementAmtDueByMakerEvent has copy, drop {
         account: address,
         amount: u128
     }
 
+    #[allow(unused_field)]
     /// @notice emitted when oi open of account < settlement amount during adl trade
     struct AccountSettlementUpdateEvent has copy, drop {
         account: address,
@@ -278,7 +282,7 @@ module bluefin_foundation::exchange {
         // a unique tx hash
         tx_hash: vector<u8>,
 
-        ctx: &mut TxContext
+        ctx: & TxContext
         ){
 
             assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
@@ -431,7 +435,7 @@ module bluefin_foundation::exchange {
 
         tx_hash: vector<u8>,
 
-        ctx: &mut TxContext        
+        ctx: & TxContext        
 
     ){
 
@@ -588,7 +592,7 @@ module bluefin_foundation::exchange {
         tx_hash: vector<u8>,
 
         // sender's context
-        ctx: &mut TxContext
+        ctx: &TxContext
     ){
 
         assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
@@ -673,7 +677,7 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to add margin to their position
      */
-    entry fun add_margin<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user:address, amount: u128, tx_hash: vector<u8>,  ctx: &mut TxContext){
+    entry fun add_margin<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user:address, amount: u128, tx_hash: vector<u8>,  ctx: &TxContext){
 
 
         assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
@@ -742,7 +746,7 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to remove margin from their position
      */
-    entry fun remove_margin<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user: address, amount: u128, tx_hash: vector<u8>, ctx: &mut TxContext){
+    entry fun remove_margin<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user: address, amount: u128, tx_hash: vector<u8>, ctx: &TxContext){
         
         assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
         assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
@@ -831,7 +835,7 @@ module bluefin_foundation::exchange {
     /**
      * Allows caller to adjust their leverage
      */
-    entry fun adjust_leverage<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user: address, leverage: u128, tx_hash: vector<u8>, ctx: &mut TxContext){
+    entry fun adjust_leverage<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, subAccounts: &SubAccountsV2, sequencer: &mut Sequencer, price_oracle: &PythFeeder, user: address, leverage: u128, tx_hash: vector<u8>, ctx: &TxContext){
      
         assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
         assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());
@@ -942,7 +946,7 @@ module bluefin_foundation::exchange {
     //                     CLOSE POSITION                        //
     //===========================================================//
 
-    entry fun close_position<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, ctx: &mut TxContext){
+    entry fun close_position<T>(perp: &mut PerpetualV2, bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, ctx: & TxContext){
 
         assert!(perpetual::get_version(perp) == roles::get_version(), error::object_version_mismatch());
         assert!(margin_bank::get_version(bank) == roles::get_version(), error::object_version_mismatch());

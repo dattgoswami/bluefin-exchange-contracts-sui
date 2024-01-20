@@ -22,12 +22,14 @@ module bluefin_foundation::position {
     //                           EVENTS                          //
     //===========================================================//
 
+    #[allow(unused_field)]
     struct AccountPositionUpdateEvent has copy, drop {
         position:UserPosition,
         sender: address,
         action: u8
     }
 
+    #[allow(unused_field)]
     struct PositionClosedEvent has copy, drop{
         perpID: ID,
         account: address,

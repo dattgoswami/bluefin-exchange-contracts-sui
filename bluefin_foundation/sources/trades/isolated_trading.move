@@ -24,6 +24,7 @@ module bluefin_foundation::isolated_trading {
     //                           EVENTS                          //
     //===========================================================//
 
+    #[allow(unused_field)]
     struct TradeExecuted has copy, drop {
         sender:address,
         perpID: ID,
@@ -112,6 +113,7 @@ module bluefin_foundation::isolated_trading {
     //                      INITIALIZATION                       //
     //===========================================================//
 
+    #[lint_allow(share_owned)]
     fun init(ctx: &mut TxContext) {        
         // create orders filled quantity table
         let orders = table::new<vector<u8>, OrderStatus>(ctx);
@@ -174,8 +176,8 @@ module bluefin_foundation::isolated_trading {
 
             // get order hashes
             // Note, order hash is computed using order values in 1x18 base as its signed in this base
-            let makerOrderSerialized = order::get_serialized_order(* &mut data1x18.makerOrder);
-            let takerOrderSerialized = order::get_serialized_order(* &mut data1x18.takerOrder);
+            let makerOrderSerialized = order::get_serialized_order(data1x18.makerOrder);
+            let takerOrderSerialized = order::get_serialized_order(data1x18.takerOrder);
 
             let makerHash = library::get_hash(makerOrderSerialized);
             let takerHash = library::get_hash(takerOrderSerialized);

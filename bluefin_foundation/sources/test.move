@@ -1,4 +1,4 @@
-
+#[allow(unused_field)]
 module bluefin_foundation::test {
 
     use std::hash;
@@ -15,6 +15,7 @@ module bluefin_foundation::test {
     struct SignatureVerifiedEvent has copy, drop {
         is_verified: bool,
     }
+
 
     struct PublicKeyRecoveredEvent has copy, drop {
         public_key: vector<u8>,

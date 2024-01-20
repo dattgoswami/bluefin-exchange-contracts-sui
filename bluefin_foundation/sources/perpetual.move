@@ -9,7 +9,6 @@ module bluefin_foundation::perpetual {
     use sui::event::{emit};
     use sui::transfer;
     use sui::math::pow;
-    use std::vector;
 
     // custom modules
     use bluefin_foundation::position::{Self, UserPosition};
@@ -18,7 +17,7 @@ module bluefin_foundation::perpetual {
     use bluefin_foundation::roles::{Self, ExchangeAdminCap, ExchangeGuardianCap, FundingRateCap, CapabilitiesSafe, CapabilitiesSafeV2};
     use bluefin_foundation::error::{Self};
     use bluefin_foundation::library::{Self};
-    use bluefin_foundation::margin_bank::{Self, Bank, BankV2};
+    use bluefin_foundation::margin_bank::{Self, BankV2};
 
     // pyth
     use Pyth::price_info::{PriceInfoObject as PythFeeder};
@@ -110,6 +109,7 @@ module bluefin_foundation::perpetual {
     //                           STORAGE                         //
     //===========================================================//
 
+    #[allow(unused_field)]
     struct Perpetual has key, store {
         id: UID,
         /// name of perpetual

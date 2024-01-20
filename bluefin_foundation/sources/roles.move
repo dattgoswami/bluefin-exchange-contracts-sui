@@ -5,13 +5,13 @@ module bluefin_foundation::roles {
     use sui::table::{Self, Table};
     use sui::event::{emit};
     use sui::transfer;
-    use std::vector;
 
     // custom modules
     use bluefin_foundation::error::{Self};
 
     // friend modules
     friend bluefin_foundation::exchange;
+    friend bluefin_foundation::vaults;
 
     //===========================================================//
     //                           EVENTS                          //
@@ -79,6 +79,7 @@ module bluefin_foundation::roles {
         id: UID
     }
 
+    #[allow(unused_field)]
     /// depricated, not used
     struct CapabilitiesSafe has key {
         id: UID,
@@ -94,6 +95,7 @@ module bluefin_foundation::roles {
         settlementOperators: VecSet<ID>,
     }
 
+    #[allow(unused_field)]
     /// depricated, not used
     struct SubAccounts has key {
         id: UID,
@@ -210,7 +212,7 @@ module bluefin_foundation::roles {
      * Transfers adminship of exchange to provided address
      * Only exchange admin can invoke this method
      */
-    entry fun set_exchange_admin(admin: ExchangeAdminCap, newAdmin:address, ctx: &mut TxContext){
+    entry fun set_exchange_admin(admin: ExchangeAdminCap, newAdmin:address, ctx: &TxContext){
         assert!(
             newAdmin != tx_context::sender(ctx), 
             error::new_address_can_not_be_same_as_current_one());
@@ -370,6 +372,41 @@ module bluefin_foundation::roles {
 
         emit(SubAccountUpdateEvent{
             account: caller,
+            subAccount: account,
+            status
+        });
+    }
+
+    /**
+     * Allows the elixir integration module to set sub account for the given vault address
+     */
+    public (friend) fun set_vault_sub_account(subAccounts: &mut SubAccountsV2, vault: address, account: address, status: bool){
+        
+        validate_sub_accounts_version(subAccounts);
+
+        let accountsMap = &mut subAccounts.map;
+
+        // if user does not have an entry in map, create it
+        if(!table::contains(accountsMap, vault)){
+            table::add(accountsMap, vault, vec_set::empty());
+        };
+
+        let accountsSet = table::borrow_mut(accountsMap, vault);
+        
+        // if asked to whitelist sub account
+        if(status){
+            if(!vec_set::contains(accountsSet, &account)){
+                vec_set::insert(accountsSet, account);
+            };
+        } else {
+            // if asked to remove sub account
+            if(vec_set::contains(accountsSet, &account)){
+                vec_set::remove(accountsSet, &account)
+            };
+        };
+
+        emit(SubAccountUpdateEvent{
+            account: vault,
             subAccount: account,
             status
         });

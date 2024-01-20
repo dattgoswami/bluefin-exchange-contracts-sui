@@ -364,5 +364,13 @@ module bluefin_foundation::error {
     public fun transaction_replay(): u64 {
         return 906
     }
+
+    public fun unauthorized(): u64 {
+        return 920
+    }
     
+    public fun vault_does_not_belong_to_safe(): u64 {
+        return 921
+    }
+ 
 }

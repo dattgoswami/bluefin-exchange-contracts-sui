@@ -12,7 +12,6 @@ module bluefin_foundation::margin_bank {
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
     use std::string::{String};
-    use std::vector;
 
 
     // custom modules
@@ -24,6 +23,7 @@ module bluefin_foundation::margin_bank {
     // friend modules
     friend bluefin_foundation::exchange;
     friend bluefin_foundation::perpetual;
+    friend bluefin_foundation::vaults;
 
     //================================================================//
     //                      EVENTS
@@ -61,6 +61,7 @@ module bluefin_foundation::margin_bank {
         owner: address,
     }
 
+    #[allow(unused_field)]
     struct Bank<phantom T> has key, store {
         id: UID,
         accounts: Table<address, BankAccount>,
@@ -69,7 +70,7 @@ module bluefin_foundation::margin_bank {
         supportedCoin: String
     }
 
-
+    #[allow(unused_field)]
     struct BankV2<phantom T> has key, store {
         id: UID,
         version: u64,
@@ -194,6 +195,7 @@ module bluefin_foundation::margin_bank {
     }
 
 
+
     /**
      * @notice Performs a withdrawal of margin tokens from the the bank to a provided address
      * @dev withdrawal amount is expected to be in 6 decimal units as the collateral token is USDC
@@ -249,6 +251,54 @@ module bluefin_foundation::margin_bank {
                 destBalance: table::borrow(accounts, destination).balance,
             }
         );
+
+    }
+
+    /**
+     * @notice Performs withdrawal of coins from a vault bank account
+     * and returns them
+     */
+    public (friend) fun withdraw_coins_from_bank_for_vault<T>(bank: &mut BankV2<T>, sequencer: &mut Sequencer, tx_hash: vector<u8>, vault:address, amount: u128, ctx: &mut TxContext): Coin<T> {
+        
+        assert!(bank.version == roles::get_version(), error::object_version_mismatch());
+
+        let tx_index = roles::validate_unique_tx(sequencer, tx_hash);
+
+        // checking if the withdrawal is allowed
+        assert!(bank.isWithdrawalAllowed, error::withdrawal_is_not_allowed());
+
+        // getting the accounts table and coin balance
+        let accounts = &mut bank.accounts;
+
+        // convert amount to 9 decimal places
+        let baseAmount = library::convert_usdc_to_base_decimals(amount);
+
+        // getting the mut ref of balance of the src_account
+        let srcBalance = &mut table::borrow_mut(accounts, vault).balance;
+
+        // checking if the sender has enough balance
+        assert!(*srcBalance >= baseAmount, error::not_enough_balance_in_margin_bank(3));
+
+        // updating the balance
+        *srcBalance = *srcBalance - baseAmount;   
+
+        // withdrawing the coin from the bank
+        let coin = coin::take(&mut bank.coinBalance, (amount as u64), ctx);
+
+        // emitting the balance balance update event
+        emit(
+            BankBalanceUpdateV2 {
+                tx_index,
+                action: ACTION_WITHDRAW,
+                srcAddress: vault,
+                destAddress: vault,
+                amount: baseAmount,
+                srcBalance: table::borrow(accounts, vault).balance,
+                destBalance: table::borrow(accounts, vault).balance,
+            }
+        );
+
+        return coin
 
     }
 
@@ -329,6 +379,7 @@ module bluefin_foundation::margin_bank {
 
         };
     }
+
 
     public (friend) fun transfer_trade_margin<T>(
         bank: &mut BankV2<T>,

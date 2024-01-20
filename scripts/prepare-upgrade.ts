@@ -1,7 +1,6 @@
 import {
     DeploymentConfigs,
-    TransactionBlock,
-    writeFile
+    TransactionBlock
 } from "../submodules/library-sui/dist";
 import path from "path";
 import {
@@ -12,7 +11,6 @@ import {
 import { OnChainCalls } from "../submodules/library-sui/dist";
 import { packageName } from "../submodules/library-sui/dist";
 import { UpgradePolicy, toB64 } from "@mysten/sui.js";
-import { Transaction } from "../submodules/library-sui/dist";
 import { Client } from "../src/Client";
 
 const deployment = readFile(DeploymentConfigs.filePath);

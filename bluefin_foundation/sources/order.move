@@ -19,6 +19,7 @@ module bluefin_foundation::order {
     //                           EVENTS                          //
     //===========================================================//
 
+    #[allow(unused_field)]
     struct OrderFill has copy, drop {
         orderHash:vector<u8>,
         order: Order,
@@ -28,6 +29,7 @@ module bluefin_foundation::order {
         newFilledQuantity: u128        
     }
 
+    #[allow(unused_field)]
     struct OrderCancel has copy, drop{
         caller: address, 
         sigMaker: address,
@@ -109,7 +111,7 @@ module bluefin_foundation::order {
         signature:vector<u8>,
         publicKey:vector<u8>,
         tx_hash: vector<u8>,
-        ctx: &mut TxContext
+        ctx: &TxContext
         ){
 
         roles::validate_sub_accounts_version(subAccounts);
@@ -345,7 +347,7 @@ module bluefin_foundation::order {
         };
     }
 
-    public (friend) fun verify_order_state(ordersTable: &mut Table<vector<u8>, OrderStatus>, hash:vector<u8>, isTaker:u64){        
+    public (friend) fun verify_order_state(ordersTable: &Table<vector<u8>, OrderStatus>, hash:vector<u8>, isTaker:u64){        
         let order = table::borrow(ordersTable, hash);
         assert!(order.status, error::order_is_canceled(isTaker));
     }

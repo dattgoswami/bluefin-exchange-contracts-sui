@@ -19,6 +19,7 @@ module bluefin_foundation::isolated_adl {
     //                           EVENTS                          //
     //===========================================================//
 
+    #[allow(unused_field)]
     struct TradeExecuted has copy, drop {
         sender:address,
         perpID: ID,
