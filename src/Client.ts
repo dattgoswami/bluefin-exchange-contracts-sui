@@ -6,7 +6,7 @@ import {
     SuiTransactionBlockResponse,
     TransactionBlock
 } from "../submodules/library-sui";
-import * as Networks from "../submodules/library-sui";
+import Networks from "../submodules/library-sui/networks.json";
 
 export function execCommand(command: string) {
     return execSync(command, { encoding: "utf-8" });
