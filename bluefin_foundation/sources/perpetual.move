@@ -1,6 +1,6 @@
 
 module bluefin_foundation::perpetual {
-    
+
     use sui::clock::{Self, Clock};
     use sui::object::{Self, ID, UID};
     use std::string::{Self, String};
@@ -502,6 +502,17 @@ module bluefin_foundation::perpetual {
     public fun get_version(perp: &PerpetualV2): u64{
         return perp.version
     }
+
+
+    /// returns a user position on the perpetual
+    public fun get_user_position(perp: &PerpetualV2, user:address): UserPosition {
+        
+        if(table::contains(&perp.positions, user)){
+            return *table::borrow(&perp.positions, user)
+        } else {
+            return position::initialize(object::uid_to_inner(&perp.id), user)
+        }
+    } 
 
 
     // depricated 
