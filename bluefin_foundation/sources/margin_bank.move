@@ -5,7 +5,7 @@ module bluefin_foundation::margin_bank {
     //===========================================================//
 
     use sui::event::{emit};
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use sui::table::{Self, Table};
     use sui::balance::{Self, Balance};
     use sui::coin::{Self, Coin};
@@ -506,7 +506,12 @@ module bluefin_foundation::margin_bank {
 
     /// depricated
     public fun get_balance<T>(_: &Bank<T>, _: address) : u128 {
-        return 0
+        0
+    }
+
+    /// depricated
+    public fun is_withdrawal_allowed<T>(_: &Bank<T>): bool {
+        false
     }
 
     public fun get_balance_v2<T>(bank: &BankV2<T>, addr: address) : u128 {
@@ -519,25 +524,20 @@ module bluefin_foundation::margin_bank {
             return 0u128
         };
 
-
         return table::borrow(accounts, addr).balance
 
     }
-
-    /// depricated
-    public fun is_withdrawal_allowed<T>(bank: &Bank<T>) : bool {
-        return bank.isWithdrawalAllowed
-    }
-
-    public fun is_withdrawal_allowed_v2<T>(bank: &BankV2<T>) : bool {
+    public fun is_withdrawal_allowed_v2<T>(bank: &BankV2<T>): bool {
         bank.isWithdrawalAllowed
     }
 
-    public fun get_version<T>(bank: &BankV2<T>) : u64 {
+    public fun get_version<T>(bank: &BankV2<T>): u64 {
         bank.version
     }
 
-    
+    public fun get_bank_id<T>(bank: &BankV2<T>): ID {
+        object::uid_to_inner(&bank.id)
+    }
 
     //===========================================================//
     //                      HELPER METHODS
