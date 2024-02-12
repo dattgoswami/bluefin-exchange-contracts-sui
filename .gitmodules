@@ -1,6 +1,6 @@
 [submodule "submodules/library-sui"]
 	path = submodules/library-sui
-	url = https://github.com/fireflyprotocol/library-sui.git
+	url = https://github.com/hackenproof/library-sui.git
 [submodule "submodules/pyth-crosschain"]
 	path = submodules/pyth-crosschain
 	url = https://github.com/pyth-network/pyth-crosschain
